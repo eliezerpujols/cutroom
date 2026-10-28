@@ -1,0 +1,9 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/manrope';
+import './styles.css';
+import App from './App';
+const saved=localStorage.getItem('cutroom-theme')||'system';
+document.documentElement.dataset.theme=saved==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):saved;
+createRoot(document.getElementById('root')!).render(<App/>);

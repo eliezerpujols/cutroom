@@ -1,0 +1,51 @@
+export const FPS = 30;
+export type Asset = {
+  id:string; name:string; kind:'video'|'audio'; duration:number; frames:number;
+  width:number; height:number; hasAudio:boolean; missing?:boolean; url:string; extension?:string; thumbnails:string[]; peaks:number[];
+};
+export type Clip = {
+  id:string; assetId:string; name:string; trackId:string; kind:'video'|'audio';
+  start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean;
+  fadeIn:number; fadeOut:number;
+};
+export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
+export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]};
+export type Tool = 'select'|'split'|'slip';
+export const uid = () => crypto.randomUUID();
+export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration));
+export const clamp = (v:number,min:number,max:number) => Math.max(min,Math.min(max,v));
+export const seconds = (f:number) => f/FPS;
+export const time = (frames:number, precise=false) => {
+  const s=Math.max(0,frames)/FPS; const m=Math.floor(s/60);
+  return `${String(m).padStart(2,'0')}:${String(Math.floor(s)%60).padStart(2,'0')}${precise?'.'+String(Math.floor((s%1)*100)).padStart(2,'0'):''}`;
+};
+export const maxDuration = (c:Clip, a:Asset) => Math.max(1,Math.floor((a.frames-c.sourceIn)/c.rate));
+export function splitClip(c:Clip,at:number,newId:string):Clip[] {
+  const offset=at-c.start;
+  if(offset<1||offset>=c.duration)return [c];
+  return [{...c,duration:offset,fadeOut:0},{...c,id:newId,start:at,duration:c.duration-offset,sourceIn:c.sourceIn+offset*c.rate,fadeIn:0}];
+}
+export function trimClip(c:Clip,delta:number,edge:'left'|'right',a:Asset):Clip {
+  if(edge==='left') {
+    const d=clamp(Math.round(delta),Math.max(-c.start,Math.ceil(-c.sourceIn/c.rate)),c.duration-1);
+    return {...c,start:c.start+d,sourceIn:c.sourceIn+d*c.rate,duration:c.duration-d};
+  }
+  return {...c,duration:clamp(c.duration+Math.round(delta),1,maxDuration(c,a))};
+}
+export function slipClip(c:Clip,delta:number,a:Asset):Clip {
+  return {...c,sourceIn:clamp(c.sourceIn+Math.round(delta)*c.rate,0,Math.max(0,a.frames-c.duration*c.rate))};
+}
+export function setClipRate(c:Clip,rate:number,a:Asset):Clip {
+  const desired=Math.max(1,Math.round(c.duration*c.rate/rate));
+  const available=Math.max(1,Math.floor((a.frames-c.sourceIn)/rate));
+  return {...c,rate,duration:Math.min(desired,available)};
+}
+export function snapFrame(value:number,points:number[],threshold:number):number {
+  let closest=value,dist=threshold;
+  for(const p of points)if(Math.abs(value-p)<dist){dist=Math.abs(value-p);closest=p;}
+  return Math.round(closest);
+}
+export function gainAt(c:Clip,frame:number):number {
+  if(c.muted)return 0;
+  return c.volume*Math.min(c.fadeIn?clamp(frame/c.fadeIn,0,1):1,c.fadeOut?clamp((c.duration-1-frame)/c.fadeOut,0,1):1);
+}
