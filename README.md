@@ -170,6 +170,8 @@ New imports are copied directly into their project folder.
 - The 50% WAV volume test measured 50.5% initial gain and 3.7% gain in the last
   100 ms of a one-second fade-out. The exported WAV duration was exactly 2 seconds.
 - Audio extraction and byte-range media delivery were checked against the reel.
+- The project picker was checked for thumbnail display, separate creation/copy
+  forms, and reopening a folder with a `~/` path, in light and charcoal themes.
 - Project reopening, MCP creation/trim/opening, stale-edit rejection, and a
   one-second MP4 export were verified end to end.
 - Light surfaces use pure white and neutral grays; the desktop header is 56px.
@@ -186,6 +188,8 @@ Inspected through the Mobbin connection:
 
 - [VEED: preview and timeline hierarchy](https://mobbin.com/screens/22b074f5-6547-4836-8cf0-39e064764f70)
 - [Vimeo: filmstrip timeline and contextual controls](https://mobbin.com/screens/d0fbb38f-14c9-42c6-a8d1-0ab79529856c)
+- [VEED: visual project library](https://mobbin.com/screens/f6dcf4e8-1233-4b22-b8a7-5dfc114d1750)
+- [v0: project preview and contextual actions (structure only)](https://mobbin.com/screens/ff0d6ceb-2856-42ff-9e7e-086907c33878)
 
 The interface adapts their hierarchy into a smaller editing surface. No reference
 screens or stock media are included in the app.

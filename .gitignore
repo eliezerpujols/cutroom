@@ -29,3 +29,6 @@ projects/
 *.jpeg
 *.png
 *.webp
+
+# Local visual review embeds private project screenshots.
+docs/project-dialog-comparison.html

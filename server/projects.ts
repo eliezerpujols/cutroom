@@ -7,7 +7,7 @@ import {absoluteDirectory} from './paths';
 
 type Entry={id:string;folder:string;name:string};
 type Registry={version:1;activeProjectId:string;legacyProjectId:string;entries:Entry[]};
-export type ProjectSummary=Entry&{updatedAt:string;revision:number;available:boolean;missingCount:number};
+export type ProjectSummary=Entry&{updatedAt:string;revision:number;available:boolean;missingCount:number;previewUrl:string|null;durationFrames:number};
 export async function atomicJson(file:string,value:unknown){await fs.mkdir(path.dirname(file),{recursive:true});const temp=file+'.'+randomUUID()+'.tmp';await fs.writeFile(temp,JSON.stringify(value,null,2));await fs.rename(temp,file);}
 const exists=async(file:string)=>fs.access(file).then(()=>true,()=>false);
 export function within(folder:string,relative:string){const result=path.resolve(folder,relative);if(path.isAbsolute(relative)||!result.startsWith(path.resolve(folder)+path.sep))throw new Error('Project media paths must stay inside their folder.');return result;}
@@ -66,7 +66,7 @@ export class ProjectStore{
   entry(id:string){const e=this.registry.entries.find(e=>e.id===id);if(!e)throw new Error('Project not found.');return e;}
   async read(id:string):Promise<ProjectDocument>{const e=this.entry(id);try{const d=documentSchema.parse(JSON.parse(await fs.readFile(path.join(e.folder,'project.cutroom'),'utf8')));if(d.id!==id)throw new Error('Project identity does not match its folder.');validateProject(d.project,d.assets);return d;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')throw new Error('The project folder could not be found. Open its .cutroom file from the new location.');throw error;}}
   async assetPath(id:string,relative:string){const folder=this.entry(id).folder;const file=within(folder,relative);if(await exists(file)){const real=await fs.realpath(file),realFolder=await fs.realpath(folder);if(!real.startsWith(realFolder+path.sep))throw new Error('Project media cannot point outside the project folder.');}return file;}
-  async list():Promise<ProjectSummary[]>{return Promise.all(this.registry.entries.map(async e=>{try{const d=await this.read(e.id);let missingCount=0;for(const a of d.assets)if(!await exists(await this.assetPath(e.id,a.file)))missingCount++;return {...e,name:d.project.name,updatedAt:d.updatedAt,revision:d.revision,available:true,missingCount};}catch{return {...e,updatedAt:'',revision:0,available:false,missingCount:0};}}));}
+  async list():Promise<ProjectSummary[]>{return Promise.all(this.registry.entries.map(async e=>{try{const d=await this.read(e.id);let missingCount=0;for(const a of d.assets)if(!await exists(await this.assetPath(e.id,a.file)))missingCount++;const clip=d.project.clips.find(c=>c.kind==='video'),cover=d.assets.find(a=>a.id===clip?.assetId);return {...e,name:d.project.name,updatedAt:d.updatedAt,revision:d.revision,available:true,missingCount,previewUrl:cover?.thumbnails.length?`/api/projects/${e.id}/thumbs/${cover.id}/0`:null,durationFrames:Math.max(0,...d.project.clips.map(c=>c.start+c.duration))};}catch{return {...e,updatedAt:'',revision:0,available:false,missingCount:0,previewUrl:null,durationFrames:0};}}));}
   async workspace(id=this.activeId()){
     const d=await this.read(id),folder=this.entry(id).folder;
     const assets=await Promise.all(d.assets.map(async a=>{const {file,...rest}=a;return {...rest,url:`/api/projects/${id}/media/${a.id}`,extension:path.extname(file).slice(1),thumbnails:a.thumbnails.map((_,i)=>`/api/projects/${id}/thumbs/${a.id}/${i}`),missing:!await exists(await this.assetPath(id,file))};}));
@@ -92,7 +92,7 @@ export class ProjectStore{
   async activate(id:string){await this.read(id);await this.lock('registry',async()=>{this.registry.activeProjectId=id;await atomicJson(this.registryFile,this.registry);});}
   async resolve(project:string):Promise<string>{
     const direct=this.registry.entries.find(e=>e.id===project);if(direct)return direct.id;
-    if(path.isAbsolute(project))return this.registerFile(project);
+    if(path.isAbsolute(project)||project.startsWith('~/'))return this.registerFile(absoluteDirectory(project));
     const matches=(await this.list()).filter(e=>e.name.toLocaleLowerCase()===project.toLocaleLowerCase());
     if(matches.length===1)return matches[0].id;if(matches.length>1)throw new Error('Several projects have that name. Choose a project ID from the project list.');throw new Error('Project not found. Choose a saved project or provide its .cutroom file path.');
   }
