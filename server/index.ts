@@ -13,6 +13,8 @@ import {projectSchema,validateProject} from './schema';
 import {mediaEngine} from './media';
 import {defaultProjectsDirectory} from './paths';
 import {chooseProjectFile} from './projectPicker';
+import {dubbingEngine} from './dubbing';
+import {integrationSettings} from './integrations';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
@@ -26,11 +28,17 @@ const media=mediaEngine(root,store);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 const clients=new Map<string,express.Response>();let focusedClient='';
-function publish(event:Record<string,unknown>){const target=clients.get(focusedClient)||[...clients.values()].at(-1);target?.write(`data: ${JSON.stringify(event)}\n\n`);}
+function publish(event:Record<string,unknown>){const target=clients.get(focusedClient)||[...clients.values()].at(-1);if(!target)return false;target.write(`data: ${JSON.stringify(event)}\n\n`);return true;}
+const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{await store.activate(projectId);return publish({type:'open-project',projectId,revision});});
+app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
+app.post('/api/dubbing/prepare',async(req,res)=>{const result=await dubbing.prepare(req.body);res.status(result.status==='prepared'?201:200).json(result);});
+app.get('/api/dubbing/jobs',async(req,res)=>res.json(await dubbing.list(req.query.projectId?z.string().uuid().parse(req.query.projectId):undefined)));
+app.get('/api/projects/:id/dubbing/:jobId',async(req,res)=>res.json(await dubbing.get(String(req.params.id),String(req.params.jobId))));
+app.post('/api/projects/:id/dubbing/:jobId/start',async(req,res)=>res.status(202).json(await dubbing.start(String(req.params.id),String(req.params.jobId),req.body)));
 app.get('/api/events',(req,res)=>{const id=String(req.query.clientId||randomUUID());res.setHeader('Content-Type','text/event-stream');res.setHeader('Cache-Control','no-cache');res.setHeader('Connection','keep-alive');res.flushHeaders();clients.set(id,res);focusedClient=id;res.write(': connected\n\n');const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000);req.on('close',()=>{clearInterval(heartbeat);clients.delete(id);});});
 app.post('/api/focus',(req,res)=>{if(clients.has(req.body.clientId))focusedClient=req.body.clientId;res.json({ok:true});});
 app.get('/api/projects',async(_req,res)=>res.json({projects:await store.list(),activeProjectId:store.activeId(),projectsRoot:store.managedRoot}));

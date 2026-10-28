@@ -1,13 +1,21 @@
 ---
 name: cutroom
-description: Create, reopen, edit, and export local Cutroom video projects through its MCP server. Use when the user wants a video prepared in Cutroom or asks to trim, split, slip, adjust audio, or reopen an existing Cutroom project.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, and open the result in Cutroom. Also create, reopen, edit, and export local Cutroom projects through its MCP, including trim, split, slip, audio adjustment, and moving clip selections together.
 ---
 
-# Cutroom editing
+# Cutroom
 
-Use the `cutroom` MCP to prepare the edit and open the project in the local editor.
-Cutroom handles existing video/audio; dubbing, translation and lip sync need a
-separate integration and are not included in these tools.
+Use the `cutroom` MCP to prepare the video and open its project in the local editor.
+For translation, dubbing or lip sync, read [the dubbing workflow](references/dubbing.md).
+The user can provide a video and target language in one request; complete the
+provider workflow and open its finished result. Existing provider keys are loaded
+from the local ignored environment, never from prompts or tool arguments.
+
+English should sound natural and idiomatic, with B2 as the user's preferred
+writing style. Automatic ElevenLabs dubbing cannot enforce a B2 script; explain
+that limitation without claiming exact control. Use adapted mode when explicit
+control of the translated text is requested; its Enterprise requirement is checked
+before any generation. Do not silently replace an explicitly required mode.
 
 ## Project location
 
@@ -102,4 +110,6 @@ Use the checkout's README for installation. The MCP entry point is
 `codex mcp add cutroom -- /bin/zsh <absolute-launcher-path>`. A new Codex session
 may be needed after registration. Run from the checkout with Node 22.12+,
 `npm ci`, `npm run build`, and FFmpeg installed or `FFMPEG_PATH` configured.
-Do not request generation API keys: Cutroom's local editing uses no such service.
+Local editing needs no provider keys. For dubbing, check `integration_status`;
+reuse configured `ELEVENLABS_API_KEY` and `SYNC_API_KEY` without asking again.
+Only report a missing variable when the tool actually says it is missing.

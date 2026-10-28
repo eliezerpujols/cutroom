@@ -3,6 +3,8 @@
 A small local video and audio editor built with React and Remotion. Trim, split,
 slip, adjust audio independently, and export existing footage without uploading
 it to a cloud editor. Includes a local MCP server and a Codex skill.
+The MCP can also translate and dub footage with ElevenLabs, apply Sync lip sync,
+and open the finished result as an editable local project.
 
 ## Install
 
@@ -18,7 +20,8 @@ npm run build
 ```
 
 `FFMPEG_PATH` is optional when `ffmpeg` is on PATH. The `.env` file is loaded by
-the npm server/MCP commands and macOS launchers. No API keys are required.
+the npm server/MCP commands and macOS launchers. Local editing requires no API
+keys; the optional dubbing workflow uses the provider variables described below.
 On first render Remotion downloads its rendering browser.
 
 ## Open
@@ -29,8 +32,9 @@ Double-click **Start Cutroom.command**, or run:
 npm start
 ```
 
-Open **http://127.0.0.1:4317**. The server listens on this computer only. The app
-does not call ElevenLabs or Sync, and does not use their keys or credits.
+Open **http://127.0.0.1:4317**. The server listens on this computer only. Local
+editing and export use no external generation credits. A requested MCP dubbing
+workflow sends its source to ElevenLabs and, for lip sync, sends video/audio to Sync.
 
 ## Projects
 
@@ -84,13 +88,14 @@ folder; it does not create a new project or relocate it.
 
 Register the local `cutroom` MCP server with the command below, using your
 checkout path. Restart Codex or open a new chat if its tools do not appear in an
-existing session. No API key is needed.
+existing session. The local MCP connection needs no separate API key.
 
 Example requests:
 
 - “Abre el proyecto Reel 2 · English en Cutroom.”
 - “Crea un proyecto con este video, recorta el primer segundo y ábrelo aquí.”
 - “Haz una copia de Reel 2, baja el audio al 80% y exporta un MP4.”
+- “$cutroom Traduce este video al inglés con lip sync y ábrelo cuando termine.”
 
 The MCP exposes project listing, creation, opening, local media import, timeline
 edits, audio extraction, export and export status. Reads include clip IDs and the
@@ -116,6 +121,37 @@ above so it reliably sets its own working directory.
 
 Manual server: `npm start` (keep its terminal open; stop with Control-C).
 The launcher and MCP can also start the server in the background.
+
+## Translation and dubbing through MCP
+
+Configure `ELEVENLABS_API_KEY` and `SYNC_API_KEY` in the ignored local `.env`.
+The launcher/server reuse them automatically; keys are never exposed by tools,
+included in the frontend, stored in projects or committed. Keep the file private
+(`chmod 600 .env`). No separate OpenAI API key is required.
+
+The added tools are `integration_status`, `prepare_dubbing`, `start_dubbing`,
+`get_dubbing_job`, and `list_dubbing_jobs`. Preparation checks account limits and
+cost without a paid generation. Starting runs the full dub and optional lip sync,
+downloads the result, imports video and audio as separate editable clips, and
+opens a new project. Jobs survive restarts under each project's `dubbing/` folder;
+resume the same IDs to avoid duplicate charges. The original edit is preserved.
+
+The defaults stop before exceeding **10,000 ElevenLabs credits** or the separate
+**US$3 Sync** limit per video. Sync is quoted live; ElevenLabs uses a conservative
+local credit estimate at 13,500 credits/minute plus a 500-credit reserve. This is
+not a guaranteed provider quote. Configure another rate only after verifying the
+account's billing basis. Increasing limits requires user approval. The workflow
+does not buy credits, change plans, enable overage or silently shorten the video.
+Watermark-free output requires a paid ElevenLabs plan and a verified Creator,
+Growth, Scale or Enterprise Sync plan.
+
+Automatic mode uses ElevenLabs Dubbing v2 translation and preserves the speaker's
+voice. It has no B2/CEFR parameter. For explicit control of adapted text, the
+`adapted` mode lets the agent translate timed source segments before dubbing and
+requires ElevenLabs Enterprise; unsupported access is blocked before spending.
+See [the full workflow](.agents/skills/cutroom/references/dubbing.md) for recovery,
+spending limits and current provider documentation. Reconnect the MCP or reopen
+the Codex chat after updating to discover its new tools.
 
 ## Edit
 
@@ -194,6 +230,14 @@ New imports are copied directly into their project folder.
   editing session was left untouched for user testing.
 - Box selection and group movement were prepared without running tests, builds,
   or browser checks, at the user's request. The active editor was not reloaded.
+  The user subsequently authorized compilation/restart, and the updated UI was
+  built and served without exercising timeline controls.
+- Preview video sequences now premount the next clip and pause the playback clock
+  while media buffers. This addresses loading gaps at exact adjoining cuts
+  without shifting saved clips. No playback test was performed on the active edit.
+- The new dubbing integration was not executed against either provider; no test
+  generation or paid request was submitted. Compilation is separate from runtime
+  validation of provider access, billing and generated output.
 - Browser checks cover playback, trim handles, slip dragging, splitting, undo,
   theme switching, narrow layout and the export/download flow.
 - Real Remotion MP4, WAV and MP3 exports were generated and decoded successfully.
