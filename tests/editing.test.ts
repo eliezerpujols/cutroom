@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {splitClip,trimClip,slipClip,setClipRate,gainAt,type Clip,type Asset} from '../src/model';
+import {splitClip,splitTarget,trimClip,slipClip,setClipRate,gainAt,type Clip,type Asset,type Project} from '../src/model';
 const asset:Asset={id:'source',name:'source',kind:'video',frames:600,duration:20,width:1080,height:1920,hasAudio:true,url:'',peaks:[],thumbnails:[]};
 const clip:Clip={id:'clip',assetId:asset.id,kind:'video',name:'clip',trackId:'video',start:30,duration:120,sourceIn:60,rate:2,volume:.8,muted:false,fadeIn:0,fadeOut:0};
 test('a split preserves source continuity for a trimmed, accelerated clip',()=>{
@@ -8,6 +8,33 @@ test('a split preserves source continuity for a trimmed, accelerated clip',()=>{
   assert.equal(left.sourceIn+left.duration*left.rate,right.sourceIn);
   assert.equal(left.duration+right.duration,clip.duration);
   assert.equal(right.sourceIn+right.duration*right.rate,clip.sourceIn+clip.duration*clip.rate);
+});
+const project=(clips:Clip[]):Project=>({version:1,name:'Edit',width:1080,height:1920,fps:30,tracks:[],clips});
+test('splitting targets the selected clip and does not silently change to another track',()=>{
+  const audio:Clip={...clip,id:'audio',kind:'audio',trackId:'audio'};
+  const p=project([clip,audio]);
+  assert.equal(splitTarget(p,'audio',75)?.id,'audio');
+  assert.equal(splitTarget(project([clip,{...audio,start:0,duration:300}]),clip.id,200),null);
+  const result=p.clips.flatMap(c=>c.id===audio.id?splitClip(c,75,'right'):[c]);
+  assert.deepEqual(result[0],clip);assert.equal(result.length,3);
+});
+test('without a selection split chooses the visible top video, then audio in video gaps',()=>{
+  const background={...clip,id:'background',start:0,duration:300};
+  const overlay={...clip,id:'overlay',start:50,duration:100};
+  const audio:Clip={...clip,id:'audio',kind:'audio',start:0,duration:500};
+  const p=project([background,overlay,audio]);
+  assert.equal(splitTarget(p,null,75)?.id,'overlay');
+  assert.equal(splitTarget(p,'removed-by-undo',75)?.id,'overlay');
+  assert.equal(splitTarget(p,null,200)?.id,'background');
+  assert.equal(splitTarget(p,null,350)?.id,'audio');
+});
+test('split is unavailable at clip boundaries, empty timelines and uncovered gaps',()=>{
+  const p=project([clip]);
+  for(const at of [0,clip.start,clip.start+clip.duration,500])assert.equal(splitTarget(p,null,at),null);
+  assert.equal(splitTarget(project([]),null,75),null);
+  const background={...clip,id:'background',start:0,duration:300};
+  const overlay={...clip,id:'overlay',start:50,duration:100};
+  assert.equal(splitTarget(project([background,overlay]),null,50),null);
 });
 test('left trim keeps the remaining content at the same absolute timeline time',()=>{
   const c=trimClip(clip,20,'left',asset);const absolute=100;

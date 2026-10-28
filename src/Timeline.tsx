@@ -1,9 +1,9 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
-import {FPS,clamp,endFrame,time,trimClip,slipClip,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
+import {FPS,clamp,endFrame,time,trimClip,slipClip,splitTarget,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={project:Project;assets:Asset[];selected:string|null;select:(id:string|null)=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:(id:string,at:number)=>void;add:(id:string,at:number,trackId?:string)=>void;showShortcuts:()=>void;};
+type Props={project:Project;assets:Asset[];selected:string|null;select:(id:string|null)=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;showShortcuts:()=>void;};
 export function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
   const count=240;
   return <svg className="waveform" viewBox={`0 0 ${count*3} 48`} preserveAspectRatio="none" aria-hidden="true">{Array.from({length:count},(_,i)=>{
@@ -23,14 +23,16 @@ export function Timeline(props:Props){
   const rulerStep=ppf*FPS<25?120:ppf*FPS<70?60:30;
   const selectedClip=project.clips.find(c=>c.id===selected);
   const selectedAsset=assets.find(a=>a.id===selectedClip?.assetId);
-  const noSlipRoom=!!selectedClip&&!!selectedAsset&&selectedAsset.frames-selectedClip.duration*selectedClip.rate<1;
+  const canSlip=!!selectedClip&&!!selectedAsset&&selectedAsset.frames-selectedClip.duration*selectedClip.rate>=1;
+  const canSplit=!!splitTarget(project,selected,frame);
+  const splitHint=canSplit?'Split at the playhead · S or ⌘B':selectedClip?'Move the playhead inside the selected clip to split.':'Move the playhead inside a clip to split.';
+  const slipHint=!selectedClip?'Select a clip to change its source content.':!canSlip?'Trim this clip first to make room for a slip edit.':'Slip source content · Y. Drag inside the clip; its position stays fixed.';
   function pointerFrame(clientX:number){const rect=board.current!.getBoundingClientRect();return clamp(Math.round((clientX-rect.left-132)/ppf),0,length-1);}
   function scrub(e:React.PointerEvent){if(e.button!==0)return;e.preventDefault();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
     const move=(ev:PointerEvent)=>seek(pointerFrame(ev.clientX));const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});}
   function drag(e:React.PointerEvent,c:Clip,edge?:'left'|'right'){
     if(e.button!==0)return;e.stopPropagation();e.preventDefault();select(c.id);
-    if(tool==='split'&&!edge){split(c.id,pointerFrame(e.clientX));return;}
-    const a=assets.find(a=>a.id===c.assetId)!;const x=e.clientX;let started=false;
+    const a=assets.find(a=>a.id===c.assetId)!;if(tool==='slip'&&!edge&&a.frames-c.duration*c.rate<1)return;const x=e.clientX;let started=false;
     const points=[0,frame,...project.clips.filter(v=>v.id!==c.id).flatMap(v=>[v.start,v.start+v.duration])];
     const move=(ev:PointerEvent)=>{
       if(!started&&Math.abs(ev.clientX-x)<2)return;
@@ -45,9 +47,11 @@ export function Timeline(props:Props){
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});window.addEventListener('pointercancel',finish,{once:true});
   }
   return <section className="timeline" aria-label="Editing timeline"><div className="timeline-toolbar"><div className="tool-group" role="toolbar" aria-label="Timeline tools">
-    {([{id:'select',icon:MousePointer2,label:'Select · V'},{id:'split',icon:Scissors,label:'Split · S'},{id:'slip',icon:BetweenHorizontalStart,label:'Slip · Y'}] as const).map(({id,icon:Icon,label})=><IconButton key={id} label={label} aria-pressed={tool===id} className={tool===id?'active':''} onClick={()=>setTool(id)}><Icon size={17}/></IconButton>)}
+    <Tip label="Move clips · V. Drag a clip to move it; drag its edges to trim."><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='select'?'active':'')} aria-label="Move clips · V" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/><span>Move</span></Button></Tip>
+    <Tip label={splitHint}><span className="tool-tip-anchor"><Button variant="outline" size="sm" className="timeline-tool split-action" aria-label="Split at playhead · S" disabled={!canSplit} onClick={split}><Scissors size={16}/><span>Split</span></Button></span></Tip>
+    <Tip label={slipHint}><span className="tool-tip-anchor"><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='slip'?'active':'')} aria-label="Slip source content · Y" aria-pressed={tool==='slip'} disabled={!canSlip} onClick={()=>setTool('slip')}><BetweenHorizontalStart size={16}/><span>Slip</span></Button></span></Tip>
     <span className="toolbar-divider"/><IconButton label="Snap to clip edges" aria-pressed={snapping} className={snapping?'snap-active':''} onClick={()=>setSnapping(v=>!v)}><Magnet size={16}/></IconButton>
-  </div><span className="timeline-guidance">{tool==='slip'?(noSlipRoom?'Trim a clip first to make room for a slip edit.':'Slide the content inside a clip. Its position stays put.'):tool==='split'?'Click a clip where you want to cut.':'Drag edges to trim. Drag a clip to move it.'}</span>
+  </div><span className="timeline-guidance">{tool==='slip'?'Drag inside the clip to change its source content.':!project.clips.length?'Add media to start editing.':!canSplit?splitHint:'Drag clips to move. Drag edges to trim.'}</span>
   <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>setZoom(v=>Math.max(.5,v-.25))}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={.5} max={5} step={.1} value={[zoom]} onValueChange={([v])=>setZoom(v)}/><IconButton label="Zoom in" onClick={()=>setZoom(v=>Math.min(5,v+.25))}><Plus size={15}/></IconButton><IconButton label="Fit timeline" onClick={()=>setZoom(1)}><Scan size={16}/></IconButton></div></div>
   <div className="timeline-scroll" ref={viewport}><div className="timeline-board" ref={board} style={{width:width+132}}>
     <div className="ruler-row"><div className="ruler-label">TIMELINE <span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>

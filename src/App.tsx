@@ -5,7 +5,7 @@ import {Button,IconButton,TooltipProvider,Slider,Input,Dialog,DialogContent,Drop
 import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
 import {api,useEditor} from './useEditor';
-import {FPS,uid,time,endFrame,clamp,splitClip,slipClip,setClipRate,maxDuration,type Asset,type Clip,type Project,type Tool} from './model';
+import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,slipClip,setClipRate,maxDuration,type Asset,type Clip,type Project,type Tool} from './model';
 
 import {ProjectShell,type ProjectControls} from './ProjectShell';
 import {restoredProject,useProjectSave,type Workspace} from './useProjectSave';
@@ -35,21 +35,36 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const seek=useCallback((f:number)=>{player.current?.pause();if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);seekRequest.current=requestAnimationFrame(()=>{player.current?.seekTo(f);setFrame(f);seekRequest.current=undefined;});},[]);
   useEffect(()=>()=>{if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);if(noticeTimer.current)clearTimeout(noticeTimer.current);},[]);
   const updateClip=(values:Partial<Clip>,record=true)=>{if(!clip)return;edit(p=>({...p,clips:p.clips.map(c=>c.id===clip.id?{...c,...values}:c)}),record);};
-  const split=useCallback((id:string,at:number)=>{const c=current.current.clips.find(c=>c.id===id);if(!c||at<=c.start||at>=c.start+c.duration){toast('Place the playhead inside the clip to split it.');return;}const id2=uid();edit(p=>({...p,clips:p.clips.flatMap(c=>c.id===id?splitClip(c,at,id2):[c])}));setSelected(id2);},[current,edit,toast]);
+  const split=useCallback(()=>{
+    player.current?.pause();const at=player.current?.getCurrentFrame()??frame;
+    const target=splitTarget(current.current,selected,at);
+    if(!target){toast('Move the playhead inside '+(current.current.clips.some(c=>c.id===selected)?'the selected clip':'a clip')+' to split it.');return;}
+    const rightId=uid();edit(p=>({...p,clips:p.clips.flatMap(c=>c.id===target.id?splitClip(c,at,rightId):[c])}));
+    setSelected(rightId);setTool('select');setFrame(at);toast('Clip split at '+time(at,true)+'.');
+  },[current,edit,frame,selected,toast]);
+  const changeTool=useCallback((next:Tool)=>{
+    if(next==='slip'){
+      const c=current.current.clips.find(c=>c.id===selected),a=assets.find(a=>a.id===c?.assetId);
+      if(!c||!a){toast('Select a clip to adjust its source content.');return;}
+      if(a.frames-c.duration*c.rate<1){toast('Trim the clip first, then use Slip to change which part of the source it shows.');return;}
+    }
+    setTool(next);
+  },[assets,current,selected,toast]);
+  useEffect(()=>{if(tool==='slip'&&(!clip||!asset||asset.frames-clip.duration*clip.rate<1))setTool('select');},[asset,clip,tool]);
   const remove=useCallback(()=>{if(!selected)return;edit(p=>({...p,clips:p.clips.filter(c=>c.id!==selected)}));setSelected(null);},[edit,selected]);
   const duplicate=()=>{if(!clip)return;const copy={...clip,id:uid(),start:clip.start+clip.duration};edit(p=>({...p,clips:[...p.clips,copy]}));setSelected(copy.id);toast('Clip duplicated.');};
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{
     if(exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
     const target=e.target as HTMLElement;if(target.closest('input,textarea,select,summary,[contenteditable="true"],[role="slider"],[role="menu"],[role="menuitem"]'))return;
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
-    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();if(selected)split(selected,frame);return;}
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();if(!e.repeat)split();return;}
     if(e.metaKey||e.ctrlKey||e.altKey)return;
     if(e.code==='Space'&&!target.closest('button')){e.preventDefault();player.current?.toggle();}
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?30:1),0,duration-1));}
     if(e.key==='Home'){e.preventDefault();seek(0);}if(e.key==='End'){e.preventDefault();seek(duration-1);}
-    if(e.key.toLowerCase()==='v')setTool('select');if(e.key.toLowerCase()==='s')setTool('split');if(e.key.toLowerCase()==='y')setTool('slip');
+    if(e.key.toLowerCase()==='v')changeTool('select');if(e.key.toLowerCase()==='s'){e.preventDefault();if(!e.repeat)split();}if(e.key.toLowerCase()==='y'&&!e.repeat)changeTool('slip');
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}if(e.key==='Escape'){setSelected(null);setTool('select');}
-  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[duration,exportOpen,frame,helpOpen,redo,remove,seek,selected,split,undo]);
+  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[changeTool,duration,exportOpen,frame,helpOpen,redo,remove,seek,selected,split,undo]);
   async function importFiles(files:File[]){if(!files.length)return;setImporting(true);const form=new FormData();for(const file of files)form.append('files',file);
     try{const result=await api<{assets:Asset[]}>(`/api/import?projectId=${initial.projectId}`,{method:'POST',body:form});setAssets(prev=>[...prev,...result.assets.filter(a=>!prev.some(p=>p.id===a.id))]);toast(`${result.assets.length===1?'File':'Files'} added to your media.`);setMediaOpen(true);}catch(e){toast((e as Error).message);}finally{setImporting(false);if(fileInput.current)fileInput.current.value='';}}
   const add=useCallback((assetId:string,at:number,requestedTrack?:string)=>{const a=assets.find(a=>a.id===assetId);if(!a||a.missing)return;
@@ -102,7 +117,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       </section>
       <aside className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{clip?'Clip settings':'Make it yours'}</h2></div>
         {clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
-          <div className="inspector-section"><div className="section-title"><h3>Timing</h3><span>seconds</span></div><div className="field-grid"><NumberField label="Position" value={clip.start/FPS} onChange={v=>updateClip({start:Math.max(0,Math.round(v*FPS))})}/><NumberField label="Duration" value={clip.duration/FPS} min={1/FPS} max={maxDuration(clip,asset)/FPS} onChange={v=>updateClip({duration:clamp(Math.round(v*FPS),1,maxDuration(clip,asset))})}/></div><div className="clip-actions"><Button variant="outline" size="sm" onClick={()=>split(clip.id,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
+          <div className="inspector-section"><div className="section-title"><h3>Timing</h3><span>seconds</span></div><div className="field-grid"><NumberField label="Position" value={clip.start/FPS} onChange={v=>updateClip({start:Math.max(0,Math.round(v*FPS))})}/><NumberField label="Duration" value={clip.duration/FPS} min={1/FPS} max={maxDuration(clip,asset)/FPS} onChange={v=>updateClip({duration:clamp(Math.round(v*FPS),1,maxDuration(clip,asset))})}/></div><div className="clip-actions"><Button variant="outline" size="sm" onClick={split} disabled={!splitTarget(project,selected,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
           <div className="inspector-section"><div className="section-title"><h3>{clip.kind==='video'?'Clip audio':'Volume'}</h3><IconButton label={clip.muted?'Unmute clip':'Mute clip'} aria-pressed={clip.muted} onClick={()=>updateClip({muted:!clip.muted})}>{clip.muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</IconButton></div><div className="volume-control"><Slider label="Clip volume" min={0} max={2} step={.01} value={[clip.volume]} onPointerDown={checkpoint} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))checkpoint();}} onValueChange={([v])=>updateClip({volume:v,muted:false},false)}/><span>{clip.muted?'Muted':Math.round(clip.volume*100)+'%'}</span></div>
             {clip.kind==='video'&&clip.muted&&<p className="field-hint">Embedded sound is muted. Your separate audio track still plays.</p>}
             <div className="field-grid fade-fields"><NumberField label="Fade in" value={clip.fadeIn/FPS} max={clip.duration/FPS} onChange={v=>updateClip({fadeIn:clamp(Math.round(v*FPS),0,clip.duration)})}/><NumberField label="Fade out" value={clip.fadeOut/FPS} max={clip.duration/FPS} onChange={v=>updateClip({fadeOut:clamp(Math.round(v*FPS),0,clip.duration)})}/></div>
@@ -113,12 +128,12 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
         </>:<div className="inspector-empty"><SlidersHorizontal size={28} strokeWidth={1.3}/><h3>One clip at a time.</h3><p>Select a clip to adjust its timing, volume, and fades.</p><span className="keyboard-tip"><kbd>V</kbd> Select <kbd>S</kbd> Split <kbd>Y</kbd> Slip</span></div>}
       </aside>
     </main>
-    <Timeline project={project} assets={assets} selected={selected} select={setSelected} frame={frame} seek={seek} tool={tool} setTool={setTool} edit={edit} checkpoint={checkpoint} split={split} add={add} showShortcuts={()=>setHelpOpen(true)}/>
+    <Timeline project={project} assets={assets} selected={selected} select={setSelected} frame={frame} seek={seek} tool={tool} setTool={changeTool} edit={edit} checkpoint={checkpoint} split={split} add={add} showShortcuts={()=>setHelpOpen(true)}/>
     {notice&&<div className="toast" role="status"><Check size={16}/><span>{notice}</span><button aria-label="Dismiss message" onClick={()=>setNotice('')}><X size={15}/></button></div>}
     <Dialog open={exportOpen} onOpenChange={setExportOpen}><DialogContent title={job?.status==='completed'?'Ready for its next chapter.':'Export your edit'} description={job?.status==='completed'?'Your file is saved on this computer.':'Rendered locally. Your source files stay exactly as they are.'}>
       {!job||job.status==='failed'?<><div className="export-formats">{([{id:'mp4',label:'Video',sub:'MP4',icon:Film},{id:'wav',label:'Audio',sub:'WAV',icon:AudioLines},{id:'mp3',label:'Audio',sub:'MP3',icon:Music2}] as const).map(({id,label,sub,icon:Icon})=><button key={id} className={`format-option ${format===id?'chosen':''}`} aria-pressed={format===id} onClick={()=>setFormat(id)}><Icon size={22}/><span>{label}</span><small>{sub}</small>{format===id&&<Check className="format-check" size={13}/>}</button>)}</div><div className="export-summary"><span>Duration</span><strong>{time(selectionOnly&&clip?clip.duration:duration,true)}</strong>{format==='mp4'&&<><span>Resolution</span><strong>{project.width} × {project.height}</strong></>}<span>Location</span><strong>Local exports folder</strong></div>{clip&&<label className="checkbox-label"><input type="checkbox" checked={selectionOnly} onChange={e=>setSelectionOnly(e.target.checked)}/>Selected time range only <span>{time(clip.start)}–{time(clip.start+clip.duration)}</span></label>}{job?.error&&<p className="inline-error" role="alert">{job.error}</p>}<Button className="export-submit" onClick={()=>void startExport()}><ArrowUpRight size={17}/>Export {displayFormat}</Button></>:job.status==='completed'?<><div className="export-success"><Check size={30}/></div><div className="export-filename">{job.filename}</div><a className="button button-primary export-submit" href={job.url} download><Download size={17}/>Download {displayFormat}</a><p className="export-path">{initial.exportsDir}</p></>:<div className="export-progress"><LoaderCircle className="spin" size={30}/><h3>{job.status==='queued'?'Preparing your export…':'Putting it all together…'}</h3><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.progress*100)}><div style={{width:`${Math.max(2,job.progress*100)}%`}}/></div><p>{Math.round(job.progress*100)}% · You can keep editing while this finishes.</p></div>}
     </DialogContent></Dialog>
-    <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent title="A few handy shortcuts" description="Small shortcuts, a little more flow."><div className="shortcuts-list">{[['Play / pause','Space'],['Move one frame','← / →'],['Move one second','Shift + ← / →'],['Select / Split / Slip','V / S / Y'],['Split selected clip','⌘ / Ctrl + B'],['Undo','⌘ / Ctrl + Z'],['Redo','Shift + ⌘ / Ctrl + Z'],['Delete clip','Backspace'],['Temporarily disable snapping','Hold Shift while dragging']].map(([l,k])=><div key={l}><span>{l}</span><kbd>{k}</kbd></div>)}</div></DialogContent></Dialog>
+    <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent title="A few handy shortcuts" description="Small shortcuts, a little more flow."><div className="shortcuts-list">{[['Play / pause','Space'],['Move one frame','← / →'],['Move one second','Shift + ← / →'],['Move clips','V'],['Split at playhead','S or ⌘ / Ctrl + B'],['Slip source content','Y'],['Undo','⌘ / Ctrl + Z'],['Redo','Shift + ⌘ / Ctrl + Z'],['Delete clip','Backspace'],['Temporarily disable snapping','Hold Shift while dragging']].map(([l,k])=><div key={l}><span>{l}</span><kbd>{k}</kbd></div>)}</div></DialogContent></Dialog>
   </div>;
 }
 function NumberField({label,value,onChange,min=0,max=3600}:{label:string;value:number;onChange:(v:number)=>void;min?:number;max?:number}){

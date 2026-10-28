@@ -10,7 +10,7 @@ export type Clip = {
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
 export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]};
-export type Tool = 'select'|'split'|'slip';
+export type Tool = 'select'|'slip';
 export const uid = () => crypto.randomUUID();
 export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration));
 export const clamp = (v:number,min:number,max:number) => Math.max(min,Math.min(max,v));
@@ -20,6 +20,13 @@ export const time = (frames:number, precise=false) => {
   return `${String(m).padStart(2,'0')}:${String(Math.floor(s)%60).padStart(2,'0')}${precise?'.'+String(Math.floor((s%1)*100)).padStart(2,'0'):''}`;
 };
 export const maxDuration = (c:Clip, a:Asset) => Math.max(1,Math.floor((a.frames-c.sourceIn)/c.rate));
+export function splitTarget(p:Project,selected:string|null,frame:number):Clip|null {
+  const chosen=p.clips.find(c=>c.id===selected);
+  const covering=(c:Clip)=>c.start<=frame&&frame<c.start+c.duration;
+  const top=[...p.clips].reverse();
+  const target=chosen||top.find(c=>c.kind==='video'&&covering(c))||top.find(c=>c.kind==='audio'&&covering(c));
+  return target&&frame>target.start&&frame<target.start+target.duration?target:null;
+}
 export function splitClip(c:Clip,at:number,newId:string):Clip[] {
   const offset=at-c.start;
   if(offset<1||offset>=c.duration)return [c];

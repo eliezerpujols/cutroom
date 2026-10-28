@@ -116,9 +116,14 @@ The launcher and MCP can also start the server in the background.
 ## Edit
 
 - Drag a clip's edges to trim; drag its body to move it.
-- **Split (S):** click a clip to cut it. **⌘/Ctrl+B** splits the selected clip at the playhead.
+- **Split:** click the button or press **S / ⌘/Ctrl+B** to cut immediately at the
+  playhead. It cuts the selected clip; with no selection, it chooses the top video
+  there (or audio when no video is present). At a clip edge or gap it is disabled.
+  Playback pauses at the cut. Undo restores it in one step.
+- **Move (V):** select and drag clips; trimming uses their edge handles.
 - **Slip (Y):** drag the content inside a clip while keeping its position and duration.
-  Trim first to leave unused source footage to slip into. Fine adjustments also
+  The button is available when the selected clip has unused source footage;
+  trim first to make room. Fine adjustments also
   offer a Source in field and one-frame buttons.
 - Select a clip to adjust position, duration, volume, fades and playback speed.
 - **Extract audio as WAV** creates a downloadable audio file. **Detach to a
@@ -160,9 +165,10 @@ New imports are copied directly into their project folder.
 
 ## Validation
 
-- Twelve tests cover default and explicit project locations, migration, rediscovery,
+- Fifteen tests cover default and explicit project locations, migration, rediscovery,
   persistence, portable copies, missing media, revision conflicts, path checks,
-  and timing/audio invariants including accelerated splits, source continuity,
+  and timing/audio invariants including split selection, clip-edge handling,
+  accelerated splits, source continuity,
   trim bounds, slip bounds, speed changes and audio fade/mute behavior.
 - Browser checks cover playback, trim handles, slip dragging, splitting, undo,
   theme switching, narrow layout and the export/download flow.

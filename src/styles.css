@@ -77,3 +77,10 @@
 .missing-art{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;height:100%;background:var(--subtle);color:var(--muted)}
 .relink-button{display:inline-block;margin:8px 0 0 36px;font-size:11px;color:var(--foreground);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .missing-banner{padding:7px 16px;background:var(--surface);color:var(--muted);font-size:11px;border-bottom:1px solid var(--border)}
+/* Split acts immediately; only Move and Slip are modes. */
+.tool-group .timeline-tool{height:30px;gap:6px;padding:0 10px;font-size:11px}
+.tool-tip-anchor{display:inline-flex}
+.tool-group .split-action{color:var(--foreground);background:var(--surface);border-color:var(--border);margin:0 3px}
+.tool-group .timeline-tool svg{flex-shrink:0}
+.timeline-toolbar .tool-group{flex-shrink:0}
+@media(max-width:560px){.timeline-toolbar{gap:6px;padding:0 8px}.tool-group{gap:1px}.tool-group .timeline-tool{padding:0 6px;gap:4px;font-size:10px}.tool-group .timeline-tool svg{width:14px;height:14px}.tool-group .split-action{margin:0 1px}.timeline-toolbar .toolbar-divider{margin:0 3px}.zoom-tools .slider{width:36px;margin:0 3px}.zoom-tools .button-icon{width:22px}}
