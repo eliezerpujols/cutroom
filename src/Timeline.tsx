@@ -2,11 +2,13 @@ import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {FadeEnvelope} from './ClipAdjustments';
+import {CaptionTimeline} from './CaptionTimeline';
+import type {CaptionSelection} from './captions';
 import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={project:Project;assets:Asset[];selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -24,6 +26,7 @@ export function Timeline(props:Props){
   const selectedSet=new Set(selectedIds);
   const timeline=useRef<HTMLElement>(null),viewport=useRef<HTMLDivElement>(null),board=useRef<HTMLDivElement>(null);
   const gestureCleanup=useRef<(()=>void)|null>(null);
+  const registerCaptionGesture=useCallback((cleanup:(()=>void)|null)=>{gestureCleanup.current=cleanup;},[]);
   const resizeCancel=useRef<(()=>void)|null>(null);
   const [resizing,setResizing]=useState(false),[timelineSize,setTimelineSize]=useState({height:294,max:1000});
   const [selectionBox,setSelectionBox]=useState<SelectionBox|null>(null),[dragScale,setDragScale]=useState<number|null>(null);
@@ -77,7 +80,7 @@ export function Timeline(props:Props){
   const selectedClip=project.clips.find(c=>c.id===selected);
   const selectedAsset=assets.find(a=>a.id===selectedClip?.assetId);
   const canSlip=!!selectedClip&&!!selectedAsset&&selectedAsset.frames-selectedClip.duration*selectedClip.rate>=1;
-  const canSplit=selectedIds.length<2&&!!splitTarget(project,selected,frame);
+  const canSplit=!props.captionSelection&&selectedIds.length<2&&!!splitTarget(project,selected,frame);
   const splitHint=selectedIds.length>1?'Select one clip to split at the playhead.':canSplit?'Split at the playhead · S or ⌘B':selectedClip?'Move the playhead inside the selected clip to split.':'Move the playhead inside a clip to split.';
   const slipHint=!selectedClip?'Select a clip to change its source content.':!canSlip?'Trim this clip first to make room for a slip edit.':'Slip source content · Y. Drag inside the clip; its position stays fixed.';
   function pointerFrame(clientX:number){const rect=board.current!.getBoundingClientRect();return clamp(Math.round((clientX-rect.left-132)/ppf),0,length-1);}
@@ -118,7 +121,7 @@ export function Timeline(props:Props){
   }
 
   function selectArea(e:React.PointerEvent){
-    if(e.button!==0||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row'))return;
+    if(e.button!==0||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row,.caption-track-row'))return;
     e.preventDefault();e.stopPropagation();gestureCleanup.current?.();
     board.current!.focus({preventScroll:true});setTool('select');setDragScale(null);setResizing(false);
     const element=board.current!,scroller=viewport.current!;
@@ -267,6 +270,7 @@ export function Timeline(props:Props){
     <div className="ruler-row"><div className="ruler-label">TIMELINE <span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
+    <CaptionTimeline layers={project.captions||[]} selection={props.captionSelection} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/>
     {project.tracks.map(track=><div className="track-row" key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}} onDrop={e=>{e.preventDefault();const id=e.dataTransfer.getData('application/cutroom-asset');if(id)add(id,pointerFrame(e.clientX),track.id);}}>
       <div className="track-label"><span className={`track-kind ${track.kind}`}>{track.kind==='video'?<Film size={16}/>:<AudioLines size={16}/>}</span><span>{track.name}</span><IconButton label={`${track.muted?'Unmute':'Mute'} ${track.name.toLowerCase()} track`} aria-pressed={track.muted} onClick={()=>edit(p=>({...p,tracks:p.tracks.map(t=>t.id===track.id?{...t,muted:!t.muted}:t)}))}>{track.muted?<VolumeX size={14}/>:<Volume2 size={14}/>}</IconButton></div>
       <div className="track-lane" style={{width}}>

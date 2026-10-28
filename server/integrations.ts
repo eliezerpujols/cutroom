@@ -20,6 +20,7 @@ export function integrationSettings(){
     max_elevenlabs_credits:limit('CUTROOM_MAX_ELEVENLABS_CREDITS',10000),
     max_sync_usd:limit('CUTROOM_MAX_SYNC_USD',3),
     elevenlabs_credits_per_minute:limit('CUTROOM_ELEVENLABS_CREDITS_PER_MINUTE',13500),
+    scribe_credits_per_minute:limit('CUTROOM_SCRIBE_CREDITS_PER_MINUTE',330),
     model:'dubbing_v2',lip_sync_model:'sync-3',
     secrets_location:'Local ignored .env or inherited environment; keys are never returned by tools.',
     translation_modes:{automatic:'ElevenLabs translation preserving the original voice; no CEFR guarantee.',adapted:'Agent-written segment translations; ElevenLabs Enterprise is required.'},

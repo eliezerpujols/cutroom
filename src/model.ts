@@ -9,10 +9,10 @@ export type Clip = {
   fadeIn:number; fadeOut:number;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
-export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]};
+export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]};
 export type Tool = 'select'|'slip';
 export const uid = () => crypto.randomUUID();
-export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration));
+export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration),...(p.captions||[]).flatMap(layer=>layer.cues.map(cue=>cue.start+cue.duration)));
 export const clamp = (v:number,min:number,max:number) => Math.max(min,Math.min(max,v));
 export const seconds = (f:number) => f/FPS;
 export const time = (frames:number, precise=false) => {

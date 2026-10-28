@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill,Sequence,Html5Video,Html5Audio,OffthreadVideo,getRemotionEnvironment,useCurrentFrame} from 'remotion';
 import {FPS,gainAt,clipsInRenderOrder,type Asset,type Clip,type Project} from '../model';
+import {CaptionOverlay} from './Captions';
 export type EditorProps={project:Project;assets:Asset[]};
 function MediaClip({clip,asset,muted}:{clip:Clip;asset:Asset;muted:boolean}){
   const frame=useCurrentFrame();
@@ -18,5 +19,5 @@ export function EditComposition({project,assets}:EditorProps){
     return <Sequence key={clip.id} from={clip.start} durationInFrames={clip.duration} layout={clip.kind==='audio'?'none':'absolute-fill'} premountFor={clip.kind==='video'?FPS:undefined}>
       <MediaClip clip={clip} asset={asset} muted={!!project.tracks.find(t=>t.id===clip.trackId)?.muted}/>
     </Sequence>;
-  })}</AbsoluteFill>;
+  })}{!!project.captions?.length&&<CaptionOverlay layers={project.captions}/>}</AbsoluteFill>;
 }

@@ -5,6 +5,8 @@ slip, adjust audio independently, and export existing footage without uploading
 it to a cloud editor. Includes a local MCP server and a Codex skill.
 The MCP can also translate and dub footage with ElevenLabs, apply Sync lip sync,
 and open the finished result as an editable local project.
+Its Text tool generates word-timed captions from the edited audio with ElevenLabs
+Scribe and includes transcript editing and caption styling.
 
 ## Install
 
@@ -96,10 +98,13 @@ Example requests:
 - “Crea un proyecto con este video, recorta el primer segundo y ábrelo aquí.”
 - “Haz una copia de Reel 2, baja el audio al 80% y exporta un MP4.”
 - “$cutroom Traduce este video al inglés con lip sync y ábrelo cuando termine.”
+- “$cutroom Genera captions del audio en inglés, con Inter y contorno negro.”
 
 The MCP exposes project listing, creation, opening, local media import, timeline
 edits, audio extraction, export and export status. Reads include clip IDs and the
 current revision. Edits require that revision; timing values use frames at 30fps.
+Caption tools are `estimate_captions`, `generate_captions`, `list_caption_jobs`,
+`get_caption_job`, `apply_captions`, `edit_captions`, and `export_caption_subtitles`.
 Opening or editing a project updates the focused connected editor tab. If no tab
 is connected, the tool returns an `editor_url` for the agent to open. The MCP
 starts the local app when needed; it never opens an unrelated browser by itself.
@@ -209,6 +214,43 @@ the Codex chat after updating to discover its new tools.
   information remain; this does not certify origin or prevent platform AI labels.
 - **Appearance:** System (default), Charcoal or Light. Narrow screens use
   Media / Preview / Clip tabs; the timeline can scroll and zoom.
+
+## Captions
+
+Choose **Text → Auto-transcript** in the left tool rail. Select a spoken language
+or Auto-detect, then Generate captions. It sends a mono mix of the audible edit
+to ElevenLabs Scribe v2, including trims, speeds, fades, gain, gaps, and track mute
+states. It uses the existing server-side `ELEVENLABS_API_KEY`; Sync is not used.
+No transcription starts just by opening the panel.
+
+The panel shows an approximate credit estimate. Generation reserves another 50%
+plus 100 credits, checks the live included balance and blocks above the lower of
+the configured limit and 10,000 credits. `CUTROOM_SCRIBE_CREDITS_PER_MINUTE`
+defaults to 330. This estimate is not a provider-guaranteed charge. Provider
+reference: [ElevenLabs pricing](https://elevenlabs.io/pricing) and the
+[Scribe API](https://elevenlabs.io/docs/api-reference/speech-to-text/convert).
+
+Captions get their own timeline rows and a timestamped transcript. Click a row
+to review its text in the inspector. Drag a cue or its edges to move/resize it;
+arrow keys nudge a focused cue, Shift for one second. Captions are independent
+of media clips; box selection currently groups video/audio, while caption cues
+move individually. Later audio edits show a reminder to review caption sync.
+Changing a caption's word count redistributes word timing inside that cue.
+
+The Style button opens a panel with Inter (default), DM Sans or Manrope, size,
+weight, fill and highlight colors, optional outline and its thickness, vertical
+position, Word/Phrase/Sentence display, and None/Fade/Pop transitions. Phrase mode
+shows up to six words; Sentence shows the full cue, grouped at punctuation or
+readability limits. These settings affect both preview and burned-in MP4 captions.
+SRT/VTT downloads preserve grouping, text and timing, and are also saved in the
+project's `exports/` folder. Up to four caption layers are supported.
+
+Job state and successful provider responses are saved under `captions/` in the
+project folder. The UI persists its request ID before sending a start request;
+repeating that ID retrieves the existing job. Interrupted paid submissions are
+never automatically retried. If the timeline changes during generation, adding
+the earlier timings requires an explicit Add earlier captions action. Applying
+the same job twice does not add duplicate layers.
 
 Timing is frame-based at 30 fps. A gap between video clips exports as black;
 audio tracks can continue through it. Trimming or slipping one track does not

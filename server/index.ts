@@ -9,13 +9,15 @@ import {bundle} from '@remotion/bundler';
 import {ensureBrowser,selectComposition,renderMedia} from '@remotion/renderer';
 import {z} from 'zod';
 import {ProjectStore,atomicJson} from './projects';
-import {projectSchema,validateProject} from './schema';
+import {captionLayerSchema,captionStyleSchema,projectSchema,validateProject} from './schema';
 import {mediaEngine} from './media';
 import {defaultProjectsDirectory} from './paths';
 import {chooseProjectFile} from './projectPicker';
 import {dubbingEngine} from './dubbing';
 import {integrationSettings} from './integrations';
 import {finalizeExportMetadata} from './exportMetadata';
+import {captionEngine} from './captions';
+import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue} from '../src/captions';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
@@ -26,16 +28,52 @@ if(existsSync(path.join(data,'project.json'))&&existsSync(path.join(data,'librar
 await store.initialize(legacy);
 await store.migrateManagedRoot(path.join(root,'projects'));
 const media=mediaEngine(root,store);
+const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 const clients=new Map<string,express.Response>();let focusedClient='';
 function publish(event:Record<string,unknown>){const target=clients.get(focusedClient)||[...clients.values()].at(-1);if(!target)return false;target.write(`data: ${JSON.stringify(event)}\n\n`);return true;}
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{await store.activate(projectId);return publish({type:'open-project',projectId,revision});});
 app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
+app.post('/api/projects/:id/captions/estimate',async(req,res)=>res.json(await captions.estimate(z.string().uuid().parse(req.params.id),req.body.project)));
+app.post('/api/projects/:id/captions',async(req,res)=>{const language=z.string().regex(/^(auto|[a-z]{2,3})$/).optional().parse(req.body.language),requestId=z.string().uuid().optional().parse(req.body.requestId);res.status(202).json(await captions.start(z.string().uuid().parse(req.params.id),req.body.project,language,requestId));});
+app.get('/api/projects/:id/caption-jobs',async(req,res)=>res.json({jobs:await captions.list(z.string().uuid().parse(req.params.id))}));
+app.get('/api/projects/:id/captions/:jobId',async(req,res)=>res.json(await captions.get(z.string().uuid().parse(req.params.id),String(req.params.jobId))));
+app.post('/api/projects/:id/captions/:jobId/apply',async(req,res)=>{
+  const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),allowTimelineChange:z.boolean().default(false),open:z.boolean().default(false)}).parse(req.body),job=await captions.get(id,String(req.params.jobId)),document=await store.read(id);
+  if(job.status!=='completed'||!job.layer)throw new Error('This transcription has no completed caption layer.');
+  if(!document.project.captions?.some(layer=>layer.sourceJobId===job.id)){
+    if(!body.allowTimelineChange&&job.sourceSignature!==captionSourceSignature(document.project))return res.status(409).json({error:'The audio timeline changed after transcription. Review the earlier caption timings before applying them.'});
+    await store.save(id,{...document.project,captions:[...(document.project.captions||[]),job.layer]},body.expectedRevision);
+  }
+  const workspace=await store.workspace(id);if(body.open)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);
+});
+app.post('/api/projects/:id/caption-edits',async(req,res)=>{
+  const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),open:z.boolean().default(false),operations:z.array(z.object({action:z.enum(['text','move','duration','remove_cue','remove_layer','style','mute']),layerId:z.string(),cueId:z.string().optional(),text:z.string().max(2000).optional(),value:z.number().finite().optional(),style:captionStyleSchema.partial().optional()})).min(1).max(100)}).parse(req.body),document=await store.read(id);
+  let project=structuredClone(document.project);
+  for(const operation of body.operations){
+    const layer=project.captions?.find(item=>item.id===operation.layerId);if(!layer)throw new Error('Choose a caption layer ID from this project.');
+    if(operation.action==='remove_layer'){project.captions=project.captions?.filter(item=>item.id!==layer.id);continue;}
+    if(operation.action==='style'){if(!operation.style)throw new Error('Provide caption style values.');layer.style={...layer.style,...operation.style};continue;}
+    if(operation.action==='mute'){if(operation.value!==0&&operation.value!==1)throw new Error('Caption mute is 0 or 1.');layer.muted=!!operation.value;continue;}
+    const cue=layer.cues.find(item=>item.id===operation.cueId);if(!cue)throw new Error('Choose a cue ID from this caption layer.');
+    if(operation.action==='remove_cue'){layer.cues=layer.cues.filter(item=>item.id!==cue.id);continue;}
+    if(operation.action==='text'){if(operation.text===undefined)throw new Error('Provide caption text.');layer.cues=layer.cues.map(item=>item.id===cue.id?replaceCueText(cue,operation.text!):item);continue;}
+    if(operation.value===undefined)throw new Error('Provide a frame value.');
+    layer.cues=layer.cues.map(item=>item.id!==cue.id?item:operation.action==='move'?{...cue,start:Math.max(0,Math.round(operation.value!))}:resizeCaptionCue(cue,operation.value!)).sort((a,b)=>a.start-b.start);
+  }
+  await store.save(id,project,body.expectedRevision);const workspace=await store.workspace(id);if(body.open)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);
+});
+app.post('/api/projects/:id/caption-subtitles',async(req,res)=>{
+  const id=z.string().uuid().parse(req.params.id),body=z.object({format:z.enum(['srt','vtt']),layerId:z.string().optional(),layer:captionLayerSchema.optional()}).parse(req.body),document=await store.read(id),layer=body.layer||document.project.captions?.find(item=>item.id===body.layerId);
+  if(!layer)throw new Error('Choose a caption layer.');
+  validateProject({...document.project,captions:[layer]},document.assets);
+  const filename=`captions-${layer.id}.${body.format}`,output=path.join(store.entry(id).folder,'exports',filename);await fs.mkdir(path.dirname(output),{recursive:true});await fs.writeFile(output,captionSubtitles(layer,body.format),'utf8');res.json({filename,path:output,url:`/api/projects/${id}/exports/${filename}`});
+});
 app.post('/api/dubbing/prepare',async(req,res)=>{const result=await dubbing.prepare(req.body);res.status(result.status==='prepared'?201:200).json(result);});
 app.get('/api/dubbing/jobs',async(req,res)=>res.json(await dubbing.list(req.query.projectId?z.string().uuid().parse(req.query.projectId):undefined)));
 app.get('/api/projects/:id/dubbing/:jobId',async(req,res)=>res.json(await dubbing.get(String(req.params.id),String(req.params.jobId))));

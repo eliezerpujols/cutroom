@@ -1,9 +1,13 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Player,type PlayerRef} from '@remotion/player';
-import {Play,Pause,SkipBack,SkipForward,Undo2,Redo2,Plus,Film,AudioLines,ArrowUpRight,ArrowDownToLine,Upload,Scissors,Copy,Trash2,Volume2,VolumeX,ChevronDown,ChevronRight,Check,LoaderCircle,Sun,Moon,Monitor,PanelLeftClose,PanelLeftOpen,SlidersHorizontal,FolderOpen,X,Download,Music2} from 'lucide-react';
+import {Play,Pause,SkipBack,SkipForward,Undo2,Redo2,Plus,Film,AudioLines,ArrowUpRight,ArrowDownToLine,Upload,Scissors,Copy,Trash2,Volume2,VolumeX,ChevronDown,ChevronRight,Check,LoaderCircle,Sun,Moon,Monitor,PanelLeftClose,PanelLeftOpen,SlidersHorizontal,FolderOpen,X,Download,Music2,Type} from 'lucide-react';
 import {Button,IconButton,TooltipProvider,Slider,Input,Dialog,DialogContent,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from './ui/primitives';
 import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
+import {CaptionsPanel} from './CaptionsPanel';
+import {CaptionInspector} from './CaptionInspector';
+import {useCaptions} from './useCaptions';
+import type {CaptionSelection,CaptionStyle} from './captions';
 import {AudioFadeControls,PlaybackControls,TimingControls} from './ClipAdjustments';
 import {arrangeTimelineTracks,changedTimelineClipIds} from './videoTracks';
 import {moveSelection} from './timelineSelection';
@@ -20,8 +24,10 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const {project,edit:editProject,checkpoint,undo,redo,canUndo,canRedo,current}=useEditor(initialProject);
   const saving=useProjectSave(initial,project);
   useEffect(()=>controls.registerSave(saving.flush),[controls.registerSave,saving.flush]);
+  const [captionSelection,setCaptionSelection]=useState<CaptionSelection>(null),[captionStyleOpen,setCaptionStyleOpen]=useState(false);
+  const [libraryTab,setLibraryTab]=useState<'media'|'text'>('media');
   const [assets,setAssets]=useState(initial.assets),[selection,setSelection]=useState<string[]>(()=>initial.project.clips[0]?[initial.project.clips[0].id]:[]);
-  const selectClips=useCallback((ids:string[])=>setSelection(previous=>previous.length===ids.length&&previous.every((id,index)=>id===ids[index])?previous:ids),[]);
+  const selectClips=useCallback((ids:string[])=>{setCaptionSelection(null);setCaptionStyleOpen(false);setSelection(previous=>previous.length===ids.length&&previous.every((id,index)=>id===ids[index])?previous:ids);},[]);
   const setSelected=useCallback((id:string|null)=>selectClips(id?[id]:[]),[selectClips]);
   const selectedClips=project.clips.filter(c=>selection.includes(c.id));
   const selectedIds=selectedClips.map(c=>c.id),multiple=selectedClips.length>1;
@@ -38,12 +44,17 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const [job,setJob]=useState<ExportJob|null>(null),[exportBusy,setExportBusy]=useState(false),[helpOpen,setHelpOpen]=useState(false);
   const player=useRef<PlayerRef>(null),fileInput=useRef<HTMLInputElement>(null),noticeTimer=useRef<ReturnType<typeof setTimeout>|null>(null),seekRequest=useRef<number|undefined>(undefined);
   const clip=project.clips.find(c=>c.id===selected),asset=assets.find(a=>a.id===clip?.assetId),duration=endFrame(project);
+  const captionLayer=project.captions?.find(layer=>layer.id===captionSelection?.layerId),captionCue=captionLayer?.cues.find(cue=>cue.id===captionSelection?.cueId);
   const compositionProps=useMemo(()=>({project,assets}),[project,assets]);
   const toast=useCallback((message:string)=>{setNotice(message);if(noticeTimer.current)clearTimeout(noticeTimer.current);noticeTimer.current=setTimeout(()=>setNotice(''),6000);},[]);
   const edit=useCallback((change:Project|((p:Project)=>Project),record=true)=>{
     try{editProject(p=>{const next=typeof change==='function'?change(p):change;return arrangeTimelineTracks(next,changedTimelineClipIds(p,next));},record);}
     catch(e){toast((e as Error).message);}
   },[editProject,toast]);
+  const selectCaption=useCallback((value:CaptionSelection)=>{setSelection([]);setCaptionSelection(value);setLibraryTab('text');setMediaOpen(true);},[]);
+  const captionsAdded=useCallback((id:string)=>{selectCaption({layerId:id});setCaptionStyleOpen(false);toast('Captions added.');},[selectCaption,toast]);
+  const captionGeneration=useCaptions(initial.projectId,project,mediaOpen&&libraryTab==='text',edit,captionsAdded);
+  const changeCaptionStyle=(patch:Partial<CaptionStyle>,record=true)=>{const id=captionLayer?.id||project.captions?.[0]?.id;if(id)edit(p=>({...p,captions:p.captions?.map(layer=>layer.id===id?{...layer,style:{...layer.style,...patch}}:layer)}),record);};
   useEffect(()=>{const query=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=theme==='system'?(query.matches?'dark':'light'):theme;apply();query.addEventListener('change',apply);localStorage.setItem('cutroom-theme',theme);return()=>query.removeEventListener('change',apply);},[theme]);
   useEffect(()=>{const p=player.current;if(!p)return;const update=(e:{detail:{frame:number}})=>setFrame(e.detail.frame);
     const play=()=>setPlaying(true),pause=()=>setPlaying(false);p.addEventListener('frameupdate',update);p.addEventListener('play',play);p.addEventListener('pause',pause);p.addEventListener('ended',pause);
@@ -53,13 +64,14 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   useEffect(()=>()=>{if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);if(noticeTimer.current)clearTimeout(noticeTimer.current);},[]);
   const updateClip=(values:Partial<Clip>,record=true)=>{if(!clip)return;edit(p=>({...p,clips:p.clips.map(c=>c.id===clip.id?{...c,...values}:c)}),record);};
   const split=useCallback(()=>{
+    if(captionSelection){toast('Select a video or audio clip to split.');return;}
     if(selection.filter(id=>current.current.clips.some(c=>c.id===id)).length>1){toast('Select one clip to split at the playhead.');return;}
     player.current?.pause();const at=player.current?.getCurrentFrame()??frame;
     const target=splitTarget(current.current,selected,at);
     if(!target){toast('Move the playhead inside '+(current.current.clips.some(c=>c.id===selected)?'the selected clip':'a clip')+' to split it.');return;}
     const rightId=uid();edit(p=>({...p,clips:p.clips.flatMap(c=>c.id===target.id?splitClip(c,at,rightId):[c])}));
     setSelected(rightId);setTool('select');setFrame(at);toast('Clip split at '+time(at,true)+'.');
-  },[current,edit,frame,selected,selection,setSelected,toast]);
+  },[captionSelection,current,edit,frame,selected,selection,setSelected,toast]);
   const changeTool=useCallback((next:Tool)=>{
     if(next==='slip'){
       const c=current.current.clips.find(c=>c.id===selected),a=assets.find(a=>a.id===c?.assetId);
@@ -69,21 +81,24 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     setTool(next);
   },[assets,current,selected,toast]);
   useEffect(()=>{if(tool==='slip'&&(!clip||!asset||asset.frames-clip.duration*clip.rate<1))setTool('select');},[asset,clip,tool]);
-  const remove=useCallback(()=>{if(!current.current.clips.some(c=>selection.includes(c.id)))return;edit(p=>({...p,clips:p.clips.filter(c=>!selection.includes(c.id))}));setSelected(null);},[current,edit,selection,setSelected]);
+  const remove=useCallback(()=>{
+    if(captionSelection){const {layerId,cueId}=captionSelection;edit(p=>({...p,captions:cueId?p.captions?.map(layer=>layer.id===layerId?{...layer,cues:layer.cues.filter(cue=>cue.id!==cueId)}:layer):p.captions?.filter(layer=>layer.id!==layerId)}));setCaptionSelection(cueId?{layerId}:null);return;}
+    if(!current.current.clips.some(c=>selection.includes(c.id)))return;edit(p=>({...p,clips:p.clips.filter(c=>!selection.includes(c.id))}));setSelected(null);
+  },[captionSelection,current,edit,selection,setSelected]);
   const duplicate=()=>{if(!clip)return;const copy={...clip,id:uid(),start:clip.start+clip.duration};edit(p=>({...p,clips:[...p.clips,copy]}));setSelected(copy.id);toast('Clip duplicated.');};
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{
     if(exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
     const target=e.target as HTMLElement;if(target.closest('input,textarea,select,summary,[contenteditable="true"],[role="slider"],[role="menu"],[role="menuitem"]'))return;
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();if(!e.repeat)split();return;}
-    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'&&target.closest('.timeline')){e.preventDefault();setSelection(current.current.clips.map(c=>c.id));setTool('select');return;}
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'&&target.closest('.timeline')){e.preventDefault();selectClips(current.current.clips.map(c=>c.id));setTool('select');return;}
     if(e.metaKey||e.ctrlKey||e.altKey)return;
     if(e.code==='Space'&&!target.closest('button')){e.preventDefault();player.current?.toggle();}
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?30:1),0,duration-1));}
     if(e.key==='Home'){e.preventDefault();seek(0);}if(e.key==='End'){e.preventDefault();seek(duration-1);}
     if(e.key.toLowerCase()==='v')changeTool('select');if(e.key.toLowerCase()==='s'){e.preventDefault();if(!e.repeat)split();}if(e.key.toLowerCase()==='y'&&!e.repeat)changeTool('slip');
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}if(e.key==='Escape'){setSelected(null);setTool('select');}
-  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[changeTool,current,duration,exportOpen,frame,helpOpen,redo,remove,seek,setSelected,split,undo]);
+  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[changeTool,current,duration,exportOpen,frame,helpOpen,redo,remove,seek,selectClips,setSelected,split,undo]);
   async function importFiles(files:File[]){if(!files.length)return;setImporting(true);const form=new FormData();for(const file of files)form.append('files',file);
     try{const result=await api<{assets:Asset[]}>(`/api/import?projectId=${initial.projectId}`,{method:'POST',body:form});setAssets(prev=>[...prev,...result.assets.filter(a=>!prev.some(p=>p.id===a.id))]);toast(`${result.assets.length===1?'File':'Files'} added to your media.`);setMediaOpen(true);}catch(e){toast((e as Error).message);}finally{setImporting(false);if(fileInput.current)fileInput.current.value='';}}
   const add=useCallback((assetId:string,at:number,requestedTrack?:string)=>{const a=assets.find(a=>a.id===assetId);if(!a||a.missing)return;
@@ -107,7 +122,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const openExport=(audio=false)=>{if(!exportBusy){setFormat(audio?'wav':'mp4');setSelectionOnly(false);setJob(null);}setExportOpen(true);};
   const displayFormat=format==='mp4'?'MP4 video':format==='wav'?'WAV audio':'MP3 audio';
   const exportTitle=job?.status==='completed'?'Export complete':job?.status==='failed'?'Export failed':exportBusy?(job?.status==='finalizing'?'Finishing export…':'Exporting…'):'Export';
-  return <div className="app-shell" style={{'--extra-tracks':Math.max(0,project.tracks.length-2),...(timelineHeight===null?{}:{'--timeline-height':`${timelineHeight}px`})} as React.CSSProperties} onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();void importFiles(Array.from(e.dataTransfer.files));}}}>
+  return <div className="app-shell" style={{'--extra-tracks':Math.max(0,project.tracks.length+(project.captions?.length||0)-2),...(timelineHeight===null?{}:{'--timeline-height':`${timelineHeight}px`})} as React.CSSProperties} onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();void importFiles(Array.from(e.dataTransfer.files));}}}>
     <header className="app-header"><a className="brand" href="/" aria-label="Cutroom home"><span className="brand-symbol"/>Cutroom</a><span className="header-divider"/><IconButton label="Your projects" onClick={controls.openProjects}><FolderOpen size={18}/></IconButton><div className="project-identity"><Input aria-label="Project name" value={project.name} maxLength={100} onChange={e=>edit(p=>({...p,name:e.target.value||'Untitled'}))}/><span className={`save-status ${saving.state}`} title={saving.error}>{saving.state==='saved'?<><Check size={12}/>Saved locally</>:saving.state==='saving'?<><span className="save-pulse"/>Saving…</>:saving.state==='conflict'?<button onClick={controls.reloadSaved}>Saved version changed · Reopen</button>:<button onClick={()=>void saving.flush().catch(()=>{})}>Reconnecting · Retry save</button>}</span></div>
       <div className="header-actions"><div className="history-tools"><IconButton label="Undo · ⌘Z" disabled={!canUndo} onClick={undo}><Undo2 size={17}/></IconButton><IconButton label="Redo · ⇧⌘Z" disabled={!canRedo} onClick={redo}><Redo2 size={17}/></IconButton></div><span className="header-divider"/>
         <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Appearance">{theme==='system'?<Monitor size={18}/>:theme==='dark'?<Moon size={18}/>:<Sun size={18}/>}</Button></DropdownMenuTrigger><DropdownMenuContent>{(['system','light','dark'] as const).map(t=><DropdownMenuItem key={t} onSelect={()=>setTheme(t)}>{t==='system'?<Monitor size={16}/>:t==='light'?<Sun size={16}/>:<Moon size={16}/>}<span>{t==='system'?'Use system theme':t==='dark'?'Charcoal':'Light'}</span>{theme===t&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
@@ -116,7 +131,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     </header>
     <nav className="mobile-tabs" aria-label="Workspace panels">{([{id:'media',text:'Media',icon:FolderOpen},{id:'preview',text:'Preview',icon:Film},{id:'properties',text:'Clip',icon:SlidersHorizontal}] as const).map(({id,text,icon:Icon})=><Button key={id} variant="ghost" aria-pressed={mobilePanel===id} onClick={()=>setMobilePanel(id)}><Icon size={16}/>{text}</Button>)}<div className="mobile-history"><IconButton label="Undo edit" disabled={!canUndo} onClick={undo}><Undo2 size={15}/></IconButton><IconButton label="Redo edit" disabled={!canRedo} onClick={redo}><Redo2 size={15}/></IconButton></div></nav>
     <main className={`workspace ${mediaOpen?'':'media-hidden'} mobile-${mobilePanel}`}>
-      <aside className="media-panel" aria-label="Media library"><div className="panel-heading"><h2>Your media</h2><IconButton label="Hide media panel" onClick={()=>setMediaOpen(false)}><PanelLeftClose size={16}/></IconButton></div><p className="panel-subtitle">A little room for your story.</p>
+      <aside className="library-sidebar" aria-label="Editing tools"><nav className="library-tools" aria-label="Library tools"><Button variant="ghost" aria-pressed={mediaOpen&&libraryTab==='media'} onClick={()=>{setLibraryTab('media');setMediaOpen(true);}}><Film size={19}/><span>Media</span></Button><Button variant="ghost" aria-pressed={mediaOpen&&libraryTab==='text'} onClick={()=>{setLibraryTab('text');setMediaOpen(true);}}><Type size={20}/><span>Text</span></Button></nav>
+      {libraryTab==='text'?<CaptionsPanel projectId={initial.projectId} layers={project.captions||[]} selection={captionSelection} select={selectCaption} seek={seek} generation={captionGeneration} styleOpen={captionStyleOpen} setStyleOpen={setCaptionStyleOpen} changeStyle={changeCaptionStyle} checkpoint={checkpoint} hide={()=>setMediaOpen(false)}/>:<section className="media-panel" aria-label="Media library"><div className="panel-heading"><h2>Media</h2><IconButton label="Hide media panel" onClick={()=>setMediaOpen(false)}><PanelLeftClose size={16}/></IconButton></div>
         <input ref={fileInput} type="file" multiple accept="video/*,audio/*,.flac" className="sr-only" aria-label="Import media files" onChange={e=>void importFiles(Array.from(e.target.files||[]))}/>
         <Button variant="outline" className="import-button" onClick={()=>fileInput.current?.click()} disabled={importing}>{importing?<LoaderCircle className="spin" size={16}/>:<Plus size={17}/>} {importing?'Preparing media…':'Import media'}</Button>
         <div className="media-list">{assets.map(a=><div key={a.id} className="media-card" draggable onDragStart={e=>{e.dataTransfer.setData('application/cutroom-asset',a.id);e.dataTransfer.effectAllowed='copy';}}>
@@ -128,6 +144,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
           {!a.missing&&a.kind==='audio'&&<a className="asset-download" href={a.url} download={`${a.name}.${a.extension||'flac'}`} aria-label={`Download ${a.name}`}><Download size={13}/></a>}
         </div>)}</div>
         <div className="library-footer"><Upload size={15}/><span>Drop files anywhere to import.<br/>Your originals stay untouched.</span></div>
+      </section>}
       </aside>
       <section className="preview-panel" aria-label="Video preview">{assets.some(a=>a.missing)&&<div className="missing-banner">Some media is missing. Use Locate file in Your media to reconnect it.</div>}<div className="preview-heading">{!mediaOpen&&<IconButton label="Show media panel" onClick={()=>setMediaOpen(true)}><PanelLeftOpen size={17}/></IconButton>}<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="sm">{project.width===project.height?'1:1':project.width<project.height?'9:16':'16:9'}<ChevronDown size={13}/></Button></DropdownMenuTrigger><DropdownMenuContent>{[{label:'Portrait · 9:16',width:1080,height:1920},{label:'Landscape · 16:9',width:1920,height:1080},{label:'Square · 1:1',width:1080,height:1080}].map(r=><DropdownMenuItem key={r.label} onSelect={()=>edit(p=>({...p,width:r.width,height:r.height}))}>{r.label}{project.width*r.height===project.height*r.width&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>
         <div className="preview-stage"><div className="player-wrap" style={{aspectRatio:`${project.width}/${project.height}`,'--aspect':project.width/project.height} as React.CSSProperties}>
@@ -135,8 +152,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
         </div>{project.clips.length===0&&<div className="preview-empty"><Film size={30}/><h3>A fresh start</h3><p>Add a video from your media to begin.</p></div>}</div>
         <div className="transport"><div className="transport-time"><strong>{time(frame,true)}</strong><span>/ {time(duration,true)}</span></div><div className="transport-buttons"><IconButton label="Jump to start" onClick={()=>seek(0)}><SkipBack size={17}/></IconButton><IconButton label={playing?'Pause':'Play'} className="play-button" onClick={()=>player.current?.toggle()}>{playing?<Pause size={19} fill="currentColor"/>:<Play size={19} fill="currentColor"/>}</IconButton><IconButton label="Jump to end" onClick={()=>seek(duration-1)}><SkipForward size={17}/></IconButton></div><div className="preview-meta">{project.height}p <span>·</span> 30 fps</div></div>
       </section>
-      <aside className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{multiple?'Selection':clip?'Clip settings':'Make it yours'}</h2></div>
-        {multiple?<SelectionInspector clips={selectedClips} move={start=>edit(p=>moveSelection(p,selectedIds,start-Math.min(...selectedClips.map(c=>c.start))))} remove={remove}/>:clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
+      <aside className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{captionLayer?'Caption settings':multiple?'Selection':clip?'Clip settings':'Make it yours'}</h2></div>
+        {captionLayer?<CaptionInspector key={captionCue?.id||captionLayer.id} layer={captionLayer} cue={captionCue} timelineEnd={duration} edit={edit} checkpoint={checkpoint} remove={remove} openStyle={()=>{setLibraryTab('text');setMediaOpen(true);setCaptionStyleOpen(true);}}/>:multiple?<SelectionInspector clips={selectedClips} move={start=>edit(p=>moveSelection(p,selectedIds,start-Math.min(...selectedClips.map(c=>c.start))))} remove={remove}/>:clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
           <div className="inspector-section"><div className="section-title"><h3>Timing</h3></div><TimingControls key={clip.id} project={project} clip={clip} asset={asset} edit={edit} checkpoint={checkpoint}/><div className="clip-actions"><Button variant="outline" size="sm" onClick={split} disabled={!splitTarget(project,selected,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
           <div className="inspector-section"><div className="section-title"><h3>{clip.kind==='video'?'Clip audio':'Volume'}</h3><IconButton label={clip.muted?'Unmute clip':'Mute clip'} aria-pressed={clip.muted} onClick={()=>updateClip({muted:!clip.muted})}>{clip.muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</IconButton></div><div className="volume-control"><Slider label="Clip volume" min={0} max={2} step={.01} value={[clip.volume]} onPointerDown={checkpoint} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))checkpoint();}} onValueChange={([v])=>updateClip({volume:v,muted:false},false)}/><span>{clip.muted?'Muted':Math.round(clip.volume*100)+'%'}</span></div>
             {clip.kind==='video'&&clip.muted&&<p className="field-hint">Embedded sound is muted. Your separate audio track still plays.</p>}
@@ -148,7 +165,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
         </>:<div className="inspector-empty"><SlidersHorizontal size={28} strokeWidth={1.3}/><h3>Select your clips.</h3><p>Click a clip to adjust it, or drag across empty timeline space to select several clips together.</p><span className="keyboard-tip"><kbd>V</kbd> Select <kbd>S</kbd> Split <kbd>Y</kbd> Slip</span></div>}
       </aside>
     </main>
-    <Timeline project={project} assets={assets} selectedIds={selectedIds} select={selectClips} frame={frame} seek={seek} tool={tool} setTool={changeTool} edit={edit} checkpoint={checkpoint} split={split} add={add} height={timelineHeight} resize={setTimelineHeight} showShortcuts={()=>setHelpOpen(true)}/>
+    <Timeline project={project} assets={assets} captionSelection={captionSelection} selectCaption={selectCaption} selectedIds={selectedIds} select={selectClips} frame={frame} seek={seek} tool={tool} setTool={changeTool} edit={edit} checkpoint={checkpoint} split={split} add={add} height={timelineHeight} resize={setTimelineHeight} showShortcuts={()=>setHelpOpen(true)}/>
     {notice&&<div className="toast" role="status"><Check size={16}/><span>{notice}</span><button aria-label="Dismiss message" onClick={()=>setNotice('')}><X size={15}/></button></div>}
     <Dialog open={exportOpen} onOpenChange={setExportOpen}><DialogContent className="export-dialog" title={exportTitle} description="Export settings and file download." descriptionClassName="sr-only">
       {!job||job.status==='failed'?<><div className="export-formats">{([{id:'mp4',label:'Video',sub:'MP4',icon:Film},{id:'wav',label:'Audio',sub:'WAV',icon:AudioLines},{id:'mp3',label:'Audio',sub:'MP3',icon:Music2}] as const).map(({id,label,sub,icon:Icon})=><button key={id} className={`format-option ${format===id?'chosen':''}`} aria-pressed={format===id} onClick={()=>setFormat(id)}><Icon size={22}/><span>{label}</span><small>{sub}</small>{format===id&&<Check className="format-check" size={13}/>}</button>)}</div><div className="export-summary"><span>Duration</span><strong>{time(selectionOnly&&clip?clip.duration:duration,true)}</strong>{format==='mp4'&&<><span>Resolution</span><strong>{project.width} × {project.height}</strong></>}</div>{clip&&<label className="checkbox-label"><input type="checkbox" checked={selectionOnly} onChange={e=>setSelectionOnly(e.target.checked)}/>Selected time range only <span>{time(clip.start)}–{time(clip.start+clip.duration)}</span></label>}{job?.error&&<p className="inline-error" role="alert">{job.error}</p>}<Button className="export-submit" onClick={()=>void startExport()}><ArrowUpRight size={17}/>Export {displayFormat}</Button></>:job.status==='completed'?<><div className="export-success"><Check size={30}/></div><div className="export-filename">{job.filename}</div><a className="button button-primary export-submit" href={job.url} download><Download size={17}/>Download {displayFormat}</a><p className="export-path">{initial.exportsDir}</p></>:<div className="export-progress"><div className="progress-track" role="progressbar" aria-label="Export progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.progress*100)}><div style={{width:`${Math.max(2,job.progress*100)}%`}}/></div><p>{Math.round(job.progress*100)}%</p></div>}

@@ -1,12 +1,13 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, and open the result in Cutroom. Also create, reopen, edit, and export local Cutroom projects through its MCP, including trim, split, slip, audio adjustment, and moving clip selections together.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, generate and style captions, and create, reopen, edit, or export local Cutroom projects through its MCP.
 ---
 
 # Cutroom
 
 Use the `cutroom` MCP to prepare the video and open its project in the local editor.
 For translation, dubbing or lip sync, read [the dubbing workflow](references/dubbing.md).
+For automatic transcription or caption styling, read [the captions workflow](references/captions.md).
 The user can provide a video and target language in one request; complete the
 provider workflow and open its finished result. Existing provider keys are loaded
 from the local ignored environment, never from prompts or tool arguments.

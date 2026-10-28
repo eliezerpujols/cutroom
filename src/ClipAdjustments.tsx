@@ -9,7 +9,7 @@ type Controls={clip:Clip;change:Change;checkpoint:()=>void};
 const adjustmentKeys=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown']);
 const secondsLabel=(frames:number)=>`${(frames/FPS).toFixed(2)} seconds`;
 
-function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number;min?:number;max:number;change:(frames:number)=>void}){
+export function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number;min?:number;max:number;change:(frames:number)=>void}){
   const [text,setText]=useState((frames/FPS).toFixed(2)),editing=useRef(false),canceled=useRef(false);
   useEffect(()=>{if(!editing.current)setText((frames/FPS).toFixed(2));},[frames]);
   return <span className="control-value"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} value={text}

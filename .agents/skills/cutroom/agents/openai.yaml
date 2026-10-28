@@ -1,4 +1,4 @@
 interface:
   display_name: "Cutroom"
-  short_description: "Translate, dub, lip sync, and edit videos in Cutroom"
-  default_prompt: "Use $cutroom to prepare or translate my video into the requested language and open the finished project in Cutroom."
+  short_description: "Dub, caption, and edit videos in Cutroom"
+  default_prompt: "Use $cutroom to dub, caption, or edit my video and open the finished project in Cutroom."
