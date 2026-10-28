@@ -161,6 +161,12 @@ the Codex chat after updating to discover its new tools.
   there (or audio when no video is present). At a clip edge or gap it is disabled.
   Playback pauses at the cut. Undo restores it in one step.
 - **Move (V):** select and drag clips; trimming uses their edge handles.
+- Drag the divider above the timeline toolbar up or down to resize the timeline;
+  its height is remembered in this browser. Double-click the divider to restore
+  automatic sizing. The focused divider also supports Up/Down and Home/End.
+- **Command + mouse wheel** (or Ctrl + wheel) zooms the timeline around the cursor
+  without zooming the page. Normal wheel scrolling stays available. Zoom buttons
+  and the slider keep the center in view; Fit returns to the beginning.
 - Drag across empty timeline space to box-select video and audio clips across
   tracks. Drag any selected clip to reposition the selection together, preserving
   spacing and audio sync; one Undo restores the move. Selection scrolls at the
@@ -235,6 +241,9 @@ New imports are copied directly into their project folder.
 - Preview video sequences now premount the next clip and pause the playback clock
   while media buffers. This addresses loading gaps at exact adjoining cuts
   without shifting saved clips. No playback test was performed on the active edit.
+- The resizable timeline and modifier-wheel zoom were prepared without exercising
+  the controls in the user's editing session. Layout height is a browser preference
+  and does not change the project document or edit history.
 - The new dubbing integration was not executed against either provider; no test
   generation or paid request was submitted. Compilation is separate from runtime
   validation of provider access, billing and generated output.

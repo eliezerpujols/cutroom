@@ -66,6 +66,9 @@ operations on the new piece. A video clip's embedded audio and separate audio
 clips are independent; edit both only when the user's intended sync requires it.
 `extract_audio` adds a WAV to the media library without changing the timeline.
 The UI can detach audio to a separate track.
+Its upper timeline divider can be dragged to change height (double-click resets
+automatic sizing). Command/Ctrl + mouse wheel zooms around the cursor. These are
+view preferences and do not change clip timing or edit history.
 
 In the UI, dragging empty timeline space selects clips across video and audio
 tracks. Drag any selected clip to move the selection together; Shift-click

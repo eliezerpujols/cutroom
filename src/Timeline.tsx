@@ -1,12 +1,13 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={project:Project;assets:Asset[];selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;showShortcuts:()=>void;};
+type Props={project:Project;assets:Asset[];selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
+const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
   const count=240;
   return <svg className="waveform" viewBox={`0 0 ${count*3} 48`} preserveAspectRatio="none" aria-hidden="true">{Array.from({length:count},(_,i)=>{
@@ -20,14 +21,57 @@ export function Timeline(props:Props){
   const {project,assets,selectedIds,select,frame,seek,tool,setTool,edit,checkpoint,split,add}=props;
   const selected=selectedIds.length===1?selectedIds[0]:null;
   const selectedSet=new Set(selectedIds);
-  const viewport=useRef<HTMLDivElement>(null),board=useRef<HTMLDivElement>(null);
+  const timeline=useRef<HTMLElement>(null),viewport=useRef<HTMLDivElement>(null),board=useRef<HTMLDivElement>(null);
   const gestureCleanup=useRef<(()=>void)|null>(null);
+  const resizeCancel=useRef<(()=>void)|null>(null);
+  const [resizing,setResizing]=useState(false),[timelineSize,setTimelineSize]=useState({height:294,max:1000});
   const [selectionBox,setSelectionBox]=useState<SelectionBox|null>(null),[dragScale,setDragScale]=useState<number|null>(null);
   const [zoom,setZoom]=useState(1),[available,setAvailable]=useState(800),[snapping,setSnapping]=useState(true);
   const length=endFrame(project);const extent=Math.max(length,FPS*8);
   const base=Math.max(.45,(available-48)/extent);const ppf=dragScale??base*zoom;const width=Math.max(available,extent*ppf+24);
+  const zoomValue=useRef(zoom),renderedScale=useRef(ppf),zoomAnchor=useRef<{frame:number;offset:number}|null>(null);
+  zoomValue.current=zoom;renderedScale.current=ppf;
+  const changeZoom=useCallback((value:number,clientX?:number)=>{
+    const next=clamp(value,MIN_ZOOM,MAX_ZOOM),scroller=viewport.current;
+    if(next===zoomValue.current)return;
+    if(scroller){
+      const rect=scroller.getBoundingClientRect(),visible=Math.max(0,scroller.clientWidth-132);
+      const offset=clientX===undefined?visible/2:clamp(clientX-rect.left-132,0,visible);
+      zoomAnchor.current={frame:(scroller.scrollLeft+offset)/renderedScale.current,offset};
+    }
+    zoomValue.current=next;setZoom(next);
+  },[]);
+  useLayoutEffect(()=>{
+    const anchor=zoomAnchor.current;if(!anchor||!viewport.current)return;
+    viewport.current.scrollLeft=Math.max(0,anchor.frame*ppf-anchor.offset);zoomAnchor.current=null;
+  },[ppf,width,zoom]);
+  useEffect(()=>{
+    const element=timeline.current;if(!element)return;
+    const wheel=(event:WheelEvent)=>{
+      if(!event.metaKey&&!event.ctrlKey)return;
+      event.preventDefault();event.stopPropagation();
+      if(gestureCleanup.current)return;
+      const unit=event.deltaMode===1?16:event.deltaMode===2?(viewport.current?.clientHeight||600):1;
+      const delta=clamp((event.deltaY||event.deltaX)*unit,-500,500);
+      changeZoom(zoomValue.current*Math.exp(-delta*.0025),event.clientX);
+    };
+    // A native non-passive listener prevents browser zoom for this gesture.
+    element.addEventListener('wheel',wheel,{passive:false});
+    return()=>element.removeEventListener('wheel',wheel);
+  },[changeZoom]);
   useEffect(()=>()=>gestureCleanup.current?.(),[]);
   useEffect(()=>{if(!viewport.current)return;const obs=new ResizeObserver(([e])=>setAvailable(Math.max(200,e.contentRect.width-132)));obs.observe(viewport.current);return()=>obs.disconnect();},[]);
+  function heightLimits(){
+    const shell=timeline.current!.closest<HTMLElement>('.app-shell')!;
+    const header=shell.querySelector<HTMLElement>('.app-header')?.offsetHeight||56;
+    const tabs=shell.querySelector<HTMLElement>('.mobile-tabs')?.offsetHeight||0;
+    return {min:MIN_HEIGHT,max:Math.max(MIN_HEIGHT,Math.floor(shell.clientHeight-header-tabs-(matchMedia('(max-width:800px)').matches?250:240)))};
+  }
+  useEffect(()=>{
+    const element=timeline.current,shell=element?.closest<HTMLElement>('.app-shell');if(!element||!shell)return;
+    const update=()=>{const height=Math.round(element.getBoundingClientRect().height),max=heightLimits().max;setTimelineSize(previous=>previous.height===height&&previous.max===max?previous:{height,max});};
+    const observer=new ResizeObserver(update);observer.observe(element);observer.observe(shell);update();return()=>observer.disconnect();
+  },[]);
   const rulerStep=ppf*FPS<25?120:ppf*FPS<70?60:30;
   const selectedClip=project.clips.find(c=>c.id===selected);
   const selectedAsset=assets.find(a=>a.id===selectedClip?.assetId);
@@ -39,10 +83,43 @@ export function Timeline(props:Props){
   function scrub(e:React.PointerEvent){if(e.button!==0)return;e.preventDefault();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
     const move=(ev:PointerEvent)=>seek(pointerFrame(ev.clientX));const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});}
 
+  function startResize(e:React.PointerEvent<HTMLDivElement>){
+    if(e.button!==0||!e.isPrimary)return;
+    e.preventDefault();e.stopPropagation();gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);
+    const handle=e.currentTarget,originY=e.clientY,originHeight=timeline.current!.getBoundingClientRect().height,previous=props.height;
+    const cursor=document.body.style.cursor,userSelect=document.body.style.userSelect;
+    let moved=false;
+    handle.focus({preventScroll:true});handle.setPointerCapture(e.pointerId);setResizing(true);
+    document.body.style.cursor='row-resize';document.body.style.userSelect='none';
+    const move=(event:PointerEvent)=>{
+      if(event.pointerId!==e.pointerId)return;
+      if(!moved&&Math.abs(event.clientY-originY)<1)return;
+      moved=true;const bounds=heightLimits();props.resize(Math.round(clamp(originHeight+originY-event.clientY,bounds.min,bounds.max)));
+    };
+    const cleanup=()=>{
+      window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',blur);
+      try{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);}catch{/* The browser may already have released a canceled pointer. */}
+      document.body.style.cursor=cursor;document.body.style.userSelect=userSelect;
+      gestureCleanup.current=null;resizeCancel.current=null;
+    };
+    const finish=(event:PointerEvent)=>{if(event.pointerId!==e.pointerId)return;if(moved)move(event);cleanup();setResizing(false);};
+    const revert=()=>{if(moved)props.resize(previous);cleanup();setResizing(false);};
+    const cancel=(event:PointerEvent)=>{if(event.pointerId===e.pointerId)revert();};
+    const blur=()=>{cleanup();setResizing(false);};
+    gestureCleanup.current=cleanup;resizeCancel.current=revert;
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur);
+  }
+  function resizeKey(e:React.KeyboardEvent){
+    if(e.key==='Escape'&&resizeCancel.current){e.preventDefault();e.stopPropagation();resizeCancel.current();return;}
+    const bounds=heightLimits(),step=e.shiftKey?72:24,current=timeline.current!.getBoundingClientRect().height;
+    const value=e.key==='ArrowUp'?current+step:e.key==='ArrowDown'?current-step:e.key==='Home'?bounds.min:e.key==='End'?bounds.max:null;
+    if(value===null)return;e.preventDefault();e.stopPropagation();props.resize(Math.round(clamp(value,bounds.min,bounds.max)));
+  }
+
   function selectArea(e:React.PointerEvent){
     if(e.button!==0||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row'))return;
     e.preventDefault();e.stopPropagation();gestureCleanup.current?.();
-    board.current!.focus({preventScroll:true});setTool('select');setDragScale(null);
+    board.current!.focus({preventScroll:true});setTool('select');setDragScale(null);setResizing(false);
     const element=board.current!,scroller=viewport.current!;
     const initialRect=element.getBoundingClientRect(),x=e.clientX,y=e.clientY;
     const origin={x:x-initialRect.left,y:y-initialRect.top};
@@ -94,7 +171,7 @@ export function Timeline(props:Props){
   }
 
   function drag(e:React.PointerEvent,c:Clip,edge?:'left'|'right'){
-    if(e.button!==0)return;e.stopPropagation();e.preventDefault();gestureCleanup.current?.();setSelectionBox(null);board.current?.focus({preventScroll:true});
+    if(e.button!==0)return;e.stopPropagation();e.preventDefault();gestureCleanup.current?.();setSelectionBox(null);setResizing(false);board.current?.focus({preventScroll:true});
     const additive=!edge&&(e.shiftKey||e.metaKey||e.ctrlKey);
     const group=!edge&&tool==='select'?(selectedSet.has(c.id)?selectedIds:additive?[...selectedIds,c.id]:[c.id]):[c.id];
     if(edge||(!additive&&!selectedSet.has(c.id)))select([c.id]);
@@ -139,14 +216,16 @@ export function Timeline(props:Props){
       edit(p=>moveSelection(p,group,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));
     }
   }
-  return <section className="timeline" aria-label="Editing timeline"><div className="timeline-toolbar"><div className="tool-group" role="toolbar" aria-label="Timeline tools">
+  return <section className="timeline" ref={timeline} aria-label="Editing timeline">
+    <div className="timeline-resizer" role="separator" aria-label="Timeline height" aria-orientation="horizontal" aria-controls="timeline-tracks" aria-valuemin={MIN_HEIGHT} aria-valuemax={timelineSize.max} aria-valuenow={timelineSize.height} aria-valuetext={`${timelineSize.height} pixels`} tabIndex={0} data-resizing={resizing||undefined} title="Drag to resize the timeline. Double-click to reset." onPointerDown={startResize} onKeyDown={resizeKey} onDoubleClick={()=>props.resize(null)}><span/></div>
+    <div className="timeline-toolbar"><div className="tool-group" role="toolbar" aria-label="Timeline tools">
     <Tip label="Move clips · V. Drag empty space to select several clips, then drag a selected clip to move them together. Drag clip edges to trim."><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='select'?'active':'')} aria-label="Move clips · V" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/><span>Move</span></Button></Tip>
     <Tip label={splitHint}><span className="tool-tip-anchor"><Button variant="outline" size="sm" className="timeline-tool split-action" aria-label="Split at playhead · S" disabled={!canSplit} onClick={split}><Scissors size={16}/><span>Split</span></Button></span></Tip>
     <Tip label={slipHint}><span className="tool-tip-anchor"><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='slip'?'active':'')} aria-label="Slip source content · Y" aria-pressed={tool==='slip'} disabled={!canSlip} onClick={()=>setTool('slip')}><BetweenHorizontalStart size={16}/><span>Slip</span></Button></span></Tip>
     <span className="toolbar-divider"/><IconButton label="Snap to clip edges" aria-pressed={snapping} className={snapping?'snap-active':''} onClick={()=>setSnapping(v=>!v)}><Magnet size={16}/></IconButton>
   </div><span className="timeline-guidance">{selectedIds.length>1?`${selectedIds.length} selected · Drag any selected clip to move together.`:tool==='slip'?'Drag inside the clip to change its source content.':!project.clips.length?'Add media to start editing.':'Drag empty space to select. Drag clips to move.'}</span>
-  <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>setZoom(v=>Math.max(.5,v-.25))}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={.5} max={5} step={.1} value={[zoom]} onValueChange={([v])=>setZoom(v)}/><IconButton label="Zoom in" onClick={()=>setZoom(v=>Math.min(5,v+.25))}><Plus size={15}/></IconButton><IconButton label="Fit timeline" onClick={()=>setZoom(1)}><Scan size={16}/></IconButton></div></div>
-  <div className="timeline-scroll" ref={viewport}><div className="timeline-board" ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
+  <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>changeZoom(zoomValue.current-.25)}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={.1} value={[zoom]} onValueChange={([value])=>changeZoom(value)}/><IconButton label="Zoom in" onClick={()=>changeZoom(zoomValue.current+.25)}><Plus size={15}/></IconButton><IconButton label="Fit timeline" onClick={()=>{zoomAnchor.current=null;zoomValue.current=1;setZoom(1);if(viewport.current)viewport.current.scrollLeft=0;}}><Scan size={16}/></IconButton></div></div>
+  <div className="timeline-scroll" id="timeline-tracks" ref={viewport}><div className="timeline-board" ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
     if(e.key==='Escape'){gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);}
     if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&selectedIds.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target as HTMLElement).closest('.ruler,.timeline-clip,.track-label')){e.preventDefault();e.stopPropagation();edit(p=>moveSelection(p,selectedIds,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));}
   }}>
