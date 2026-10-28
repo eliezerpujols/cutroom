@@ -121,6 +121,9 @@ The launcher and MCP can also start the server in the background.
   there (or audio when no video is present). At a clip edge or gap it is disabled.
   Playback pauses at the cut. Undo restores it in one step.
 - **Move (V):** select and drag clips; trimming uses their edge handles.
+- Overlapping video clips get separate visible tracks. Moving a clip onto an
+  occupied video track places it in a free track above, creating one when needed.
+  Drag vertically to another video track, or above the first one to create a track.
 - **Slip (Y):** drag the content inside a clip while keeping its position and duration.
   The button is available when the selected clip has unused source footage;
   trim first to make room. Fine adjustments also
@@ -139,8 +142,10 @@ The launcher and MCP can also start the server in the background.
 Timing is frame-based at 30 fps. A gap between video clips exports as black;
 audio tracks can continue through it. Trimming or slipping one track does not
 silently move another. Multiple audio tracks mix together; avoid leaving the
-same sound enabled twice after detaching. Overlapping video clips show the
-later clip in the project order. There is no ripple editing or transition tool.
+same sound enabled twice after detaching. The upper video track appears above
+lower tracks in the preview and exported video. Video clips cannot overlap within
+one track; their timing and source windows stay unchanged when assigned to a new
+track. There is no ripple editing or transition tool.
 
 ## Development
 
@@ -165,11 +170,16 @@ New imports are copied directly into their project folder.
 
 ## Validation
 
-- Fifteen tests cover default and explicit project locations, migration, rediscovery,
+- Twenty-two tests cover default and explicit project locations, migration, rediscovery,
   persistence, portable copies, missing media, revision conflicts, path checks,
   and timing/audio invariants including split selection, clip-edge handling,
   accelerated splits, source continuity,
-  trim bounds, slip bounds, speed changes and audio fade/mute behavior.
+  trim bounds, slip bounds, speed changes and audio fade/mute behavior. Video track
+  cases cover collision placement, free-track reuse, drag preview cleanup,
+  legacy overlap repair, track limits, and render/split ordering.
+- The video-track change passed the unit suite and production build. Its live
+  dragging and export behavior have not been checked in the browser; the active
+  editing session was left untouched for user testing.
 - Browser checks cover playback, trim handles, slip dragging, splitting, undo,
   theme switching, narrow layout and the export/download flow.
 - Real Remotion MP4, WAV and MP3 exports were generated and decoded successfully.

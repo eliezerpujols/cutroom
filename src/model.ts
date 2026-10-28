@@ -20,10 +20,14 @@ export const time = (frames:number, precise=false) => {
   return `${String(m).padStart(2,'0')}:${String(Math.floor(s)%60).padStart(2,'0')}${precise?'.'+String(Math.floor((s%1)*100)).padStart(2,'0'):''}`;
 };
 export const maxDuration = (c:Clip, a:Asset) => Math.max(1,Math.floor((a.frames-c.sourceIn)/c.rate));
+export function clipsInRenderOrder(p:Project):Clip[]{
+  const order=new Map(p.tracks.map((t,i)=>[t.id,i]));
+  return [...p.clips].sort((a,b)=>(order.get(b.trackId)??Number.MAX_SAFE_INTEGER)-(order.get(a.trackId)??Number.MAX_SAFE_INTEGER));
+}
 export function splitTarget(p:Project,selected:string|null,frame:number):Clip|null {
   const chosen=p.clips.find(c=>c.id===selected);
   const covering=(c:Clip)=>c.start<=frame&&frame<c.start+c.duration;
-  const top=[...p.clips].reverse();
+  const top=clipsInRenderOrder(p).reverse();
   const target=chosen||top.find(c=>c.kind==='video'&&covering(c))||top.find(c=>c.kind==='audio'&&covering(c));
   return target&&frame>target.start&&frame<target.start+target.duration?target:null;
 }

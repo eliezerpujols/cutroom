@@ -4,6 +4,7 @@ import {Play,Pause,SkipBack,SkipForward,Undo2,Redo2,Plus,Film,AudioLines,ArrowUp
 import {Button,IconButton,TooltipProvider,Slider,Input,Dialog,DialogContent,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from './ui/primitives';
 import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
+import {arrangeVideoTracks,changedVideoClipIds} from './videoTracks';
 import {api,useEditor} from './useEditor';
 import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,slipClip,setClipRate,maxDuration,type Asset,type Clip,type Project,type Tool} from './model';
 
@@ -13,7 +14,8 @@ type ExportJob={id:string;status:string;progress:number;url?:string;error?:strin
 type Theme='system'|'light'|'dark';
 export default function App(){return <ProjectShell>{(workspace,controls)=><Editor initial={workspace} controls={controls}/>}</ProjectShell>;}
 function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls}){
-  const {project,edit,checkpoint,undo,redo,canUndo,canRedo,current}=useEditor(restoredProject(initial));
+  const [initialProject]=useState(()=>arrangeVideoTracks(restoredProject(initial)));
+  const {project,edit:editProject,checkpoint,undo,redo,canUndo,canRedo,current}=useEditor(initialProject);
   const saving=useProjectSave(initial,project);
   useEffect(()=>controls.registerSave(saving.flush),[controls.registerSave,saving.flush]);
   const [assets,setAssets]=useState(initial.assets),[selected,setSelected]=useState<string|null>(initial.project.clips[0]?.id||null);
@@ -27,6 +29,10 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const clip=project.clips.find(c=>c.id===selected),asset=assets.find(a=>a.id===clip?.assetId),duration=endFrame(project);
   const compositionProps=useMemo(()=>({project,assets}),[project,assets]);
   const toast=useCallback((message:string)=>{setNotice(message);if(noticeTimer.current)clearTimeout(noticeTimer.current);noticeTimer.current=setTimeout(()=>setNotice(''),6000);},[]);
+  const edit=useCallback((change:Project|((p:Project)=>Project),record=true)=>{
+    try{editProject(p=>{const next=typeof change==='function'?change(p):change;return arrangeVideoTracks(next,changedVideoClipIds(p,next));},record);}
+    catch(e){toast((e as Error).message);}
+  },[editProject,toast]);
   useEffect(()=>{const query=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=theme==='system'?(query.matches?'dark':'light'):theme;apply();query.addEventListener('change',apply);localStorage.setItem('cutroom-theme',theme);return()=>query.removeEventListener('change',apply);},[theme]);
   useEffect(()=>{const p=player.current;if(!p)return;const update=(e:{detail:{frame:number}})=>setFrame(e.detail.frame);
     const play=()=>setPlaying(true),pause=()=>setPlaying(false);p.addEventListener('frameupdate',update);p.addEventListener('play',play);p.addEventListener('pause',pause);p.addEventListener('ended',pause);
@@ -87,7 +93,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   },[job?.id,job?.status,toast]);
   const openExport=(audio=false)=>{if(!exportBusy){setFormat(audio?'wav':'mp4');setSelectionOnly(false);setJob(null);}setExportOpen(true);};
   const displayFormat=format==='mp4'?'MP4 video':format==='wav'?'WAV audio':'MP3 audio';
-  return <div className="app-shell" onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();void importFiles(Array.from(e.dataTransfer.files));}}}>
+  return <div className="app-shell" style={{'--extra-tracks':Math.max(0,project.tracks.length-2)} as React.CSSProperties} onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();void importFiles(Array.from(e.dataTransfer.files));}}}>
     <header className="app-header"><a className="brand" href="/" aria-label="Cutroom home"><span className="brand-symbol"/>Cutroom</a><span className="header-divider"/><IconButton label="Your projects" onClick={controls.openProjects}><FolderOpen size={18}/></IconButton><div className="project-identity"><Input aria-label="Project name" value={project.name} maxLength={100} onChange={e=>edit(p=>({...p,name:e.target.value||'Untitled'}))}/><span className={`save-status ${saving.state}`} title={saving.error}>{saving.state==='saved'?<><Check size={12}/>Saved locally</>:saving.state==='saving'?<><span className="save-pulse"/>Saving…</>:saving.state==='conflict'?<button onClick={controls.reloadSaved}>Saved version changed · Reopen</button>:<button onClick={()=>void saving.flush().catch(()=>{})}>Reconnecting · Retry save</button>}</span></div>
       <div className="header-actions"><div className="history-tools"><IconButton label="Undo · ⌘Z" disabled={!canUndo} onClick={undo}><Undo2 size={17}/></IconButton><IconButton label="Redo · ⇧⌘Z" disabled={!canRedo} onClick={redo}><Redo2 size={17}/></IconButton></div><span className="header-divider"/>
         <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Appearance">{theme==='system'?<Monitor size={18}/>:theme==='dark'?<Moon size={18}/>:<Sun size={18}/>}</Button></DropdownMenuTrigger><DropdownMenuContent>{(['system','light','dark'] as const).map(t=><DropdownMenuItem key={t} onSelect={()=>setTheme(t)}>{t==='system'?<Monitor size={16}/>:t==='light'?<Sun size={16}/>:<Moon size={16}/>}<span>{t==='system'?'Use system theme':t==='dark'?'Charcoal':'Light'}</span>{theme===t&&<Check size={14}/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>

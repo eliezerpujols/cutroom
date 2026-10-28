@@ -1,7 +1,8 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
-import {FPS,clamp,endFrame,time,trimClip,slipClip,splitTarget,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
+import {placeTimelineClip} from './videoTracks';
+import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
 
 type Props={project:Project;assets:Asset[];selected:string|null;select:(id:string|null)=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;showShortcuts:()=>void;};
 export function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -32,16 +33,17 @@ export function Timeline(props:Props){
     const move=(ev:PointerEvent)=>seek(pointerFrame(ev.clientX));const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});}
   function drag(e:React.PointerEvent,c:Clip,edge?:'left'|'right'){
     if(e.button!==0)return;e.stopPropagation();e.preventDefault();select(c.id);
-    const a=assets.find(a=>a.id===c.assetId)!;if(tool==='slip'&&!edge&&a.frames-c.duration*c.rate<1)return;const x=e.clientX;let started=false;
+    const a=assets.find(a=>a.id===c.assetId)!;if(tool==='slip'&&!edge&&a.frames-c.duration*c.rate<1)return;const x=e.clientX,y=e.clientY,dragTrackId=uid();let started=false;
+    const rows=Array.from(board.current!.querySelectorAll<HTMLElement>('.track-row')).map(row=>({id:row.dataset.trackId!,kind:row.dataset.trackKind!,rect:row.getBoundingClientRect()})).filter(row=>row.kind===c.kind);
     const points=[0,frame,...project.clips.filter(v=>v.id!==c.id).flatMap(v=>[v.start,v.start+v.duration])];
     const move=(ev:PointerEvent)=>{
-      if(!started&&Math.abs(ev.clientX-x)<2)return;
+      if(!started&&Math.abs(ev.clientX-x)<2&&Math.abs(ev.clientY-y)<4)return;
       if(!started){checkpoint();started=true;}
-      let delta=Math.round((ev.clientX-x)/ppf);let next:Clip;
+      let delta=Math.round((ev.clientX-x)/ppf);let next:Clip;let forceNewTrack=false;
       if(edge){if(snapping&&!ev.shiftKey){const target=(edge==='left'?c.start:c.start+c.duration)+delta;delta+=snapFrame(target,points,7/ppf)-target;}next=trimClip(c,delta,edge,a);}
       else if(tool==='slip')next=slipClip(c,delta,a);
-      else {let start=Math.max(0,c.start+delta);if(snapping&&!ev.shiftKey){const l=snapFrame(start,points,7/ppf),r=snapFrame(start+c.duration,points,7/ppf)-c.duration;start=Math.abs(l-start)<=Math.abs(r-start)?l:r;}next={...c,start:Math.max(0,start)};}
-      edit(p=>({...p,clips:p.clips.map(v=>v.id===c.id?next:v)}),false);
+      else {let start=Math.max(0,c.start+delta);if(snapping&&!ev.shiftKey){const l=snapFrame(start,points,7/ppf),r=snapFrame(start+c.duration,points,7/ppf)-c.duration;start=Math.abs(l-start)<=Math.abs(r-start)?l:r;}const target=rows.find(row=>ev.clientY>=row.rect.top&&ev.clientY<row.rect.bottom);forceNewTrack=c.kind==='video'&&!!rows[0]&&ev.clientY<rows[0].rect.top-6;next={...c,start:Math.max(0,start),trackId:forceNewTrack?rows[0].id:target?.id||c.trackId};}
+      edit(p=>placeTimelineClip(p,next,{newTrackId:dragTrackId,cleanupTrackId:dragTrackId,forceNewTrack}),false);
     };
     const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);};
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});window.addEventListener('pointercancel',finish,{once:true});
@@ -57,12 +59,12 @@ export function Timeline(props:Props){
     <div className="ruler-row"><div className="ruler-label">TIMELINE <span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
-    {project.tracks.map(track=><div className="track-row" key={track.id} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}} onDrop={e=>{e.preventDefault();const id=e.dataTransfer.getData('application/cutroom-asset');if(id)add(id,pointerFrame(e.clientX),track.id);}}>
+    {project.tracks.map(track=><div className="track-row" key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}} onDrop={e=>{e.preventDefault();const id=e.dataTransfer.getData('application/cutroom-asset');if(id)add(id,pointerFrame(e.clientX),track.id);}}>
       <div className="track-label"><span className={`track-kind ${track.kind}`}>{track.kind==='video'?<Film size={16}/>:<AudioLines size={16}/>}</span><span>{track.name}</span><IconButton label={`${track.muted?'Unmute':'Mute'} ${track.name.toLowerCase()} track`} aria-pressed={track.muted} onClick={()=>edit(p=>({...p,tracks:p.tracks.map(t=>t.id===track.id?{...t,muted:!t.muted}:t)}))}>{track.muted?<VolumeX size={14}/>:<Volume2 size={14}/>}</IconButton></div>
       <div className="track-lane" style={{width}} onPointerDown={e=>{if(e.target===e.currentTarget){select(null);scrub(e);}}}>
       {!project.clips.some(c=>c.trackId===track.id)&&<div className="empty-track">Drop {track.kind==='video'?'a video':'audio'} here</div>}
       {project.clips.filter(c=>c.trackId===track.id).map(c=>{const a=assets.find(a=>a.id===c.assetId);if(!a)return null;const selectedClip=c.id===selected;
-        return <div key={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>{if(e.key==='Enter')select(c.id);if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const delta=e.key==='ArrowRight'?1:-1;edit(p=>({...p,clips:p.clips.map(v=>v.id===c.id?{...v,start:Math.max(0,v.start+delta*(e.shiftKey?30:1))}:v)}));}}}>
+        return <div key={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>{if(e.key==='Enter'){e.stopPropagation();select(c.id);}if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();const delta=e.key==='ArrowRight'?1:-1;edit(p=>({...p,clips:p.clips.map(v=>v.id===c.id?{...v,start:Math.max(0,v.start+delta*(e.shiftKey?30:1))}:v)}));}}}>
           {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<Waveform asset={a} clip={c}/>}
           <div className="clip-title">{c.kind==='video'?<Film size={11}/>:<AudioLines size={12}/>}<span>{c.name}</span>{c.muted&&<VolumeX size={12}/>}</div>
           <div className="clip-edge left" aria-label="Trim start" role="separator" onPointerDown={e=>drag(e,c,'left')}/><div className="clip-edge right" aria-label="Trim end" role="separator" onPointerDown={e=>drag(e,c,'right')}/>

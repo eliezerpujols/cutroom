@@ -59,6 +59,13 @@ clips are independent; edit both only when the user's intended sync requires it.
 `extract_audio` adds a WAV to the media library without changing the timeline.
 The UI can detach audio to a separate track.
 
+Video clips that overlap in time occupy separate tracks. Adding, moving or
+extending a video into another clip's space automatically assigns it a free video
+track above, creating one if needed. Inspect the returned project for updated
+`trackId` values before later edits. Tracks are ordered top to bottom: the upper
+video track appears above lower ones in both preview and export. Audio clips
+can overlap and mix without being moved to new tracks.
+
 If a revision conflict occurs, read the latest project and reconcile the requested
 change. Do not replay stale edits or discard an unsaved browser draft. The editor
 keeps a local draft and reports the conflict. Missing media should be reconnected
