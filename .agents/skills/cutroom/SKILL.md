@@ -76,6 +76,9 @@ Fade in / Fade out sliders with editable seconds. Playback & content provides
 speed controls and a Content start source window. Dragging that window slips
 the source without moving or resizing the timeline clip; Earlier / Later move
 one source frame. Speed changes the clip's duration.
+Timing offers Start at and Duration sliders with editable seconds and an Ends at
+readout. Each slider gesture is a single undo step; overlapping clips are assigned
+separate matching tracks, as when dragging on the timeline.
 
 In the UI, dragging empty timeline space selects clips across video and audio
 tracks. Drag any selected clip to move the selection together; Shift-click

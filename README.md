@@ -184,6 +184,9 @@ the Codex chat after updating to discover its new tools.
   trim first to make room. Fine adjustments also
   offer a Source in field and one-frame buttons.
 - Select a clip to adjust position, duration, volume, fades and playback speed.
+- **Timing** has Start at and Duration sliders with editable seconds and an
+  Ends at readout. Sliders adjust one frame at a time. Moving or extending into
+  another clip's space uses a separate matching track, as timeline dragging does.
 - Audio clips show fade ramps and an attenuated waveform. Select an audio clip
   and drag its small fade handles, or use the inspector's Fade in / Fade out
   sliders. The compact seconds values remain editable for precise adjustments.

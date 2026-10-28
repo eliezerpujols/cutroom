@@ -4,11 +4,11 @@ import {Play,Pause,SkipBack,SkipForward,Undo2,Redo2,Plus,Film,AudioLines,ArrowUp
 import {Button,IconButton,TooltipProvider,Slider,Input,Dialog,DialogContent,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from './ui/primitives';
 import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
-import {AudioFadeControls,PlaybackControls} from './ClipAdjustments';
+import {AudioFadeControls,PlaybackControls,TimingControls} from './ClipAdjustments';
 import {arrangeTimelineTracks,changedTimelineClipIds} from './videoTracks';
 import {moveSelection} from './timelineSelection';
 import {api,useEditor} from './useEditor';
-import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,maxDuration,type Asset,type Clip,type Project,type Tool} from './model';
+import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,type Asset,type Clip,type Project,type Tool} from './model';
 
 import {ProjectShell,type ProjectControls} from './ProjectShell';
 import {restoredProject,useProjectSave,type Workspace} from './useProjectSave';
@@ -137,7 +137,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       </section>
       <aside className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{multiple?'Selection':clip?'Clip settings':'Make it yours'}</h2></div>
         {multiple?<SelectionInspector clips={selectedClips} move={start=>edit(p=>moveSelection(p,selectedIds,start-Math.min(...selectedClips.map(c=>c.start))))} remove={remove}/>:clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
-          <div className="inspector-section"><div className="section-title"><h3>Timing</h3><span>seconds</span></div><div className="field-grid"><NumberField label="Position" value={clip.start/FPS} onChange={v=>updateClip({start:Math.max(0,Math.round(v*FPS))})}/><NumberField label="Duration" value={clip.duration/FPS} min={1/FPS} max={maxDuration(clip,asset)/FPS} onChange={v=>updateClip({duration:clamp(Math.round(v*FPS),1,maxDuration(clip,asset))})}/></div><div className="clip-actions"><Button variant="outline" size="sm" onClick={split} disabled={!splitTarget(project,selected,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
+          <div className="inspector-section"><div className="section-title"><h3>Timing</h3></div><TimingControls key={clip.id} project={project} clip={clip} asset={asset} edit={edit} checkpoint={checkpoint}/><div className="clip-actions"><Button variant="outline" size="sm" onClick={split} disabled={!splitTarget(project,selected,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
           <div className="inspector-section"><div className="section-title"><h3>{clip.kind==='video'?'Clip audio':'Volume'}</h3><IconButton label={clip.muted?'Unmute clip':'Mute clip'} aria-pressed={clip.muted} onClick={()=>updateClip({muted:!clip.muted})}>{clip.muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</IconButton></div><div className="volume-control"><Slider label="Clip volume" min={0} max={2} step={.01} value={[clip.volume]} onPointerDown={checkpoint} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))checkpoint();}} onValueChange={([v])=>updateClip({volume:v,muted:false},false)}/><span>{clip.muted?'Muted':Math.round(clip.volume*100)+'%'}</span></div>
             {clip.kind==='video'&&clip.muted&&<p className="field-hint">Embedded sound is muted. Your separate audio track still plays.</p>}
             <AudioFadeControls key={clip.id} clip={clip} change={updateClip} checkpoint={checkpoint}/>

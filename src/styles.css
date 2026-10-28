@@ -127,3 +127,8 @@
 .export-dialog .export-progress{gap:12px;padding:26px 0 4px}
 .export-dialog .export-success{width:42px;height:42px;margin:24px auto 14px}
 .export-dialog .export-success svg{width:22px;height:22px}
+
+.timing-controls{display:grid;gap:12px}
+.timing-controls .slider{height:24px}
+.timing-end{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+.timing-end output{color:var(--foreground)}

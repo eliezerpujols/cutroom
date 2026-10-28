@@ -1,20 +1,52 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight} from 'lucide-react';
 import {Button,Input,Slider} from './ui/primitives';
-import {FPS,clamp,fadeGainAt,setClipRate,time,type Asset,type Clip} from './model';
+import {FPS,clamp,endFrame,fadeGainAt,maxDuration,setClipRate,time,uid,type Asset,type Clip,type Project} from './model';
+import {placeTimelineClip} from './videoTracks';
 
 type Change=(values:Partial<Clip>,record?:boolean)=>void;
 type Controls={clip:Clip;change:Change;checkpoint:()=>void};
 const adjustmentKeys=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown']);
 const secondsLabel=(frames:number)=>`${(frames/FPS).toFixed(2)} seconds`;
 
-function TimeValue({label,frames,max,change}:{label:string;frames:number;max:number;change:(frames:number)=>void}){
+function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number;min?:number;max:number;change:(frames:number)=>void}){
   const [text,setText]=useState((frames/FPS).toFixed(2)),editing=useRef(false),canceled=useRef(false);
   useEffect(()=>{if(!editing.current)setText((frames/FPS).toFixed(2));},[frames]);
-  return <span className="control-value"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={0} max={max/FPS} aria-label={label} value={text}
+  return <span className="control-value"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} value={text}
     onFocus={()=>{editing.current=true;canceled.current=false;}} onChange={event=>setText(event.target.value)}
-    onBlur={()=>{editing.current=false;if(canceled.current){canceled.current=false;setText((frames/FPS).toFixed(2));return;}const value=Number(text);if(Number.isFinite(value)){const next=clamp(Math.round(value*FPS),0,max);if(next!==frames)change(next);setText((next/FPS).toFixed(2));}else setText((frames/FPS).toFixed(2));}}
+    onBlur={()=>{editing.current=false;if(canceled.current){canceled.current=false;setText((frames/FPS).toFixed(2));return;}const value=Number(text);if(Number.isFinite(value)){const next=clamp(Math.round(value*FPS),min,max);if(next!==frames)change(next);setText((next/FPS).toFixed(2));}else setText((frames/FPS).toFixed(2));}}
     onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter')event.currentTarget.blur();if(event.key==='Escape'){canceled.current=true;event.currentTarget.blur();}}}/><span aria-hidden="true">s</span></span>;
+}
+
+type TimingProps={project:Project;clip:Clip;asset:Asset;edit:(change:(project:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void};
+type TimingField='start'|'duration';
+export function TimingControls({project,clip,asset,edit,checkpoint}:TimingProps){
+  const startMaximum=Math.min(108000,Math.max(FPS*8,endFrame(project)));
+  const durationMaximum=Math.max(clip.duration,maxDuration(clip,asset));
+  const gesture=useRef<{project:Project;clip:Clip;trackId:string;maximum:number}|null>(null);
+  const [activeMaximum,setActiveMaximum]=useState<{field:TimingField;value:number}|null>(null);
+  function begin(field:TimingField){
+    const maximum=field==='start'?startMaximum:durationMaximum;
+    gesture.current={project,clip,trackId:uid(),maximum};setActiveMaximum({field,value:maximum});checkpoint();
+  }
+  function finish(){gesture.current=null;setActiveMaximum(null);}
+  function apply(field:TimingField,value:number,record=true){
+    const origin=record?null:gesture.current;
+    const next=clamp(Math.round(value),field==='start'?0:1,origin?.maximum??(field==='start'?108000:durationMaximum));
+    if(origin){
+      // Rebuild from the gesture's original tracks so passing across other clips
+      // does not leave a growing set of temporary lanes behind.
+      edit(()=>placeTimelineClip(origin.project,{...origin.clip,[field]:next},{newTrackId:origin.trackId}),false);
+    }else if(next!==clip[field])edit(p=>({...p,clips:p.clips.map(c=>c.id===clip.id?{...c,[field]:next}:c)}));
+  }
+  return <div className="timing-controls">{(['start','duration'] as const).map(field=>{
+    const label=field==='start'?'Start at':'Duration',minimum=field==='start'?0:1;
+    const maximum=activeMaximum?.field===field?activeMaximum.value:field==='start'?startMaximum:durationMaximum;
+    return <div className="clip-adjustment" key={field}>
+      <div className="adjustment-heading"><span>{label}</span><TimeValue label={`${label} in seconds`} frames={clip[field]} min={minimum} max={field==='start'?108000:durationMaximum} change={value=>apply(field,value)}/></div>
+      <Slider label={field==='start'?'Clip start on timeline':'Clip duration'} valueText={secondsLabel(clip[field])} min={minimum} max={maximum} step={1} value={[clip[field]]} disabled={maximum<=minimum} onPointerDown={()=>begin(field)} onKeyDown={event=>{if(adjustmentKeys.has(event.key))begin(field);}} onValueChange={([value])=>apply(field,value,false)} onValueCommit={finish} onPointerCancel={finish} onBlur={finish}/>
+    </div>;
+  })}<div className="timing-end"><span>Ends at</span><output>{((clip.start+clip.duration)/FPS).toFixed(2)} s</output></div></div>;
 }
 
 export function AudioFadeControls({clip,change,checkpoint}:Controls){
