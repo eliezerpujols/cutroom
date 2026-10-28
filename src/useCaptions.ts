@@ -5,18 +5,18 @@ import type {Project} from './model';
 
 export type CaptionQuote={frames:number;seconds:number;estimatedCredits:number;reservedCredits:number;maxCredits:number;configured:boolean;hasAudio:boolean};
 export type CaptionJob={id:string;status:'mixing'|'transcribing'|'completed'|'failed';running:boolean;sourceSignature:string;estimatedCredits:number;layer?:CaptionLayer;error?:string;submitted:boolean};
-export function useCaptions(projectId:string,project:Project,enabled:boolean,edit:(change:(p:Project)=>Project)=>void,added:(id:string)=>void){
+export function useCaptions(projectId:string,project:Project,enabled:boolean,edit:(change:(p:Project)=>Project)=>void,added:(id:string)=>void,editorInstanceId?:string,recoverLegacy=false){
   const [quote,setQuote]=useState<CaptionQuote|null>(null),[job,setJob]=useState<CaptionJob|null>(null),[error,setError]=useState(''),[starting,setStarting]=useState(false),[refresh,setRefresh]=useState(0);
   const [quoteState,setQuoteState]=useState<'idle'|'loading'|'reconnecting'|'ready'|'unavailable'>('idle');
   const [settled,setSettled]=useState(0),pointerActive=useRef(false);
   const latest=useRef(project),onAdded=useRef(added),applied=useRef(new Set<string>()),requestId=useRef<string|null>(null);latest.current=project;onAdded.current=added;
-  const key='cutroom-caption-job-'+projectId,signature=captionSourceSignature(project);
+  const legacyKey='cutroom-caption-job-'+projectId,key=legacyKey+(editorInstanceId?'-'+editorInstanceId:''),signature=captionSourceSignature(project);
   useEffect(()=>{
     const down=()=>{pointerActive.current=true;},finish=()=>{pointerActive.current=false;setSettled(value=>value+1);},blur=()=>setSettled(value=>value+1);
     window.addEventListener('pointerdown',down,true);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);window.addEventListener('blur',finish);window.addEventListener('focusout',blur);
     return()=>{window.removeEventListener('pointerdown',down,true);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',finish);window.removeEventListener('focusout',blur);};
   },[]);
-  useEffect(()=>{let cancelled=false;try{const id=localStorage.getItem(key);if(id){requestId.current=id;void api<CaptionJob>(`/api/projects/${projectId}/captions/${id}`).then(result=>{if(!cancelled){requestId.current=null;setJob(result);}}).catch(()=>{if(!cancelled)setError('Could not reconnect to the saved transcription. Retrying will reuse the same request.');});}}catch{}return()=>{cancelled=true;};},[key,projectId]);
+  useEffect(()=>{let cancelled=false;try{let id=localStorage.getItem(key);if(!id&&recoverLegacy&&editorInstanceId){id=localStorage.getItem(legacyKey);if(id){localStorage.setItem(key,id);localStorage.removeItem(legacyKey);}}if(id){requestId.current=id;void api<CaptionJob>(`/api/projects/${projectId}/captions/${id}`).then(result=>{if(!cancelled){requestId.current=null;setJob(result);}}).catch(()=>{if(!cancelled)setError('Could not reconnect to the saved transcription. Retrying will reuse the same request.');});}}catch{}return()=>{cancelled=true;};},[editorInstanceId,key,legacyKey,projectId,recoverLegacy]);
   useEffect(()=>{
     if(!enabled)return;let cancelled=false,attempts=0;setQuote(null);setQuoteState('loading');
     let timer:ReturnType<typeof setTimeout>;

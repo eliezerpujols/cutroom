@@ -21,6 +21,7 @@ import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue}
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
+function editorDestination(projectId:string){const instanceId=randomUUID();return {editor_url:`http://127.0.0.1:${port}/?project=${projectId}&instance=${instanceId}`,editor_instance_id:instanceId,open_in_new_tab:true,next_action:'open_editor_in_new_tab'};}
 await fs.mkdir(path.join(data,'uploads'),{recursive:true});
 const store=new ProjectStore(data,defaultProjectsDirectory());
 let legacy:{project:Project;assets:(Asset&{file:string})[]}|undefined;
@@ -32,12 +33,23 @@ const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
-const clients=new Map<string,express.Response>();let focusedClient='';
-function publish(event:Record<string,unknown>){const target=clients.get(focusedClient)||[...clients.values()].at(-1);if(!target)return false;target.write(`data: ${JSON.stringify(event)}\n\n`);return true;}
-const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{await store.activate(projectId);return publish({type:'open-project',projectId,revision});});
+type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
+const clients=new Map<string,EditorClient>();
+function publish(event:Record<string,unknown>){
+  if(typeof event.projectId!=='string')return false;
+  let delivered=false;
+  for(const [clientId,client] of clients){
+    if(client.projectId!==event.projectId||event.originInstanceId&&client.instanceId===event.originInstanceId)continue;
+    if(client.response.destroyed||client.response.writableEnded){clients.delete(clientId);continue;}
+    // External updates are notices, never navigation commands, even for legacy callers.
+    try{client.response.write(`data: ${JSON.stringify({...event,type:'project-changed'})}\n\n`);delivered=true;}catch{clients.delete(clientId);}
+  }
+  return delivered;
+}
+const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
 app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
 app.post('/api/projects/:id/captions/estimate',async(req,res)=>res.json(await captions.estimate(z.string().uuid().parse(req.params.id),req.body.project)));
 app.post('/api/projects/:id/captions',async(req,res)=>{const language=z.string().regex(/^(auto|[a-z]{2,3})$/).optional().parse(req.body.language),requestId=z.string().uuid().optional().parse(req.body.requestId);res.status(202).json(await captions.start(z.string().uuid().parse(req.params.id),req.body.project,language,requestId));});
@@ -50,7 +62,7 @@ app.post('/api/projects/:id/captions/:jobId/apply',async(req,res)=>{
     if(!body.allowTimelineChange&&job.sourceSignature!==captionSourceSignature(document.project))return res.status(409).json({error:'The audio timeline changed after transcription. Review the earlier caption timings before applying them.'});
     await store.save(id,{...document.project,captions:[...(document.project.captions||[]),job.layer]},body.expectedRevision);
   }
-  const workspace=await store.workspace(id);if(body.open)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);
+  const workspace=await store.workspace(id);if(body.open)publish({projectId:id,revision:workspace.revision});res.json({...workspace,...(body.open?editorDestination(id):{})});
 });
 app.post('/api/projects/:id/caption-edits',async(req,res)=>{
   const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),open:z.boolean().default(false),operations:z.array(z.object({action:z.enum(['text','move','duration','remove_cue','remove_layer','style','mute']),layerId:z.string(),cueId:z.string().optional(),text:z.string().max(2000).optional(),value:z.number().finite().optional(),style:captionStyleSchema.partial().optional()})).min(1).max(100)}).parse(req.body),document=await store.read(id);
@@ -66,7 +78,7 @@ app.post('/api/projects/:id/caption-edits',async(req,res)=>{
     if(operation.value===undefined)throw new Error('Provide a frame value.');
     layer.cues=layer.cues.map(item=>item.id!==cue.id?item:operation.action==='move'?{...cue,start:Math.max(0,Math.round(operation.value!))}:resizeCaptionCue(cue,operation.value!)).sort((a,b)=>a.start-b.start);
   }
-  await store.save(id,project,body.expectedRevision);const workspace=await store.workspace(id);if(body.open)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);
+  await store.save(id,project,body.expectedRevision);const workspace=await store.workspace(id);if(body.open)publish({projectId:id,revision:workspace.revision});res.json({...workspace,...(body.open?editorDestination(id):{})});
 });
 app.post('/api/projects/:id/caption-subtitles',async(req,res)=>{
   const id=z.string().uuid().parse(req.params.id),body=z.object({format:z.enum(['srt','vtt']),layerId:z.string().optional(),layer:captionLayerSchema.optional()}).parse(req.body),document=await store.read(id),layer=body.layer||document.project.captions?.find(item=>item.id===body.layerId);
@@ -78,14 +90,15 @@ app.post('/api/dubbing/prepare',async(req,res)=>{const result=await dubbing.prep
 app.get('/api/dubbing/jobs',async(req,res)=>res.json(await dubbing.list(req.query.projectId?z.string().uuid().parse(req.query.projectId):undefined)));
 app.get('/api/projects/:id/dubbing/:jobId',async(req,res)=>res.json(await dubbing.get(String(req.params.id),String(req.params.jobId))));
 app.post('/api/projects/:id/dubbing/:jobId/start',async(req,res)=>res.status(202).json(await dubbing.start(String(req.params.id),String(req.params.jobId),req.body)));
-app.get('/api/events',(req,res)=>{const id=String(req.query.clientId||randomUUID());res.setHeader('Content-Type','text/event-stream');res.setHeader('Cache-Control','no-cache');res.setHeader('Connection','keep-alive');res.flushHeaders();clients.set(id,res);focusedClient=id;res.write(': connected\n\n');const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000);req.on('close',()=>{clearInterval(heartbeat);clients.delete(id);});});
-app.post('/api/focus',(req,res)=>{if(clients.has(req.body.clientId))focusedClient=req.body.clientId;res.json({ok:true});});
+app.get('/api/events',(req,res)=>{const id=z.string().uuid().parse(req.query.clientId||randomUUID()),projectId=z.string().uuid().optional().parse(req.query.projectId),instanceId=z.string().uuid().optional().parse(req.query.instanceId);res.setHeader('Content-Type','text/event-stream');res.setHeader('Cache-Control','no-cache');res.setHeader('Connection','keep-alive');res.flushHeaders();const client={response:res,projectId,instanceId};clients.set(id,client);res.write(': connected\n\n');const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000);req.on('close',()=>{clearInterval(heartbeat);if(clients.get(id)===client)clients.delete(id);});});
+// Older tabs can still report focus, but focus no longer selects an MCP destination.
+app.post('/api/focus',(_req,res)=>res.json({ok:true}));
 app.get('/api/projects',async(_req,res)=>res.json({projects:await store.list(),activeProjectId:store.activeId(),projectsRoot:store.managedRoot}));
-app.post('/api/projects',async(req,res)=>{const {name,templateId,projectsDirectory}=z.object({name:z.string().min(1).max(100),templateId:z.string().uuid().optional(),projectsDirectory:z.string().trim().min(1).max(1500).optional()}).parse(req.body);const d=await store.create(name,templateId,undefined,projectsDirectory);res.status(201).json(await store.workspace(d.id));});
+app.post('/api/projects',async(req,res)=>{const {name,templateId,projectsDirectory}=z.object({name:z.string().min(1).max(100),templateId:z.string().uuid().optional(),projectsDirectory:z.string().trim().min(1).max(1500).optional()}).parse(req.body);const d=await store.create(name,templateId,undefined,projectsDirectory);res.status(201).json({...await store.workspace(d.id),...editorDestination(d.id)});});
 app.post('/api/projects/pick',async(_req,res)=>res.json({path:await chooseProjectFile(store.managedRoot)}));
-app.post('/api/projects/open',async(req,res)=>{const body=z.object({project:z.string().min(1),broadcast:z.boolean().optional()}).parse(req.body);const id=await store.resolve(body.project);await store.activate(id);const workspace=await store.workspace(id);if(body.broadcast)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);});
+app.post('/api/projects/open',async(req,res)=>{const body=z.object({project:z.string().min(1),broadcast:z.boolean().optional()}).parse(req.body);const id=await store.resolve(body.project);await store.activate(id);const workspace=await store.workspace(id);res.json({...workspace,...editorDestination(id)});});
 app.get('/api/workspace',async(req,res)=>res.json(await store.workspace(req.query.projectId?String(req.query.projectId):store.activeId())));
-app.put('/api/project',async(req,res)=>{const modern=req.body.projectId!==undefined;const id=modern?String(req.body.projectId):store.legacyId();const project=modern?req.body.project:req.body;const revision=modern?z.number().int().min(0).parse(req.body.expectedRevision):undefined;const saved=await store.save(id,project,revision);res.json({saved:true,revision:saved.revision,projectId:id});});
+app.put('/api/project',async(req,res)=>{const modern=req.body.projectId!==undefined;const id=modern?String(req.body.projectId):store.legacyId();const project=modern?req.body.project:req.body;const revision=modern?z.number().int().min(0).parse(req.body.expectedRevision):undefined,originInstanceId=modern?z.string().uuid().optional().parse(req.body.editorInstanceId):undefined;const saved=await store.save(id,project,revision);publish({projectId:id,revision:saved.revision,originInstanceId});res.json({saved:true,revision:saved.revision,projectId:id});});
 
 const mime=(file:string)=>({'.mp4':'video/mp4','.mov':'video/quicktime','.webm':'video/webm','.wav':'audio/wav','.flac':'audio/flac','.mp3':'audio/mpeg','.m4a':'audio/mp4','.aac':'audio/aac','.ogg':'audio/ogg'}[path.extname(file).toLowerCase()]||'application/octet-stream');
 async function serveMedia(id:string,assetId:string,res:express.Response){const d=await store.read(id),a=d.assets.find(a=>a.id===assetId);if(!a)return res.status(404).json({error:'Media not found in this project.'});const file=await store.assetPath(id,a.file);if(!existsSync(file))return res.status(404).json({error:'Media file is missing. Relink it from Your media.'});res.type(mime(file));res.sendFile(file);}
@@ -110,7 +123,7 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
     const asset={...a,url:'',thumbnails:[],missing:false};
     if(op.action==='trim_start')next=trimClip(c,n,'left',asset);if(op.action==='trim_end')next=trimClip(c,n,'right',asset);if(op.action==='slip')next=slipClip(c,n,asset);if(op.action==='move')next={...c,start:Math.max(0,Math.round(n))};
     if(op.action==='speed'){if(n<.25||n>4)throw new Error('Speed must be between .25 and 4.');next=setClipRate(c,n,asset);}if(op.action==='volume')next={...c,volume:n};if(op.action==='mute')next={...c,muted:!!n};if(op.action==='fade_in')next={...c,fadeIn:Math.max(0,Math.round(n))};if(op.action==='fade_out')next={...c,fadeOut:Math.max(0,Math.round(n))};p.clips=p.clips.map(v=>v.id===c.id?next:v);
-  }await store.save(id,p,body.expectedRevision);const w=await store.workspace(id);if(body.open){await store.activate(id);publish({type:'open-project',projectId:id,revision:w.revision});}res.json(w);
+  }await store.save(id,p,body.expectedRevision);const w=await store.workspace(id);if(body.open)publish({projectId:id,revision:w.revision});res.json({...w,...(body.open?editorDestination(id):{})});
 });
 
 type Job={id:string;projectId:string;status:'queued'|'rendering'|'finalizing'|'completed'|'failed';progress:number;url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};

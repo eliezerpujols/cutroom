@@ -105,9 +105,21 @@ edits, audio extraction, export and export status. Reads include clip IDs and th
 current revision. Edits require that revision; timing values use frames at 30fps.
 Caption tools are `estimate_captions`, `generate_captions`, `list_caption_jobs`,
 `get_caption_job`, `apply_captions`, `edit_captions`, and `export_caption_subtitles`.
-Opening or editing a project updates the focused connected editor tab. If no tab
-is connected, the tool returns an `editor_url` for the agent to open. The MCP
-starts the local app when needed; it never opens an unrelated browser by itself.
+MCP open/create/edit results return an `editor_url` for a separate instance. The
+agent opens it in a **new browser tab**, retaining its `instance` parameter.
+Opening a project never switches an existing tab. External edits notify only
+instances displaying that project, without reloading their edit or playhead.
+The MCP starts the shared local server when needed; it never picks a destination
+tab based on focus or opens an unrelated browser by itself.
+
+Each instance keeps its own recovery draft and pending caption-job state.
+Different projects have independent saved files. Two instances of the same
+project share its saved file and revision checks: concurrent changes can produce
+a conflict, preserving the instance's draft instead of overwriting another save.
+Use **Save a copy** for independently saved versions. A View update notice opens
+the newer saved version in another tab; intentional switching inside a tab still
+uses Your projects. Existing tabs without an instance parameter migrate their
+legacy recovery draft on their next reload; new MCP instances do not adopt it.
 
 Register, or re-register after moving the Cutroom application folder:
 

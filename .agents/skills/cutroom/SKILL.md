@@ -31,6 +31,10 @@ location for a new project, pass its parent folder as `projects_directory` to
 `create_project`. Omit that field otherwise; the server supplies the default
 (or a configured `CUTROOM_PROJECTS_DIR`). The tool returns the actual folder;
 use it for any accompanying project documents instead of inventing another path.
+Use project IDs established in this chat or its explicitly referenced editor URL;
+the server's last active project may belong to another chat. Each MCP opening
+gets its own editor instance. Different tabs of the same project still share its
+saved file and revision checks; create a copy for independently saved versions.
 
 ## Prepare the project
 
@@ -105,8 +109,14 @@ with **Locate file** in the media panel, preserving the existing source windows.
 ## Show and export
 
 - `open_project` accepts a project name, ID, absolute folder or `project.cutroom`
-  path. It updates the focused connected editor tab. If no editor tab is open,
-  use the returned `editor_url` with the available browser tool.
+  path. Open the returned `editor_url` in a **new browser tab**, using the browser
+  creation tool. Preserve its `instance` query parameter. Never navigate or
+  replace a tab already editing another project, even if it is focused.
+- `create_project` and external edit results also return a new-instance URL.
+  Open it in a new tab when presenting the result. Existing project tabs receive
+  a project-scoped update notice; they are never automatically reloaded or
+  switched. Their recovery drafts and pending caption-job state are scoped to
+  the instance. User-initiated project switching inside a tab remains available.
 - In the macOS editor, **Open project…** opens the system file selector for
   `project.cutroom`. Users do not need to type a path. The project opens from
   its original folder, keeping relative media references; canceling keeps the

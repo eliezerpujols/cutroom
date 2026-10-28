@@ -23,6 +23,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const [initialProject]=useState(()=>arrangeTimelineTracks(restoredProject(initial)));
   const {project,edit:editProject,checkpoint,undo,redo,canUndo,canRedo,current}=useEditor(initialProject);
   const saving=useProjectSave(initial,project);
+  useEffect(()=>{document.title=project.name+' · Cutroom';},[project.name]);
   useEffect(()=>controls.registerSave(saving.flush),[controls.registerSave,saving.flush]);
   const [captionSelection,setCaptionSelection]=useState<CaptionSelection>(null),[captionStyleOpen,setCaptionStyleOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState<'media'|'text'>('media');
@@ -53,7 +54,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   },[editProject,toast]);
   const selectCaption=useCallback((value:CaptionSelection)=>{setSelection([]);setCaptionSelection(value);setLibraryTab('text');setMediaOpen(true);},[]);
   const captionsAdded=useCallback((id:string)=>{selectCaption({layerId:id});setCaptionStyleOpen(false);toast('Captions added.');},[selectCaption,toast]);
-  const captionGeneration=useCaptions(initial.projectId,project,mediaOpen&&libraryTab==='text',edit,captionsAdded);
+  const captionGeneration=useCaptions(initial.projectId,project,mediaOpen&&libraryTab==='text',edit,captionsAdded,initial.editorInstanceId,initial.recoverLegacyDraft);
   const changeCaptionStyle=(patch:Partial<CaptionStyle>,record=true)=>{const id=captionLayer?.id||project.captions?.[0]?.id;if(id)edit(p=>({...p,captions:p.captions?.map(layer=>layer.id===id?{...layer,style:{...layer.style,...patch}}:layer)}),record);};
   useEffect(()=>{const query=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=theme==='system'?(query.matches?'dark':'light'):theme;apply();query.addEventListener('change',apply);localStorage.setItem('cutroom-theme',theme);return()=>query.removeEventListener('change',apply);},[theme]);
   useEffect(()=>{const p=player.current;if(!p)return;const update=(e:{detail:{frame:number}})=>setFrame(e.detail.frame);

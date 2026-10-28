@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
-import {FolderOpen,Plus,Copy,LoaderCircle,FileVideo,MoreHorizontal,ArrowLeft,Check} from 'lucide-react';
+import {FolderOpen,Plus,Copy,LoaderCircle,FileVideo,MoreHorizontal,ArrowLeft,Check,X} from 'lucide-react';
 import {Button,Dialog,DialogContent,Input,TooltipProvider,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from './ui/primitives';
 import {api} from './useEditor';
 import {time} from './model';
@@ -12,12 +12,16 @@ const readablePath=(value:string)=>value.replace(/^(\/Users\/[^/]+|\/home\/[^/]+
 
 export function ProjectShell({children}:{children:(workspace:Workspace,controls:ProjectControls)=>ReactNode}){
   const [workspace,setWorkspace]=useState<Workspace|null>(null);
+  const [instanceId]=useState(()=>{const value=new URLSearchParams(location.search).get('instance');return value&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)?value:crypto.randomUUID();});
+  const legacyRecovery=useRef(!new URLSearchParams(location.search).has('instance')&&performance.getEntriesByType('navigation').some(entry=>(entry as PerformanceNavigationTiming).type==='reload'));
+  const visibleProject=useRef<Workspace|null>(null);
+  const [update,setUpdate]=useState<{projectId:string;revision:number;url:string}|null>(null);
   const [error,setError]=useState(''),[open,setOpen]=useState(false),[panel,setPanel]=useState<Panel>('browse');
   const [projects,setProjects]=useState<Summary[]>([]),[projectsRoot,setProjectsRoot]=useState('');
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[name,setName]=useState('');
   const save=useRef<()=>Promise<void>>(async()=>{}),switching=useRef(false);
   const registerSave=useCallback((fn:()=>Promise<void>)=>{save.current=fn;return()=>{if(save.current===fn)save.current=async()=>{};};},[]);
-  const accept=useCallback((w:Workspace)=>{setWorkspace(w);setError('');const url=new URL(location.href);url.searchParams.set('project',w.projectId);history.replaceState(null,'',url);},[]);
+  const accept=useCallback((w:Workspace)=>{const scoped={...w,editorInstanceId:instanceId,recoverLegacyDraft:legacyRecovery.current};legacyRecovery.current=false;visibleProject.current=scoped;setWorkspace(scoped);setUpdate(null);setError('');const url=new URL(location.href);url.searchParams.set('project',w.projectId);url.searchParams.set('instance',instanceId);history.replaceState(null,'',url);},[instanceId]);
 
   useEffect(()=>{
     const id=new URLSearchParams(location.search).get('project');
@@ -43,12 +47,11 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
   });
 
   useEffect(()=>{
-    const clientId=crypto.randomUUID(),events=new EventSource('/api/events?clientId='+clientId);
-    const focus=()=>void api('/api/focus',{method:'POST',body:JSON.stringify({clientId})}).catch(()=>{});
-    events.onmessage=e=>{try{const event=JSON.parse(e.data);if(event.type==='open-project')void load(event.projectId);}catch{}};
-    events.onopen=focus;window.addEventListener('focus',focus);
-    return()=>{events.close();window.removeEventListener('focus',focus);};
-  },[load]);
+    if(!workspace)return;
+    const query=new URLSearchParams({clientId:crypto.randomUUID(),projectId:workspace.projectId,instanceId}),events=new EventSource('/api/events?'+query);
+    events.onmessage=e=>{try{const event=JSON.parse(e.data),current=visibleProject.current;if(event.type!=='project-changed'||!current||event.projectId!==current.projectId||event.originInstanceId===instanceId||!Number.isInteger(event.revision)||event.revision<=current.revision)return;const url=new URL(location.href);url.searchParams.set('project',event.projectId);url.searchParams.set('instance',crypto.randomUUID());setUpdate({projectId:event.projectId,revision:event.revision,url:url.toString()});}catch{}};
+    return()=>events.close();
+  },[instanceId,workspace?.projectId]);
 
   useEffect(()=>{
     if(!open)return;
@@ -87,6 +90,7 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
   const library=readablePath(projectsRoot);
 
   return <TooltipProvider delayDuration={450}>
+    {update&&update.projectId===workspace?.projectId&&<div className="project-update-notice" role="status"><span>This project was updated in another instance.</span><a href={update.url} target="_blank" rel="noopener noreferrer" title="Open the saved version in a new tab">View update</a><Button variant="ghost" size="icon" aria-label="Dismiss project update" onClick={()=>setUpdate(null)}><X size={14}/></Button></div>}
     {workspace?<div key={workspace.projectId+':'+workspace.revision+':'+workspace.updatedAt}>{children(workspace,controls)}</div>:<div className="loading-screen"><div className="brand-symbol"/><h1>Cutroom</h1><LoaderCircle className="spin" size={22}/><p>{error||'Opening your local workspace…'}</p><Button variant="outline" onClick={()=>setOpen(true)}>Open a project</Button></div>}
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className={'projects-dialog'+(!browse?' project-form-dialog':'')} title={title}

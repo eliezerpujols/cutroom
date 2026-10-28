@@ -23,9 +23,10 @@ sample, and default to lip sync and watermark-free output.
    authorizes the complete ElevenLabs dub and optional Sync lip sync.
 4. Poll `get_dubbing_job` while `running=true`, with about 10 seconds between
    polls. A background worker downloads and assembles the output. `completed`
-   returns the local video and editor URL, and opens the finished project in the
-   connected editor. If `opened=false`, use `open_project`; if no tab is connected,
-   open the returned URL when finished.
+   returns the local video and a separate-instance editor URL. Open that URL in
+   a new browser tab, or use `open_project` and open its new-instance URL. Never
+   navigate or replace another project's editor. Completion no longer switches
+   whichever tab happened to be focused.
 5. A server restart stops the worker; it does not trigger another paid generation.
    Use `list_dubbing_jobs` to rediscover work, then `start_dubbing` with the same
    project/job IDs. `failed`, `blocked` and `needs_reconciliation` require reading
