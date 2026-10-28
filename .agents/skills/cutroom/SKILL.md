@@ -84,12 +84,14 @@ For the equivalent MCP edit, apply the same frame delta to every selected clip's
 absolute `move` value in one `edit_project` operations batch. Preserve relative
 spacing and audio sync; do not clamp each clip separately at frame zero.
 
-Video clips that overlap in time occupy separate tracks. Adding, moving or
-extending a video into another clip's space automatically assigns it a free video
-track above, creating one if needed. Inspect the returned project for updated
+Video and audio clips that overlap in time occupy separate tracks. Adding, moving
+or extending a clip into another clip's space automatically assigns it a free
+track of the same kind above, creating one if needed. Touching edges are not
+overlaps. Inspect the returned project for updated
 `trackId` values before later edits. Tracks are ordered top to bottom: the upper
-video track appears above lower ones in both preview and export. Audio clips
-can overlap and mix without being moved to new tracks.
+video track appears above lower ones in both preview and export. Overlapping
+audio clips mix from separate visible tracks; new tracks inherit the occupied
+track's mute state when separating an overlap.
 
 If a revision conflict occurs, read the latest project and reconcile the requested
 change. Do not replay stale edits or discard an unsaved browser draft. The editor

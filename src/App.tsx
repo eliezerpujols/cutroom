@@ -5,7 +5,7 @@ import {Button,IconButton,TooltipProvider,Slider,Input,Dialog,DialogContent,Drop
 import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
 import {AudioFadeControls,PlaybackControls} from './ClipAdjustments';
-import {arrangeVideoTracks,changedVideoClipIds} from './videoTracks';
+import {arrangeTimelineTracks,changedTimelineClipIds} from './videoTracks';
 import {moveSelection} from './timelineSelection';
 import {api,useEditor} from './useEditor';
 import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,maxDuration,type Asset,type Clip,type Project,type Tool} from './model';
@@ -16,7 +16,7 @@ type ExportJob={id:string;status:string;progress:number;url?:string;error?:strin
 type Theme='system'|'light'|'dark';
 export default function App(){return <ProjectShell>{(workspace,controls)=><Editor initial={workspace} controls={controls}/>}</ProjectShell>;}
 function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls}){
-  const [initialProject]=useState(()=>arrangeVideoTracks(restoredProject(initial)));
+  const [initialProject]=useState(()=>arrangeTimelineTracks(restoredProject(initial)));
   const {project,edit:editProject,checkpoint,undo,redo,canUndo,canRedo,current}=useEditor(initialProject);
   const saving=useProjectSave(initial,project);
   useEffect(()=>controls.registerSave(saving.flush),[controls.registerSave,saving.flush]);
@@ -41,7 +41,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const compositionProps=useMemo(()=>({project,assets}),[project,assets]);
   const toast=useCallback((message:string)=>{setNotice(message);if(noticeTimer.current)clearTimeout(noticeTimer.current);noticeTimer.current=setTimeout(()=>setNotice(''),6000);},[]);
   const edit=useCallback((change:Project|((p:Project)=>Project),record=true)=>{
-    try{editProject(p=>{const next=typeof change==='function'?change(p):change;return arrangeVideoTracks(next,changedVideoClipIds(p,next));},record);}
+    try{editProject(p=>{const next=typeof change==='function'?change(p):change;return arrangeTimelineTracks(next,changedTimelineClipIds(p,next));},record);}
     catch(e){toast((e as Error).message);}
   },[editProject,toast]);
   useEffect(()=>{const query=matchMedia('(prefers-color-scheme: dark)');const apply=()=>document.documentElement.dataset.theme=theme==='system'?(query.matches?'dark':'light'):theme;apply();query.addEventListener('change',apply);localStorage.setItem('cutroom-theme',theme);return()=>query.removeEventListener('change',apply);},[theme]);

@@ -195,7 +195,7 @@ export function Timeline(props:Props){
       }
       if(edge){if(snapping&&!ev.shiftKey){const target=(edge==='left'?c.start:c.start+c.duration)+delta;delta+=snapFrame(target,points,7/ppf)-target;}next=trimClip(c,delta,edge,a);}
       else if(tool==='slip')next=slipClip(c,delta,a);
-      else {let start=Math.max(0,c.start+delta);if(snapping&&!ev.shiftKey){const l=snapFrame(start,points,7/ppf),r=snapFrame(start+c.duration,points,7/ppf)-c.duration;start=Math.abs(l-start)<=Math.abs(r-start)?l:r;}const target=rows.find(row=>ev.clientY>=row.rect.top&&ev.clientY<row.rect.bottom);forceNewTrack=c.kind==='video'&&!!rows[0]&&ev.clientY<rows[0].rect.top-6;next={...c,start:Math.max(0,start),trackId:forceNewTrack?rows[0].id:target?.id||c.trackId};}
+      else {let start=Math.max(0,c.start+delta);if(snapping&&!ev.shiftKey){const l=snapFrame(start,points,7/ppf),r=snapFrame(start+c.duration,points,7/ppf)-c.duration;start=Math.abs(l-start)<=Math.abs(r-start)?l:r;}const target=rows.find(row=>ev.clientY>=row.rect.top&&ev.clientY<row.rect.bottom);forceNewTrack=!!rows[0]&&ev.clientY<rows[0].rect.top-6;next={...c,start:Math.max(0,start),trackId:forceNewTrack?rows[0].id:target?.id||c.trackId};}
       apply(p=>placeTimelineClip(p,next,{newTrackId:dragTrackId,cleanupTrackId:dragTrackId,forceNewTrack}));
     };
     const cleanup=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',blur);gestureCleanup.current=null;};

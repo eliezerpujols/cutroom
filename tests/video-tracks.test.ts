@@ -1,12 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {clipsInRenderOrder,splitTarget,type Clip,type Project} from '../src/model';
-import {arrangeVideoTracks,clipsOverlap,placeTimelineClip} from '../src/videoTracks';
+import {arrangeTimelineTracks,clipsOverlap,placeTimelineClip} from '../src/videoTracks';
 
 const clip=(id:string,start:number,duration=100,trackId='video'):Clip=>({id,assetId:'media',name:id,kind:'video',trackId,start,duration,sourceIn:0,rate:1,volume:1,muted:false,fadeIn:0,fadeOut:0});
 const project=(clips:Clip[]):Project=>({version:1,name:'Project',fps:30,width:1080,height:1920,tracks:[{id:'video',name:'Video',kind:'video',muted:false},{id:'audio',name:'Audio',kind:'audio',muted:false}],clips});
 function assertSeparate(p:Project){
-  for(const a of p.clips)for(const b of p.clips)if(a.id!==b.id&&a.kind==='video'&&b.kind==='video'&&a.trackId===b.trackId)assert.equal(clipsOverlap(a,b),false);
+  for(const a of p.clips)for(const b of p.clips)if(a.id!==b.id&&a.trackId===b.trackId)assert.equal(clipsOverlap(a,b),false);
 }
 
 test('an overlapping incoming video moves above the occupied track without changing either source window',()=>{
@@ -38,11 +38,11 @@ test('moving vertically above the first lane can create a separate track even in
 });
 test('existing overlaps are repaired, and edits prioritize moving the changed clip rather than its neighbor',()=>{
   const first=clip('first',0),second=clip('second',50),third=clip('third',75);
-  const p=project([first,second,third]),result=arrangeVideoTracks(p);
+  const p=project([first,second,third]),result=arrangeTimelineTracks(p);
   assertSeparate(result);assert.deepEqual(result.clips.map(c=>c.id),p.clips.map(c=>c.id));
   for(const c of result.clips){const old=p.clips.find(o=>o.id===c.id)!;assert.deepEqual({...c,trackId:old.trackId},old);}
-  assert.equal(arrangeVideoTracks(result),result);
-  const prioritized=arrangeVideoTracks(project([first,second]),['first']);
+  assert.equal(arrangeTimelineTracks(result),result);
+  const prioritized=arrangeTimelineTracks(project([first,second]),['first']);
   assert.equal(prioritized.clips[1].trackId,'video');assert.notEqual(prioritized.clips[0].trackId,'video');
 });
 test('preview/export and automatic split selection follow visible track order rather than clip array order',()=>{
@@ -51,9 +51,9 @@ test('preview/export and automatic split selection follow visible track order ra
   assert.deepEqual(clipsInRenderOrder(p).map(c=>c.id),['lower','upper']);
   assert.equal(splitTarget(p,null,50)?.id,'upper');
 });
-test('audio overlaps remain independent and a full track list never overwrites another video',()=>{
+test('audio overlaps get separate tracks and a full track list never overwrites another clip',()=>{
   const audio:Clip={...clip('sound',0),kind:'audio',trackId:'audio'};
-  const p=project([audio]),r=placeTimelineClip(p,{...audio,id:'sound-2'});assert.equal(r.tracks.length,2);assert.equal(r.clips[1].trackId,'audio');
+  const p=project([audio]),r=placeTimelineClip(p,{...audio,id:'sound-2'});assert.equal(r.tracks.length,3);assert.notEqual(r.clips[1].trackId,'audio');assert.equal(r.tracks.find(t=>t.id===r.clips[1].trackId)?.kind,'audio');assertSeparate(r);
   const full=project([clip('base',0)]);for(let i=2;i<12;i++){const id='track-'+i;full.tracks.unshift({id,name:'Video '+i,kind:'video',muted:false});full.clips.push(clip('clip-'+i,0,100,id));}
   assert.throws(()=>placeTimelineClip(full,clip('incoming',10)),/12 tracks/);assert.equal(full.clips.length,11);
 });

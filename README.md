@@ -175,9 +175,10 @@ the Codex chat after updating to discover its new tools.
   nudge focused selections by one frame (Shift for one second). Escape clears
   selection; Delete/Backspace removes selected clips. The inspector also offers
   a shared start position. Trimming and slipping use one clip at a time.
-- Overlapping video clips get separate visible tracks. Moving a clip onto an
-  occupied video track places it in a free track above, creating one when needed.
-  Drag vertically to another video track, or above the first one to create a track.
+- Overlapping video and audio clips get separate visible tracks of the same kind.
+  Moving a clip onto an occupied track places it in a free matching track above,
+  creating one when needed. Drag vertically to another matching track, or above
+  the first matching track to create one. Touching edges stay on the same track.
 - **Slip (Y):** drag the content inside a clip while keeping its position and duration.
   The button is available when the selected clip has unused source footage;
   trim first to make room. Fine adjustments also
@@ -210,7 +211,7 @@ Timing is frame-based at 30 fps. A gap between video clips exports as black;
 audio tracks can continue through it. Trimming or slipping one track does not
 silently move another. Multiple audio tracks mix together; avoid leaving the
 same sound enabled twice after detaching. The upper video track appears above
-lower tracks in the preview and exported video. Video clips cannot overlap within
+lower tracks in the preview and exported video. Clips cannot overlap within
 one track; their timing and source windows stay unchanged when assigned to a new
 track. There is no ripple editing or transition tool.
 

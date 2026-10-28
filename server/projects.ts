@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {documentSchema,storedAssetSchema,validateProject,ProjectConflict,type ProjectDocument,type StoredAsset} from './schema';
 import type {Project,Asset} from '../src/model';
 import {absoluteDirectory} from './paths';
-import {arrangeVideoTracks,changedVideoClipIds} from '../src/videoTracks';
+import {arrangeTimelineTracks,changedTimelineClipIds} from '../src/videoTracks';
 
 type Entry={id:string;folder:string;name:string};
 type Registry={version:1;activeProjectId:string;legacyProjectId:string;entries:Entry[]};
@@ -90,7 +90,7 @@ export class ProjectStore{
     await this.lock('registry',async()=>{this.registry.entries.push({id,folder,name});if(!this.registry.activeProjectId)this.registry.activeProjectId=id;await atomicJson(this.registryFile,this.registry);});
     return doc;
   }
-  async activate(id:string){const d=await this.read(id);const arranged=arrangeVideoTracks(d.project);if(arranged!==d.project)await this.save(id,arranged,d.revision);await this.lock('registry',async()=>{this.registry.activeProjectId=id;await atomicJson(this.registryFile,this.registry);});}
+  async activate(id:string){const d=await this.read(id);const arranged=arrangeTimelineTracks(d.project);if(arranged!==d.project)await this.save(id,arranged,d.revision);await this.lock('registry',async()=>{this.registry.activeProjectId=id;await atomicJson(this.registryFile,this.registry);});}
   async resolve(project:string):Promise<string>{
     const direct=this.registry.entries.find(e=>e.id===project);if(direct)return direct.id;
     if(path.isAbsolute(project)||project.startsWith('~/'))return this.registerFile(absoluteDirectory(project));
@@ -110,7 +110,7 @@ export class ProjectStore{
     if(previous&&path.resolve(previous.folder)!==folder&&await exists(previous.folder))throw new Error('This project ID is already open from another folder. Use Save a copy to duplicate it.');
     await this.lock('registry',async()=>{this.registry.entries=this.registry.entries.filter(e=>e.id!==doc.id);this.registry.entries.push({id:doc.id,folder,name:doc.project.name});await atomicJson(this.registryFile,this.registry);});return doc.id;
   }
-  async save(id:string,input:unknown,expectedRevision?:number){return this.lock(id,async()=>{const d=await this.read(id);if(expectedRevision!==undefined&&d.revision!==expectedRevision)throw new ProjectConflict();const parsed=validateProject(input,d.assets);const project=validateProject(arrangeVideoTracks(parsed,changedVideoClipIds(d.project,parsed)),d.assets);
+  async save(id:string,input:unknown,expectedRevision?:number){return this.lock(id,async()=>{const d=await this.read(id);if(expectedRevision!==undefined&&d.revision!==expectedRevision)throw new ProjectConflict();const parsed=validateProject(input,d.assets);const project=validateProject(arrangeTimelineTracks(parsed,changedTimelineClipIds(d.project,parsed)),d.assets);
     const folder=this.entry(id).folder;await atomicJson(path.join(folder,'history',String(d.revision).padStart(6,'0')+'.json'),d.project);
     const next={...d,project,revision:d.revision+1,updatedAt:new Date().toISOString()};await atomicJson(path.join(folder,'project.cutroom'),next);return next;
   });}
