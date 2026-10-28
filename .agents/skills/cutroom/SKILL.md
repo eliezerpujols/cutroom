@@ -103,6 +103,10 @@ with **Locate file** in the media panel, preserving the existing source windows.
   on failure, report the actual error rather than claiming an export exists.
 - Exports live inside that project's `exports/` folder. Verify the returned
   result and present a usable local file or download link.
+- New exports and dubbed MP4 deliverables finalize with minimal optional tags,
+  excluding encoder/software/version comments. Codec information remains. This
+  is not a guarantee about platform AI labels or content provenance; do not claim
+  the media is undetectable or AI-free because metadata was cleaned.
 - To move or back up work, keep `project.cutroom`, `media/`, `thumbs/`, and
   `exports/` together. The manifest alone does not include the media.
 

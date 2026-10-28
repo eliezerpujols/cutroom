@@ -190,6 +190,12 @@ the Codex chat after updating to discover its new tools.
   portrait, landscape or square canvas.
 - Export the full edit or selected time range as **MP4, WAV or MP3**.
   Video exports use Remotion and H.264 at the project resolution, 30 fps.
+- New exports are finalized with minimal optional metadata: inherited descriptive
+  tags, software/version comments, and container/stream encoder tags are removed.
+  This final pass copies encoded streams without another compression step and
+  also applies to newly generated dubbed MP4 deliverables. Source media and
+  private project/job history are kept. Codec, duration and other structural
+  information remain; this does not certify origin or prevent platform AI labels.
 - **Appearance:** System (default), Charcoal or Light. Narrow screens use
   Media / Preview / Clip tabs; the timeline can scroll and zoom.
 
@@ -244,6 +250,10 @@ New imports are copied directly into their project folder.
 - The resizable timeline and modifier-wheel zoom were prepared without exercising
   the controls in the user's editing session. Layout height is a browser preference
   and does not change the project document or edit history.
+- The metadata finalization step was prepared without rendering a test export or
+  modifying existing media, at the user's request. Its stream-copy arguments
+  follow FFmpeg's metadata mapping and muxer options; runtime output remains
+  unverified until an actual export is inspected.
 - The new dubbing integration was not executed against either provider; no test
   generation or paid request was submitted. Compilation is separate from runtime
   validation of provider access, billing and generated output.

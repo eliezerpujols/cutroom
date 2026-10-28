@@ -15,6 +15,7 @@ import {defaultProjectsDirectory} from './paths';
 import {chooseProjectFile} from './projectPicker';
 import {dubbingEngine} from './dubbing';
 import {integrationSettings} from './integrations';
+import {finalizeExportMetadata} from './exportMetadata';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
@@ -74,7 +75,7 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
   }await store.save(id,p,body.expectedRevision);const w=await store.workspace(id);if(body.open){await store.activate(id);publish({type:'open-project',projectId:id,revision:w.revision});}res.json(w);
 });
 
-type Job={id:string;projectId:string;status:'queued'|'rendering'|'completed'|'failed';progress:number;url?:string;error?:string;filename?:string};
+type Job={id:string;projectId:string;status:'queued'|'rendering'|'finalizing'|'completed'|'failed';progress:number;url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
 const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,busy=false;
 app.post('/api/export',async(req,res)=>{
   if(busy)return res.status(409).json({error:'An export is already running. Let it finish first.'});
@@ -84,7 +85,8 @@ app.post('/api/export',async(req,res)=>{
   const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0};jobs.set(id,job);busy=true;res.status(202).json(job);
   (async()=>{try{const inputs={project,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`}))};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps:inputs});job.status='rendering';
     const filename=project.name.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+body.format,output=path.join(workspace.exportsDir,filename);await fs.mkdir(workspace.exportsDir,{recursive:true});
-    await renderMedia({composition,serveUrl,inputProps:inputs,codec:body.format==='mp4'?'h264':body.format,outputLocation:output,...(range?{frameRange:[range.start,range.end-1] as [number,number]}:{}),concurrency:2,onProgress:({progress})=>job.progress=progress,...(body.format==='mp4'?{crf:18,pixelFormat:'yuv420p' as const}:{})});
+    await renderMedia({composition,serveUrl,inputProps:inputs,codec:body.format==='mp4'?'h264':body.format,outputLocation:output,...(range?{frameRange:[range.start,range.end-1] as [number,number]}:{}),concurrency:2,onProgress:({progress})=>job.progress=progress*.97,...(body.format==='mp4'?{crf:18,pixelFormat:'yuv420p' as const}:{})});
+    job.status='finalizing';job.progress=.98;Object.assign(job,await finalizeExportMetadata(output,media.run));
     job.status='completed';job.progress=1;job.filename=filename;job.url=`/api/projects/${pid}/exports/${encodeURIComponent(filename)}`;await atomicJson(path.join(workspace.exportsDir,id+'.export.json'),job);
   }catch(e){job.status='failed';job.error=(e as Error).message;}finally{busy=false;}})();
 });
