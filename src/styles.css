@@ -14,6 +14,8 @@
 @media(max-width:440px){.brand{font-size:0;gap:0}.brand-symbol{width:27px;height:27px}.project-identity .input{max-width:155px}.header-actions .button-icon{width:27px}.export-button{font-size:11px;gap:5px}.app-header{gap:12px}.zoom-tools .slider{width:45px;margin:0 4px}.zoom-tools .button-icon{width:22px}.tool-group .button-icon{width:29px}.toolbar-divider{margin:0 4px}.timeline-footer .local-status{font-size:0}.timeline-footer .local-status>.status-dot{width:5px;height:5px}.timeline-footer .local-status:after{content:'Saved on this computer';font-size:8px}}
 .app-shell{grid-template-columns:minmax(0,1fr)}
 .timeline,.timeline-scroll{min-width:0;max-width:100%}
+.track-lane{touch-action:none;user-select:none}
+.timeline-selection-box{position:absolute;z-index:5;pointer-events:none;border:1px solid var(--ring);background:color-mix(in srgb,var(--ring) 14%,transparent);border-radius:3px}
 .media-panel>.panel-heading,.media-panel>.panel-subtitle,.media-panel>.import-button,.media-panel>.media-list,.library-footer,.inspector>*{flex-shrink:0}
 .mobile-history{display:flex;align-items:center;gap:1px}.mobile-tabs .mobile-history .button{width:27px;min-width:27px;padding:0}
 @media(max-width:800px){.mobile-tabs{gap:2px}.mobile-tabs>.button{padding:0 11px}.mobile-history{margin-left:4px}}

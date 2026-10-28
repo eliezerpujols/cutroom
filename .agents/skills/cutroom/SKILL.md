@@ -59,6 +59,13 @@ clips are independent; edit both only when the user's intended sync requires it.
 `extract_audio` adds a WAV to the media library without changing the timeline.
 The UI can detach audio to a separate track.
 
+In the UI, dragging empty timeline space selects clips across video and audio
+tracks. Drag any selected clip to move the selection together; Shift-click
+adjusts the selection. The inspector's Selection start moves the whole group.
+For the equivalent MCP edit, apply the same frame delta to every selected clip's
+absolute `move` value in one `edit_project` operations batch. Preserve relative
+spacing and audio sync; do not clamp each clip separately at frame zero.
+
 Video clips that overlap in time occupy separate tracks. Adding, moving or
 extending a video into another clip's space automatically assigns it a free video
 track above, creating one if needed. Inspect the returned project for updated

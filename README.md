@@ -125,6 +125,14 @@ The launcher and MCP can also start the server in the background.
   there (or audio when no video is present). At a clip edge or gap it is disabled.
   Playback pauses at the cut. Undo restores it in one step.
 - **Move (V):** select and drag clips; trimming uses their edge handles.
+- Drag across empty timeline space to box-select video and audio clips across
+  tracks. Drag any selected clip to reposition the selection together, preserving
+  spacing and audio sync; one Undo restores the move. Selection scrolls at the
+  timeline edges. Shift/Command/Control-click adds or removes clips, and
+  Command/Control+A selects all clips when the timeline has focus. Arrow keys
+  nudge focused selections by one frame (Shift for one second). Escape clears
+  selection; Delete/Backspace removes selected clips. The inspector also offers
+  a shared start position. Trimming and slipping use one clip at a time.
 - Overlapping video clips get separate visible tracks. Moving a clip onto an
   occupied video track places it in a free track above, creating one when needed.
   Drag vertically to another video track, or above the first one to create a track.
@@ -184,6 +192,8 @@ New imports are copied directly into their project folder.
 - The video-track change passed the unit suite and production build. Its live
   dragging and export behavior have not been checked in the browser; the active
   editing session was left untouched for user testing.
+- Box selection and group movement were prepared without running tests, builds,
+  or browser checks, at the user's request. The active editor was not reloaded.
 - Browser checks cover playback, trim handles, slip dragging, splitting, undo,
   theme switching, narrow layout and the export/download flow.
 - Real Remotion MP4, WAV and MP3 exports were generated and decoded successfully.
