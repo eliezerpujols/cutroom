@@ -12,6 +12,7 @@ import {ProjectStore,atomicJson} from './projects';
 import {projectSchema,validateProject} from './schema';
 import {mediaEngine} from './media';
 import {defaultProjectsDirectory} from './paths';
+import {chooseProjectFile} from './projectPicker';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
@@ -34,6 +35,7 @@ app.get('/api/events',(req,res)=>{const id=String(req.query.clientId||randomUUID
 app.post('/api/focus',(req,res)=>{if(clients.has(req.body.clientId))focusedClient=req.body.clientId;res.json({ok:true});});
 app.get('/api/projects',async(_req,res)=>res.json({projects:await store.list(),activeProjectId:store.activeId(),projectsRoot:store.managedRoot}));
 app.post('/api/projects',async(req,res)=>{const {name,templateId,projectsDirectory}=z.object({name:z.string().min(1).max(100),templateId:z.string().uuid().optional(),projectsDirectory:z.string().trim().min(1).max(1500).optional()}).parse(req.body);const d=await store.create(name,templateId,undefined,projectsDirectory);res.status(201).json(await store.workspace(d.id));});
+app.post('/api/projects/pick',async(_req,res)=>res.json({path:await chooseProjectFile(store.managedRoot)}));
 app.post('/api/projects/open',async(req,res)=>{const body=z.object({project:z.string().min(1),broadcast:z.boolean().optional()}).parse(req.body);const id=await store.resolve(body.project);await store.activate(id);const workspace=await store.workspace(id);if(body.broadcast)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);});
 app.get('/api/workspace',async(req,res)=>res.json(await store.workspace(req.query.projectId?String(req.query.projectId):store.activeId())));
 app.put('/api/project',async(req,res)=>{const modern=req.body.projectId!==undefined;const id=modern?String(req.body.projectId):store.legacyId();const project=modern?req.body.project:req.body;const revision=modern?z.number().int().min(0).parse(req.body.expectedRevision):undefined;const saved=await store.save(id,project,revision);res.json({saved:true,revision:saved.revision,projectId:id});});

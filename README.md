@@ -35,8 +35,11 @@ does not call ElevenLabs or Sync, and does not use their keys or credits.
 ## Projects
 
 The folder button beside the project name opens **Your projects**. Create a new
-project, save an independent copy, or reopen a recent project. **Open from a
-folder** accepts an absolute folder path or `project.cutroom` path.
+project, save an independent copy, or reopen a recent project. **Open project…**
+opens the macOS file selector: choose the folder's `project.cutroom` file without
+typing a path. The selector starts in the project library; canceling leaves the
+current edit in place. The native selector currently requires macOS; the MCP can
+still open projects by name, ID or absolute path on other platforms.
 
 By default, projects live in **`~/Documents/Cut Room`**, one portable folder per
 project. The working directory of the agent or application does not change this
@@ -54,7 +57,8 @@ project:
 ```
 
 Move or back up the entire folder together. The manifest alone does not contain
-the media. Open a moved folder from its new path; references remain relative.
+the media. Choose `project.cutroom` inside the moved folder to reopen it;
+references remain relative.
 If a media file is deleted, the project still opens and shows **Locate file**
 in the media panel. Choose its replacement to reconnect the existing edits.
 Exports require all media used on the timeline to be available.
@@ -187,7 +191,9 @@ New imports are copied directly into their project folder.
   100 ms of a one-second fade-out. The exported WAV duration was exactly 2 seconds.
 - Audio extraction and byte-range media delivery were checked against the reel.
 - The project picker was checked for thumbnail display, separate creation/copy
-  forms, and reopening a folder with a `~/` path, in light and charcoal themes.
+  forms, and reopening a folder with a `~/` path, in light and charcoal themes,
+  before the native file selector replaced the path form. The native selector
+  change has not been run or tested, to preserve the user's active editing session.
 - Project reopening, MCP creation/trim/opening, stale-edit rejection, and a
   one-second MP4 export were verified end to end.
 - Light surfaces use pure white and neutral grays; the desktop header is 56px.

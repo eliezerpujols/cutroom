@@ -51,7 +51,6 @@
 .project-item>.button-icon{width:28px;height:28px;flex-shrink:0}
 .project-dialog-footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--background);border-top:1px solid var(--border);padding:13px 22px}
 .project-dialog-footer .open-project-action{font-size:11px;padding:0 4px;gap:8px;color:var(--foreground);height:30px;flex-shrink:0}
-.project-dialog-footer .open-project-action>svg:last-child{margin-left:4px;color:var(--muted)}
 .project-library-location{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
 .project-form-dialog{width:min(480px,calc(100vw - 32px))}
 .project-form-dialog .dialog-heading{padding-bottom:26px}

@@ -76,6 +76,10 @@ with **Locate file** in the media panel, preserving the existing source windows.
 - `open_project` accepts a project name, ID, absolute folder or `project.cutroom`
   path. It updates the focused connected editor tab. If no editor tab is open,
   use the returned `editor_url` with the available browser tool.
+- In the macOS editor, **Open project…** opens the system file selector for
+  `project.cutroom`. Users do not need to type a path. The project opens from
+  its original folder, keeping relative media references; canceling keeps the
+  current project open.
 - `export_project` renders MP4, WAV or MP3 locally. Optional ranges are start
   inclusive/end exclusive frames. Poll `export_status` until completed or failed;
   on failure, report the actual error rather than claiming an export exists.

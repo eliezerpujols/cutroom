@@ -1,12 +1,12 @@
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
-import {FolderOpen,Plus,Copy,LoaderCircle,FileVideo,MoreHorizontal,ArrowLeft,Check,ArrowUpRight} from 'lucide-react';
+import {FolderOpen,Plus,Copy,LoaderCircle,FileVideo,MoreHorizontal,ArrowLeft,Check} from 'lucide-react';
 import {Button,Dialog,DialogContent,Input,TooltipProvider,DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem} from './ui/primitives';
 import {api} from './useEditor';
 import {time} from './model';
 import type {Workspace} from './useProjectSave';
 
 type Summary={id:string;name:string;folder:string;updatedAt:string;available:boolean;missingCount:number;previewUrl?:string|null;durationFrames?:number};
-type Panel='browse'|'new'|'copy'|'folder';
+type Panel='browse'|'new'|'copy';
 export type ProjectControls={openProjects:()=>void;registerSave:(fn:()=>Promise<void>)=>()=>void;reloadSaved:()=>void};
 const readablePath=(value:string)=>value.replace(/^(\/Users\/[^/]+|\/home\/[^/]+)(?=\/)/,'~');
 
@@ -14,7 +14,7 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
   const [workspace,setWorkspace]=useState<Workspace|null>(null);
   const [error,setError]=useState(''),[open,setOpen]=useState(false),[panel,setPanel]=useState<Panel>('browse');
   const [projects,setProjects]=useState<Summary[]>([]),[projectsRoot,setProjectsRoot]=useState('');
-  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[name,setName]=useState(''),[path,setPath]=useState('');
+  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[name,setName]=useState('');
   const save=useRef<()=>Promise<void>>(async()=>{}),switching=useRef(false);
   const registerSave=useCallback((fn:()=>Promise<void>)=>{save.current=fn;return()=>{if(save.current===fn)save.current=async()=>{};};},[]);
   const accept=useCallback((w:Workspace)=>{setWorkspace(w);setError('');const url=new URL(location.href);url.searchParams.set('project',w.projectId);history.replaceState(null,'',url);},[]);
@@ -24,16 +24,23 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
     api<Workspace>('/api/workspace'+(id?'?projectId='+encodeURIComponent(id):'')).then(accept).catch(e=>{setError(e.message);setOpen(true);});
   },[accept]);
 
-  const load=useCallback(async(reference:string,skipSave=false)=>{
+  const load=useCallback(async(reference:string|(()=>Promise<string|null>),skipSave=false)=>{
     if(switching.current)return;
     switching.current=true;setBusy(true);setError('');
     try{
+      const chosen=typeof reference==='function'?await reference():reference;
+      if(!chosen)return;
       if(!skipSave)await save.current();
-      const w=await api<Workspace>('/api/projects/open',{method:'POST',body:JSON.stringify({project:reference})});
+      const w=await api<Workspace>('/api/projects/open',{method:'POST',body:JSON.stringify({project:chosen})});
       accept(w);setOpen(false);
     }catch(e){setError((e as Error).message);setOpen(true);}
     finally{switching.current=false;setBusy(false);}
   },[accept]);
+
+  const pickProject=()=>void load(async()=>{
+    const result=await api<{path:string|null}>('/api/projects/pick',{method:'POST',body:'{}'});
+    return result.path;
+  });
 
   useEffect(()=>{
     const clientId=crypto.randomUUID(),events=new EventSource('/api/events?clientId='+clientId);
@@ -75,15 +82,15 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
     registerSave,
     reloadSaved:()=>{if(workspace)void load(workspace.projectId,true);},
   };
-  const browse=panel==='browse',folder=panel==='folder';
-  const title=browse?'Your projects':folder?'Open a project':panel==='copy'?'Save a copy':'New project';
+  const browse=panel==='browse';
+  const title=browse?'Your projects':panel==='copy'?'Save a copy':'New project';
   const library=readablePath(projectsRoot);
 
   return <TooltipProvider delayDuration={450}>
     {workspace?<div key={workspace.projectId+':'+workspace.revision+':'+workspace.updatedAt}>{children(workspace,controls)}</div>:<div className="loading-screen"><div className="brand-symbol"/><h1>Cutroom</h1><LoaderCircle className="spin" size={22}/><p>{error||'Opening your local workspace…'}</p><Button variant="outline" onClick={()=>setOpen(true)}>Open a project</Button></div>}
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className={'projects-dialog'+(!browse?' project-form-dialog':'')} title={title}
-        description={browse?'Open a saved project, create a project, or save a copy.':folder?'Open a project folder or its project.cutroom file.':'Choose a name for your project.'}
+        description={browse?'Open a saved project, create a project, or save a copy.':'Choose a name for your project.'}
         descriptionClassName="sr-only"
         leading={!browse?<Button variant="ghost" size="icon" aria-label="Back to projects" disabled={busy} onClick={()=>showPanel('browse')}><ArrowLeft size={18}/></Button>:undefined}
         headerActions={browse?<Button className="new-project-action" disabled={busy} onClick={()=>showPanel('new')}><Plus size={16}/>New project</Button>:undefined}>
@@ -108,10 +115,10 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
               {!loading&&!projects.length&&<div className="projects-empty"><FileVideo size={25}/><p>No saved projects yet</p><Button variant="outline" onClick={()=>showPanel('new')}>Create your first project</Button></div>}
             </div>
           </div>
-          <div className="project-dialog-footer"><Button variant="ghost" className="open-project-action" disabled={busy} onClick={()=>showPanel('folder')}><FolderOpen size={16}/>Open from a folder<ArrowUpRight size={13}/></Button><span className="project-library-location" title={projectsRoot}>{library}</span></div>
-        </>:<form className="project-form" onSubmit={e=>{e.preventDefault();if(!busy){if(folder){if(path.trim())void load(path.trim());}else void create();}}}>
-          {folder?<><p className="project-form-intro">Enter the path to a project folder or its <code>project.cutroom</code> file.</p><label className="field"><span>Project location</span><Input autoFocus aria-label="Project folder path" placeholder="~/Documents/Cut Room/My project" value={path} onChange={e=>setPath(e.target.value)} disabled={busy}/></label></>:<><label className="field"><span>Project name</span><Input autoFocus aria-label="New project name" placeholder="Untitled project" value={name} maxLength={100} onChange={e=>setName(e.target.value)} disabled={busy}/></label>{panel==='copy'&&workspace&&<p className="project-form-intro">A separate copy of <strong>{workspace.project.name}</strong>, including its media and edits.</p>}<div className="project-save-location"><FolderOpen size={15}/><div><span>Save location</span><strong title={projectsRoot}>{library||'Loading…'}</strong></div></div></>}
-          <div className="project-form-footer"><Button variant="outline" disabled={busy} onClick={()=>showPanel('browse')}>Cancel</Button><Button type="submit" disabled={busy||loading||!(folder?path.trim():name.trim())}>{busy&&<LoaderCircle size={15} className="spin"/>}{busy?(folder?'Opening…':'Creating…'):folder?'Open project':panel==='copy'?'Create copy':'Create project'}</Button></div>
+          <div className="project-dialog-footer"><Button variant="ghost" className="open-project-action" disabled={busy} onClick={pickProject}><FolderOpen size={16}/>Open project…</Button><span className="project-library-location" title={projectsRoot}>{library}</span></div>
+        </>:<form className="project-form" onSubmit={e=>{e.preventDefault();if(!busy)void create();}}>
+          <label className="field"><span>Project name</span><Input autoFocus aria-label="New project name" placeholder="Untitled project" value={name} maxLength={100} onChange={e=>setName(e.target.value)} disabled={busy}/></label>{panel==='copy'&&workspace&&<p className="project-form-intro">A separate copy of <strong>{workspace.project.name}</strong>, including its media and edits.</p>}<div className="project-save-location"><FolderOpen size={15}/><div><span>Save location</span><strong title={projectsRoot}>{library||'Loading…'}</strong></div></div>
+          <div className="project-form-footer"><Button variant="outline" disabled={busy} onClick={()=>showPanel('browse')}>Cancel</Button><Button type="submit" disabled={busy||loading||!name.trim()}>{busy&&<LoaderCircle size={15} className="spin"/>}{busy?'Creating…':panel==='copy'?'Create copy':'Create project'}</Button></div>
         </form>}
         {busy&&browse&&<p className="project-working" role="status"><LoaderCircle size={15} className="spin"/>Opening project…</p>}
       </DialogContent>
