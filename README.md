@@ -101,9 +101,9 @@ Register, or re-register after moving the Cutroom application folder:
 codex mcp add cutroom -- /bin/zsh "/absolute/path/to/cutroom/Cutroom MCP.command"
 ```
 
-The bundled skill lives at [`.agents/skills/cutroom-edit/SKILL.md`](.agents/skills/cutroom-edit/SKILL.md).
-It is discoverable when working in this checkout. To use it from other projects,
-copy the `cutroom-edit` folder into `~/.codex/skills/`. It guides project selection,
+The bundled skill lives at [`.agents/skills/cutroom/SKILL.md`](.agents/skills/cutroom/SKILL.md).
+Invoke it as `$cutroom`. It is discoverable when working in this checkout.
+To use it from any project, install the `cutroom` folder in `~/.codex/skills/`. It guides project selection,
 frame-based edits, revision conflicts, reopening and exports through the MCP.
 
 For another MCP client, launch `npm run mcp --silent` with the checkout as its

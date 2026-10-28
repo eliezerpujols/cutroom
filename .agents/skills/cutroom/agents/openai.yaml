@@ -1,4 +1,4 @@
 interface:
   display_name: "Cutroom"
   short_description: "Edit and reopen local Cutroom video projects"
-  default_prompt: "Use $cutroom-edit to prepare my video project and open it in Cutroom."
+  default_prompt: "Use $cutroom to prepare my video project and open it in Cutroom."

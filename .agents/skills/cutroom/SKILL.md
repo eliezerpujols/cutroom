@@ -1,5 +1,5 @@
 ---
-name: cutroom-edit
+name: cutroom
 description: Create, reopen, edit, and export local Cutroom video projects through its MCP server. Use when the user wants a video prepared in Cutroom or asks to trim, split, slip, adjust audio, or reopen an existing Cutroom project.
 ---
 
