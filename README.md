@@ -183,6 +183,13 @@ the Codex chat after updating to discover its new tools.
   trim first to make room. Fine adjustments also
   offer a Source in field and one-frame buttons.
 - Select a clip to adjust position, duration, volume, fades and playback speed.
+- Audio clips show fade ramps and an attenuated waveform. Select an audio clip
+  and drag its small fade handles, or use the inspector's Fade in / Fade out
+  sliders. The compact seconds values remain editable for precise adjustments.
+- **Playback & content** includes a speed slider and common speed buttons.
+  **Content start** shows the selected source window: drag it to slip the source
+  without changing the clip's timeline position or duration. Earlier / Later
+  buttons adjust it one source frame at a time. Changing speed changes duration.
 - **Extract audio as WAV** creates a downloadable audio file. **Detach to a
   separate track** mutes the embedded sound and adds an independent audio clip.
 - Import or drag in local video/audio. Click a media tile to append it, or drag

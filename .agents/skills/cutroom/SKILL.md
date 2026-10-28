@@ -70,6 +70,13 @@ Its upper timeline divider can be dragged to change height (double-click resets
 automatic sizing). Command/Ctrl + mouse wheel zooms around the cursor. These are
 view preferences and do not change clip timing or edit history.
 
+Audio fades are visible as ramps and attenuated waveforms in the timeline.
+Selected audio clips expose draggable fade handles; the inspector also offers
+Fade in / Fade out sliders with editable seconds. Playback & content provides
+speed controls and a Content start source window. Dragging that window slips
+the source without moving or resizing the timeline clip; Earlier / Later move
+one source frame. Speed changes the clip's duration.
+
 In the UI, dragging empty timeline space selects clips across video and audio
 tracks. Drag any selected clip to move the selection together; Shift-click
 adjusts the selection. The inspector's Selection start moves the whole group.

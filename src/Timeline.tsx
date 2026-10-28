@@ -1,9 +1,10 @@
 import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
+import {FadeEnvelope} from './ClipAdjustments';
 import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta} from './timelineSelection';
-import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,type Asset,type Clip,type Project,type Tool} from './model';
+import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
 type Props={project:Project;assets:Asset[];selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
@@ -14,7 +15,7 @@ export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;cli
     const start=Math.floor((clip.sourceIn+i/count*clip.duration*clip.rate)/asset.frames*asset.peaks.length);
     const end=Math.max(start+1,Math.floor((clip.sourceIn+(i+1)/count*clip.duration*clip.rate)/asset.frames*asset.peaks.length));
     const peak=asset.peaks.slice(Math.max(0,start),Math.min(asset.peaks.length,end)).reduce((a,b)=>Math.max(a,b),0);
-    const h=Math.max(2,Math.pow(peak,.62)*42);return <rect key={i} x={i*3} y={24-h/2} width="1.8" height={h} rx=".8"/>;
+    const h=Math.max(1,Math.max(2,Math.pow(peak,.62)*42)*fadeGainAt(clip,i/(count-1)*Math.max(0,clip.duration-1)));return <rect key={i} x={i*3} y={24-h/2} width="1.8" height={h} rx=".8"/>;
   })}</svg>;
 });
 export function Timeline(props:Props){
@@ -204,6 +205,40 @@ export function Timeline(props:Props){
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);window.addEventListener('blur',blur);
   }
 
+  function dragFade(e:React.PointerEvent,c:Clip,field:'fadeIn'|'fadeOut'){
+    if(e.button!==0||!e.isPrimary)return;
+    e.preventDefault();e.stopPropagation();gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);
+    const handle=e.currentTarget as HTMLElement,x=e.clientX,scrollLeft=viewport.current!.scrollLeft;
+    let started=false,last=c[field];
+    handle.focus({preventScroll:true});handle.setPointerCapture(e.pointerId);
+    const move=(event:PointerEvent)=>{
+      if(event.pointerId!==e.pointerId)return;
+      const delta=Math.round((event.clientX-x+viewport.current!.scrollLeft-scrollLeft)/ppf);
+      if(!started&&!delta)return;
+      const value=clamp(c[field]+(field==='fadeIn'?delta:-delta),0,c.duration);
+      if(value===last)return;
+      if(!started){checkpoint();started=true;}last=value;
+      edit(p=>({...p,clips:p.clips.map(clip=>clip.id===c.id?{...clip,[field]:value}:clip)}),false);
+    };
+    const cleanup=()=>{
+      window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',cleanup);window.removeEventListener('keydown',escape,true);
+      try{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);}catch{}
+      gestureCleanup.current=null;
+    };
+    const finish=(event:PointerEvent)=>{if(event.pointerId!==e.pointerId)return;move(event);cleanup();};
+    const revert=()=>{if(started)edit(p=>({...p,clips:p.clips.map(clip=>clip.id===c.id?{...clip,[field]:c[field]}:clip)}),false);cleanup();};
+    const cancel=(event:PointerEvent)=>{if(event.pointerId===e.pointerId)revert();};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();revert();}};
+    gestureCleanup.current=cleanup;
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',cleanup);window.addEventListener('keydown',escape,true);
+  }
+  function fadeKey(e:React.KeyboardEvent,c:Clip,field:'fadeIn'|'fadeOut'){
+    e.stopPropagation();const direction=field==='fadeIn'?1:-1,step=e.shiftKey?FPS:1;
+    const value=e.key==='ArrowRight'?c[field]+direction*step:e.key==='ArrowLeft'?c[field]-direction*step:e.key==='Home'?0:e.key==='End'?c.duration:null;
+    if(value===null)return;e.preventDefault();const next=clamp(value,0,c.duration);
+    if(next!==c[field])edit(p=>({...p,clips:p.clips.map(clip=>clip.id===c.id?{...clip,[field]:next}:clip)}));
+  }
+
   function clipKey(e:React.KeyboardEvent,c:Clip){
     if(e.key==='Enter'||e.key===' '){
       e.preventDefault();e.stopPropagation();
@@ -238,9 +273,10 @@ export function Timeline(props:Props){
       {!project.clips.some(c=>c.trackId===track.id)&&<div className="empty-track">Drop {track.kind==='video'?'a video':'audio'} here</div>}
       {project.clips.filter(c=>c.trackId===track.id).map(c=>{const a=assets.find(a=>a.id===c.assetId);if(!a)return null;const selectedClip=selectedSet.has(c.id);
         return <div key={c.id} data-clip-id={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>clipKey(e,c)}>
-          {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<Waveform asset={a} clip={c}/>}
+          {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<><Waveform asset={a} clip={c}/><FadeEnvelope clip={c}/></>}
           <div className="clip-title">{c.kind==='video'?<Film size={11}/>:<AudioLines size={12}/>}<span>{c.name}</span>{c.muted&&<VolumeX size={12}/>}</div>
           <div className="clip-edge left" aria-label="Trim start" role="separator" onPointerDown={e=>drag(e,c,'left')}/><div className="clip-edge right" aria-label="Trim end" role="separator" onPointerDown={e=>drag(e,c,'right')}/>
+          {c.kind==='audio'&&selectedClip&&(['fadeIn','fadeOut'] as const).map(field=>{const label=field==='fadeIn'?'Fade in':'Fade out',ratio=clamp(c[field]/Math.max(1,c.duration-1),0,1),position=field==='fadeIn'?ratio:1-ratio;return <div key={field} className="audio-fade-handle" role="slider" tabIndex={0} aria-label={`${label} duration`} aria-valuemin={0} aria-valuemax={Math.max(c.duration,c[field])/FPS} aria-valuenow={c[field]/FPS} aria-valuetext={`${(c[field]/FPS).toFixed(2)} seconds`} title={`${label}: ${(c[field]/FPS).toFixed(2)}s · Drag to adjust`} style={{left:`clamp(10px, ${position*100}%, calc(100% - 10px))`}} onPointerDown={e=>dragFade(e,c,field)} onKeyDown={e=>fadeKey(e,c,field)}><span/></div>;})}
         </div>;
       })}</div>
     </div>)}

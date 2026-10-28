@@ -56,7 +56,7 @@ export function snapFrame(value:number,points:number[],threshold:number):number 
   for(const p of points)if(Math.abs(value-p)<dist){dist=Math.abs(value-p);closest=p;}
   return Math.round(closest);
 }
-export function gainAt(c:Clip,frame:number):number {
-  if(c.muted)return 0;
-  return c.volume*Math.min(c.fadeIn?clamp(frame/c.fadeIn,0,1):1,c.fadeOut?clamp((c.duration-1-frame)/c.fadeOut,0,1):1);
+export function fadeGainAt(c:Clip,frame:number):number {
+  return Math.min(c.fadeIn?clamp(frame/c.fadeIn,0,1):1,c.fadeOut?clamp((c.duration-1-frame)/c.fadeOut,0,1):1);
 }
+export function gainAt(c:Clip,frame:number):number {return c.muted?0:c.volume*fadeGainAt(c,frame);}
