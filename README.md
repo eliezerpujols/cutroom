@@ -38,15 +38,19 @@ The folder button beside the project name opens **Your projects**. Create a new
 project, save an independent copy, or reopen a recent project. **Open from a
 folder** accepts an absolute folder path or `project.cutroom` path.
 
-Each project is a portable folder inside `projects/`:
+By default, projects live in **`~/Documents/Cut Room`**, one portable folder per
+project. The working directory of the agent or application does not change this
+location. Imported media, extracted audio, documents and exports belong with the
+project:
 
 ```text
-Reel-2-English-…/
-  project.cutroom   # JSON manifest: timeline, metadata, relative media paths
-  media/           # copies of video and audio, including extracted WAVs
-  thumbs/          # generated thumbnails
-  exports/         # MP4 / WAV / MP3 results
-  history/         # previous timeline snapshots
+~/Documents/Cut Room/
+  Reel-2-English-…/
+    project.cutroom   # JSON manifest: timeline, metadata, relative media paths
+    media/           # copies of video and audio, including extracted WAVs
+    thumbs/          # generated thumbnails
+    exports/         # MP4 / WAV / MP3 results
+    history/         # previous timeline snapshots
 ```
 
 Move or back up the entire folder together. The manifest alone does not contain
@@ -61,8 +65,16 @@ newer revision saved by another tab or tool. A conflict offers **Reopen** to loa
 the saved version. The previous draft remains in browser storage until a new
 successful save. Before switching projects the editor saves pending changes.
 The original single workspace is migrated automatically; its old data files
-remain untouched as a backup. Current projects use `projects/`, and
-`data/projects.json` records known folders.
+remain untouched as a backup. Existing projects inside the old checkout's
+`projects/` directory are moved automatically into the default library. Explicitly opened projects in other
+folders keep their locations. `data/projects.json` records known folders, and the
+default library is scanned on startup so projects can be found after reinstalling.
+
+To set a different default library, set `CUTROOM_PROJECTS_DIR` in `.env` to an
+absolute path (or `~/…`). For a single new project in another location, the MCP's
+`create_project` tool accepts `projects_directory`. Leave it unset unless the user
+requests another destination. Continuing an existing project uses its current
+folder; it does not create a new project or relocate it.
 
 ## Use from Codex (MCP)
 
@@ -148,8 +160,9 @@ New imports are copied directly into their project folder.
 
 ## Validation
 
-- Nine tests cover project persistence, portable copies, missing media, revision
-  conflicts, path checks, and timing/audio invariants including accelerated splits, source continuity,
+- Twelve tests cover default and explicit project locations, migration, rediscovery,
+  persistence, portable copies, missing media, revision conflicts, path checks,
+  and timing/audio invariants including accelerated splits, source continuity,
   trim bounds, slip bounds, speed changes and audio fade/mute behavior.
 - Browser checks cover playback, trim handles, slip dragging, splitting, undo,
   theme switching, narrow layout and the export/download flow.

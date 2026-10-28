@@ -9,6 +9,20 @@ Use the `cutroom` MCP to prepare the edit and open the project in the local edit
 Cutroom handles existing video/audio; dubbing, translation and lip sync need a
 separate integration and are not included in these tools.
 
+## Project location
+
+Default to `~/Documents/Cut Room`, with one folder per project. Keep imported
+media, extracted audio, project documents and exports inside that project folder;
+do not use the application checkout or the current working directory for user
+work. No location question is needed when the user has not specified a path.
+
+Continue in the current project when the user is editing it. If they name another
+project, find and open that project instead. If they explicitly request a different
+location for a new project, pass its parent folder as `projects_directory` to
+`create_project`. Omit that field otherwise; the server supplies the default
+(or a configured `CUTROOM_PROJECTS_DIR`). The tool returns the actual folder;
+use it for any accompanying project documents instead of inventing another path.
+
 ## Prepare the project
 
 - Find existing work with `list_projects`, then `get_project`. Project names can

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {documentSchema,storedAssetSchema,validateProject,ProjectConflict,type ProjectDocument,type StoredAsset} from './schema';
 import type {Project,Asset} from '../src/model';
+import {absoluteDirectory} from './paths';
 
 type Entry={id:string;folder:string;name:string};
 type Registry={version:1;activeProjectId:string;legacyProjectId:string;entries:Entry[]};
@@ -19,10 +20,46 @@ export class ProjectStore{
   private async lock<T>(key:string,work:()=>Promise<T>):Promise<T>{const before=this.locks.get(key)||Promise.resolve();const next=before.catch(()=>{}).then(work);this.locks.set(key,next);try{return await next;}finally{if(this.locks.get(key)===next)this.locks.delete(key);}}
   async initialize(legacy?:{project:Project;assets:(Omit<Asset,'missing'>&{file:string})[]}){
     await fs.mkdir(this.managedRoot,{recursive:true});await fs.mkdir(this.data,{recursive:true});
-    if(await exists(this.registryFile)){this.registry=JSON.parse(await fs.readFile(this.registryFile,'utf8'));return;}
+    if(await exists(this.registryFile)){this.registry=JSON.parse(await fs.readFile(this.registryFile,'utf8'));await this.discover();return;}
     this.registry={version:1,activeProjectId:'',legacyProjectId:'',entries:[]};
+    await this.discover();if(this.registry.entries.length)return;
     const doc=await this.create(legacy?.project.name||'Untitled project',undefined,legacy);
     this.registry.legacyProjectId=doc.id;this.registry.activeProjectId=doc.id;await atomicJson(this.registryFile,this.registry);
+  }
+  private async discover(){
+    // Recover projects from the default library even after reinstalling the app.
+    let changed=false;
+    for(const item of await fs.readdir(this.managedRoot,{withFileTypes:true})){
+      if(!item.isDirectory()||item.name.startsWith('.'))continue;
+      const folder=path.join(this.managedRoot,item.name),file=path.join(folder,'project.cutroom');
+      if(!await exists(file))continue;
+      try{
+        if((await fs.stat(file)).size>5*1024**2)continue;
+        const d=documentSchema.parse(JSON.parse(await fs.readFile(file,'utf8')));validateProject(d.project,d.assets);
+        for(const a of d.assets){within(folder,a.file);for(const t of a.thumbnails)within(folder,t);}
+        const known=this.registry.entries.find(e=>e.id===d.id);
+        if(known){if(!await exists(known.folder)){known.folder=folder;changed=true;}continue;}
+        this.registry.entries.push({id:d.id,folder,name:d.project.name});changed=true;
+      }catch{/* Leave unrelated or invalid folders untouched. */}
+    }
+    if(!this.registry.activeProjectId&&this.registry.entries[0]){this.registry.activeProjectId=this.registry.entries[0].id;changed=true;}
+    if(!this.registry.legacyProjectId&&this.registry.entries[0]){this.registry.legacyProjectId=this.registry.entries[0].id;changed=true;}
+    if(changed)await atomicJson(this.registryFile,this.registry);
+  }
+  async migrateManagedRoot(previousRoot:string){
+    if(path.resolve(previousRoot)===path.resolve(this.managedRoot))return;
+    for(const e of [...this.registry.entries]){
+      if(path.dirname(path.resolve(e.folder))!==path.resolve(previousRoot)||!await exists(e.folder))continue;
+      await this.lock(e.id,async()=>{
+        const oldFolder=e.folder,target=path.join(this.managedRoot,path.basename(oldFolder));
+        if(await exists(target))throw new Error('Cannot move project: its destination folder already exists. Open the intended project folder explicitly.');
+        let copied=false;
+        try{await fs.rename(oldFolder,target);}catch(error){if((error as NodeJS.ErrnoException).code!=='EXDEV')throw error;await fs.cp(oldFolder,target,{recursive:true,errorOnExist:true,force:false});copied=true;}
+        try{await this.lock('registry',async()=>{e.folder=target;try{await atomicJson(this.registryFile,this.registry);}catch(error){e.folder=oldFolder;throw error;}});}
+        catch(error){if(!copied)await fs.rename(target,oldFolder);throw error;}
+        // On different disks keep the source as a fallback; the registry uses the new copy.
+      });
+    }
   }
   activeId(){return this.registry.activeProjectId;}
   legacyId(){return this.registry.legacyProjectId;}
@@ -35,10 +72,10 @@ export class ProjectStore{
     const assets=await Promise.all(d.assets.map(async a=>{const {file,...rest}=a;return {...rest,url:`/api/projects/${id}/media/${a.id}`,extension:path.extname(file).slice(1),thumbnails:a.thumbnails.map((_,i)=>`/api/projects/${id}/thumbs/${a.id}/${i}`),missing:!await exists(await this.assetPath(id,file))};}));
     return {projectId:id,project:d.project,assets,revision:d.revision,folder,projectFile:path.join(folder,'project.cutroom'),exportsDir:path.join(folder,'exports'),missingAssets:assets.filter(a=>a.missing).map(a=>({id:a.id,name:a.name})),updatedAt:d.updatedAt};
   }
-  async create(name:string,templateId?:string,legacy?:{project:Project;assets:(Omit<Asset,'missing'>&{file:string})[]}){
+  async create(name:string,templateId?:string,legacy?:{project:Project;assets:(Omit<Asset,'missing'>&{file:string})[]},parentFolder?:string){
     name=name.trim();if(!name||name.length>100)throw new Error('Give the project a name of 1–100 characters.');
     const id=randomUUID(),slug=name.normalize('NFKD').replace(/[^a-zA-Z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,60)||'Project';
-    const folder=path.join(this.managedRoot,slug+'-'+id.slice(0,8));
+    const folder=path.join(parentFolder?absoluteDirectory(parentFolder):this.managedRoot,slug+'-'+id.slice(0,8));
     await fs.mkdir(path.join(folder,'media'),{recursive:true});await fs.mkdir(path.join(folder,'thumbs'),{recursive:true});await fs.mkdir(path.join(folder,'exports'),{recursive:true});
     let project:Project={version:1,name,width:1080,height:1920,fps:30,tracks:[{id:'video-1',name:'Video',kind:'video',muted:false},{id:'audio-1',name:'Audio',kind:'audio',muted:false}],clips:[]};
     let assets:StoredAsset[]=[];

@@ -11,14 +11,16 @@ import {z} from 'zod';
 import {ProjectStore,atomicJson} from './projects';
 import {projectSchema,validateProject} from './schema';
 import {mediaEngine} from './media';
+import {defaultProjectsDirectory} from './paths';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
 await fs.mkdir(path.join(data,'uploads'),{recursive:true});
-const store=new ProjectStore(data,path.join(root,'projects'));
+const store=new ProjectStore(data,defaultProjectsDirectory());
 let legacy:{project:Project;assets:(Asset&{file:string})[]}|undefined;
 if(existsSync(path.join(data,'project.json'))&&existsSync(path.join(data,'library.json')))legacy={project:JSON.parse(await fs.readFile(path.join(data,'project.json'),'utf8')),assets:JSON.parse(await fs.readFile(path.join(data,'library.json'),'utf8'))};
 await store.initialize(legacy);
+await store.migrateManagedRoot(path.join(root,'projects'));
 const media=mediaEngine(root,store);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
@@ -31,7 +33,7 @@ function publish(event:Record<string,unknown>){const target=clients.get(focusedC
 app.get('/api/events',(req,res)=>{const id=String(req.query.clientId||randomUUID());res.setHeader('Content-Type','text/event-stream');res.setHeader('Cache-Control','no-cache');res.setHeader('Connection','keep-alive');res.flushHeaders();clients.set(id,res);focusedClient=id;res.write(': connected\n\n');const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000);req.on('close',()=>{clearInterval(heartbeat);clients.delete(id);});});
 app.post('/api/focus',(req,res)=>{if(clients.has(req.body.clientId))focusedClient=req.body.clientId;res.json({ok:true});});
 app.get('/api/projects',async(_req,res)=>res.json({projects:await store.list(),activeProjectId:store.activeId(),projectsRoot:store.managedRoot}));
-app.post('/api/projects',async(req,res)=>{const {name,templateId}=z.object({name:z.string().min(1).max(100),templateId:z.string().uuid().optional()}).parse(req.body);const d=await store.create(name,templateId);res.status(201).json(await store.workspace(d.id));});
+app.post('/api/projects',async(req,res)=>{const {name,templateId,projectsDirectory}=z.object({name:z.string().min(1).max(100),templateId:z.string().uuid().optional(),projectsDirectory:z.string().trim().min(1).max(1500).optional()}).parse(req.body);const d=await store.create(name,templateId,undefined,projectsDirectory);res.status(201).json(await store.workspace(d.id));});
 app.post('/api/projects/open',async(req,res)=>{const body=z.object({project:z.string().min(1),broadcast:z.boolean().optional()}).parse(req.body);const id=await store.resolve(body.project);await store.activate(id);const workspace=await store.workspace(id);if(body.broadcast)publish({type:'open-project',projectId:id,revision:workspace.revision});res.json(workspace);});
 app.get('/api/workspace',async(req,res)=>res.json(await store.workspace(req.query.projectId?String(req.query.projectId):store.activeId())));
 app.put('/api/project',async(req,res)=>{const modern=req.body.projectId!==undefined;const id=modern?String(req.body.projectId):store.legacyId();const project=modern?req.body.project:req.body;const revision=modern?z.number().int().min(0).parse(req.body.expectedRevision):undefined;const saved=await store.save(id,project,revision);res.json({saved:true,revision:saved.revision,projectId:id});});
