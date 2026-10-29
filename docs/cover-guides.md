@@ -17,7 +17,7 @@ safe zone are different checks:
 Presets are **approximate centered crop previews**: TikTok profile 3:4,
 Instagram grid 3:4, portrait feed 4:5, and square 1:1. They simulate the selected
 shape, not platform placement controls, app interface occlusion, repositioned
-thumbnails or every device. The menu labels this limit concisely. No third-party
+thumbnails or every device. These limits are documented here; the compact menu shows crop choices only. No third-party
 size chart is treated as an official specification.
 
 ## Design decisions
@@ -30,7 +30,9 @@ neutral color tokens. Other video-editor search results showed selection bounds
 or media adjustments, not safe-area controls; they were not cited as precedents.
 
 The left part of the split control toggles the remembered guide. Its arrow opens
-a radio menu: No guides or exactly one crop preset. Selected radio indicators
+a compact radio menu: No guides or exactly one crop preset. The menu omits
+a heading and explanatory footer. A fixed-width check column and left-aligned
+labels prevent the options from spreading across the menu. Selected radio indicators
 cannot appear on two presets at once. Outside the crop is dimmed; a thin boundary
 and small label identify the remaining area. The overlay passes pointer events
 through so existing cover text selection and dragging work underneath it.
