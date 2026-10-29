@@ -360,3 +360,11 @@ Source, tests, package lockfile, launchers, MCP server, the Codex skill and
 `.env.example` are versioned. Videos, audio, screenshots, project manifests,
 project folders, exports, runtime data, dependencies and real `.env` files are
 ignored. The app opens an empty project on a fresh checkout; add your own media.
+
+### Covers and adjustments
+
+Use the square **Cover** tile at the start of the timeline to choose an exact frame, add and move styled text, toggle captions, and export a separate PNG. Title card, yellow Highlight, and Text only styles support fill/text colors, bold, italic, font size, outlines and placement. The cover keeps the project aspect ratio and never changes the video duration.
+
+The left **Adjust** tool applies looks and light/color controls to the whole edit. Select a video or image for its own **Adjustments** section on the right. Preset strength, exposure, brightness, contrast, saturation, temperature and tint share preview/export rendering; captions and cover text retain their chosen colors. PNG/JPEG/WebP images import onto video tracks with an initial five-second duration.
+
+MCP tools `set_cover`, `set_visual_adjustments` and `export_cover` provide the same features with revision protection. Updated `$cutroom` instructions are in [the visual editing reference](.agents/skills/cutroom/references/visuals.md); design sources and validation limits are in [covers and adjustments](docs/covers-and-adjustments.md).

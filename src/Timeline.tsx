@@ -3,12 +3,13 @@ import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,B
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {FadeEnvelope} from './ClipAdjustments';
 import {CaptionTimeline} from './CaptionTimeline';
+import {CoverTile} from './CoverEditor';
 import type {CaptionSelection} from './captions';
 import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -79,12 +80,12 @@ export function Timeline(props:Props){
   const rulerStep=ppf*FPS<25?120:ppf*FPS<70?60:30;
   const selectedClip=project.clips.find(c=>c.id===selected);
   const selectedAsset=assets.find(a=>a.id===selectedClip?.assetId);
-  const canSlip=!!selectedClip&&!!selectedAsset&&selectedAsset.frames-selectedClip.duration*selectedClip.rate>=1;
-  const canSplit=!props.captionSelection&&selectedIds.length<2&&!!splitTarget(project,selected,frame);
+  const canSlip=!props.coverEditing&&!!selectedClip&&!!selectedAsset&&selectedAsset.kind!=='image'&&selectedAsset.frames-selectedClip.duration*selectedClip.rate>=1;
+  const canSplit=!props.coverEditing&&!props.captionSelection&&selectedIds.length<2&&!!splitTarget(project,selected,frame);
   const splitHint=selectedIds.length>1?'Select one clip to split at the playhead.':canSplit?'Split at the playhead · S or ⌘B':selectedClip?'Move the playhead inside the selected clip to split.':'Move the playhead inside a clip to split.';
   const slipHint=!selectedClip?'Select a clip to change its source content.':!canSlip?'Trim this clip first to make room for a slip edit.':'Slip source content · Y. Drag inside the clip; its position stays fixed.';
   function pointerFrame(clientX:number){const rect=board.current!.getBoundingClientRect();return clamp(Math.round((clientX-rect.left-132)/ppf),0,length-1);}
-  function scrub(e:React.PointerEvent){if(e.button!==0)return;e.preventDefault();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
+  function scrub(e:React.PointerEvent){if(e.button!==0)return;e.preventDefault();if(props.coverEditing)checkpoint();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
     const move=(ev:PointerEvent)=>seek(pointerFrame(ev.clientX));const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});}
 
   function startResize(e:React.PointerEvent<HTMLDivElement>){
@@ -267,7 +268,7 @@ export function Timeline(props:Props){
     if(e.key==='Escape'){gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);}
     if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&selectedIds.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target as HTMLElement).closest('.ruler,.timeline-clip,.track-label')){e.preventDefault();e.stopPropagation();edit(p=>moveSelection(p,selectedIds,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));}
   }}>
-    <div className="ruler-row"><div className="ruler-label">TIMELINE <span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
+    <div className="ruler-row cover-ruler-row"><div className="ruler-label cover-ruler-label"><CoverTile project={project} assets={assets} active={props.coverEditing} open={props.openCover}/><span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(props.coverEditing&&['ArrowLeft','ArrowRight'].includes(e.key))checkpoint();if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
     <CaptionTimeline layers={project.captions||[]} selection={props.captionSelection} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/>
@@ -277,7 +278,7 @@ export function Timeline(props:Props){
       {!project.clips.some(c=>c.trackId===track.id)&&<div className="empty-track">Drop {track.kind==='video'?'a video':'audio'} here</div>}
       {project.clips.filter(c=>c.trackId===track.id).map(c=>{const a=assets.find(a=>a.id===c.assetId);if(!a)return null;const selectedClip=selectedSet.has(c.id);
         return <div key={c.id} data-clip-id={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>clipKey(e,c)}>
-          {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<><Waveform asset={a} clip={c}/><FadeEnvelope clip={c}/></>}
+          {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[a.kind==='image'?0:Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<><Waveform asset={a} clip={c}/><FadeEnvelope clip={c}/></>}
           <div className="clip-title">{c.kind==='video'?<Film size={11}/>:<AudioLines size={12}/>}<span>{c.name}</span>{c.muted&&<VolumeX size={12}/>}</div>
           <div className="clip-edge left" aria-label="Trim start" role="separator" onPointerDown={e=>drag(e,c,'left')}/><div className="clip-edge right" aria-label="Trim end" role="separator" onPointerDown={e=>drag(e,c,'right')}/>
           {c.kind==='audio'&&selectedClip&&(['fadeIn','fadeOut'] as const).map(field=>{const label=field==='fadeIn'?'Fade in':'Fade out',ratio=clamp(c[field]/Math.max(1,c.duration-1),0,1),position=field==='fadeIn'?ratio:1-ratio;return <div key={field} className="audio-fade-handle" role="slider" tabIndex={0} aria-label={`${label} duration`} aria-valuemin={0} aria-valuemax={Math.max(c.duration,c[field])/FPS} aria-valuenow={c[field]/FPS} aria-valuetext={`${(c[field]/FPS).toFixed(2)} seconds`} title={`${label}: ${(c[field]/FPS).toFixed(2)}s · Drag to adjust`} style={{left:`clamp(10px, ${position*100}%, calc(100% - 10px))`}} onPointerDown={e=>dragFade(e,c,field)} onKeyDown={e=>fadeKey(e,c,field)}><span/></div>;})}
