@@ -40,7 +40,12 @@ The square Cover tile lives in the timeline's sticky label column; frame zero
 and clip positions do not move. The tile/picker reuse approximate cached media
 thumbnails to avoid new rendering during editing; the main canvas and exported
 PNG use the exact selected timeline frame. A cover PNG keeps the project ratio,
-is exported separately, and never prepends footage or alters duration.
+is exported separately, and never prepends footage or alters duration. MP4 exports
+automatically render a matching `-cover.png` from the same snapshot, in the same
+folder. Export stays in progress until that render finishes. A failed cover keeps
+the MP4 and reports a separate warning; its companion metadata is saved with the
+export manifest and restored when reopening the export. The cover panel has one
+X close button; the duplicate preview navigation button is removed.
 
 Text supports multiple independently movable blocks. Style presets, color,
 outline, font, bold, italic and alignment are primary controls; exact placement,

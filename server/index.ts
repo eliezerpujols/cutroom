@@ -19,6 +19,7 @@ import {finalizeExportMetadata} from './exportMetadata';
 import {captionEngine} from './captions';
 import {registerVisualRoutes} from './visuals';
 import {coverFrame} from '../src/visuals';
+import {companionProject,renderCompanion,savedCompanion,type CoverCompanion} from './coverExports';
 import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue} from '../src/captions';
 import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
@@ -35,7 +36,7 @@ const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
@@ -129,19 +130,21 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
   }await store.save(id,p,body.expectedRevision);const w=await store.workspace(id);if(body.open)publish({projectId:id,revision:w.revision});res.json({...w,...(body.open?editorDestination(id):{})});
 });
 
-type Job={id:string;projectId:string;status:'queued'|'rendering'|'finalizing'|'completed'|'failed';progress:number;format?:'png';url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
+type Job={id:string;projectId:string;status:'queued'|'rendering'|'rendering-cover'|'finalizing'|'completed'|'failed';progress:number;cover?:CoverCompanion;coverError?:string;format?:'png';url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
 const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,busy=false;
 const reserveExport:express.RequestHandler=(_req,res,next)=>{if(busy){res.status(409).json({error:'An export is already running. Let it finish first.'});return;}busy=true;res.once('finish',()=>{if(res.statusCode>=400)busy=false;});next();};
 app.post('/api/export',reserveExport,async(req,res)=>{
   const body=z.object({projectId:z.string().optional(),project:projectSchema.optional(),format:z.enum(['mp4','wav','mp3']),selection:z.object({start:z.number().int().min(0),end:z.number().int().min(1)}).optional()}).parse(req.body),pid=body.projectId||store.legacyId();
   const document=await store.read(pid),workspace=await store.workspace(pid),project=validateProject(body.project||document.project,document.assets),duration=Math.max(1,...project.clips.map(c=>c.start+c.duration));
   if(!project.clips.length)throw new Error('Add a clip before exporting.');if(workspace.assets.some(a=>a.missing&&project.clips.some(c=>c.assetId===a.id)))throw new Error('Relink the missing media before exporting.');const range=body.selection;if(range&&(range.end<=range.start||range.end>duration))throw new Error('Choose a valid export range.');
+  if(body.format==='mp4')companionProject(project);
   const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0};jobs.set(id,job);busy=true;res.status(202).json(job);
   (async()=>{try{const inputs={project,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`}))};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps:inputs});job.status='rendering';
     const filename=project.name.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+body.format,output=path.join(workspace.exportsDir,filename);await fs.mkdir(workspace.exportsDir,{recursive:true});
-    await renderMedia({composition,serveUrl,inputProps:inputs,codec:body.format==='mp4'?'h264':body.format,outputLocation:output,...(range?{frameRange:[range.start,range.end-1] as [number,number]}:{}),concurrency:2,onProgress:({progress})=>job.progress=progress*.97,...(body.format==='mp4'?{crf:18,pixelFormat:'yuv420p' as const}:{})});
-    job.status='finalizing';job.progress=.98;Object.assign(job,await finalizeExportMetadata(output,media.run));
-    job.status='completed';job.progress=1;job.filename=filename;job.url=`/api/projects/${pid}/exports/${encodeURIComponent(filename)}`;await atomicJson(path.join(workspace.exportsDir,id+'.export.json'),job);
+    await renderMedia({composition,serveUrl,inputProps:inputs,codec:body.format==='mp4'?'h264':body.format,outputLocation:output,...(range?{frameRange:[range.start,range.end-1] as [number,number]}:{}),concurrency:2,onProgress:({progress})=>job.progress=progress*(body.format==='mp4'?.94:.97),...(body.format==='mp4'?{crf:18,pixelFormat:'yuv420p' as const}:{})});
+    job.status='finalizing';job.progress=body.format==='mp4'?.95:.98;Object.assign(job,await finalizeExportMetadata(output,media.run));
+    if(body.format==='mp4'){job.status='rendering-cover';job.progress=.97;try{job.cover=await renderCompanion({project,assets:inputs.assets,composition,serveUrl,exportsDir:workspace.exportsDir,filename,projectId:pid});}catch(error){job.coverError=(error as Error).message.slice(0,1500);}}
+    const completed={...job,status:'completed' as const,progress:1,filename,url:`/api/projects/${pid}/exports/${encodeURIComponent(filename)}`};await atomicJson(path.join(workspace.exportsDir,id+'.export.json'),completed);Object.assign(job,completed);
   }catch(e){job.status='failed';job.error=(e as Error).message;}finally{busy=false;}})();
 });
 // Cover rendering shares the export queue and bundle, but never changes video timing.
@@ -157,6 +160,7 @@ app.post('/api/projects/:id/cover/export',reserveExport,async(req,res)=>{
   }catch(e){job.status='failed';job.error=(e as Error).message;if(output)await fs.unlink(output).catch(()=>{});}finally{busy=false;}})();
 });
 app.get('/api/export/:id',(req,res)=>{const j=jobs.get(String(req.params.id));j?res.json(j):res.status(404).json({error:'Export not found. It may have ended when the server restarted.'});});
+app.get('/api/projects/:id/export-companion/:jobId',async(req,res)=>{const id=z.string().uuid().parse(req.params.id),jobId=z.string().uuid().parse(req.params.jobId);res.json(await savedCompanion(path.join(store.entry(id).folder,'exports'),id,jobId));});
 app.get('/api/projects/:id/exports/:filename',(req,res)=>res.download(path.join(store.entry(String(req.params.id)).folder,'exports',path.basename(String(req.params.filename)))));
 app.get('/api/exports/:filename',(_req,res)=>res.status(410).json({error:'Exports now live inside each project folder.'}));
 if(process.argv.includes('--production')){app.use(express.static(path.join(root,'dist')));app.get('/{*path}',(_req,res)=>res.sendFile(path.join(root,'dist/index.html')));}

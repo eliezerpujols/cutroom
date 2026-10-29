@@ -11,6 +11,13 @@ the `instance` and `view` parameters; never replace another editing session.
 `show_captions` (default false). A cover is separate from the timeline: it does
 not insert a still, change timing, or burn its title into an MP4. Use
 `export_cover`, then poll `export_status` to obtain its PNG in `exports/`.
+Every new MP4 timeline export also renders the cover as a matching
+`<video-name>-cover.png` beside the video. It uses the same export snapshot,
+including when exporting a selected time range; the cover uses its full-timeline
+frame. With no configured cover, the first visual frame is used without text.
+A cover render failure preserves the video and returns `coverError`; report this
+partial result rather than claiming both files were generated. `cover` includes
+the PNG filename, URL and frame when successful. Audio-only exports omit it.
 The PNG uses the project aspect ratio and dimensions. The square timeline tile
 is a cover shortcut, not a square crop setting. Choose a frame with visual media;
 gaps cannot be exported as a cover. If edits shorten the timeline, its saved

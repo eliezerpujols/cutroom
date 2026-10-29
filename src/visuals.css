@@ -74,3 +74,7 @@
 .clip-visual-section .advanced-content>.field-hint{margin-bottom:14px}
 .asset-preview.image{background:var(--subtle)}
 @media(max-width:800px){.cover-panel,.adjustments-panel{padding:16px 20px}.workspace.mobile-media .cover-panel,.workspace.mobile-media .adjustments-panel{display:block}.media-hidden .cover-panel,.media-hidden .adjustments-panel{display:none}.cover-filmstrip{height:78px}}
+
+.export-cover-companion{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;font-size:11px;color:var(--muted)}
+.export-cover-companion a{max-width:75%;min-width:0;color:var(--foreground)}
+.export-cover-companion a span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
