@@ -1,13 +1,14 @@
 # Cutroom
 
-A local video editor with a browser timeline, a Remotion renderer, and an MCP
-server for working with an AI assistant. Import existing footage, edit video and
-audio, add captions, design a cover, and export the result. Optional integrations
-translate/dub speech with ElevenLabs and apply lip sync with Sync.
+Cutroom is a video editor that runs on your computer. Trim and arrange clips,
+adjust audio, add captions, and design a cover. Export your finished video with
+its cover saved alongside it.
 
-**Editing and rendering run on your computer.** API keys are optional: you only
-need them for transcription, dubbing, or lip sync. Those operations send the
-necessary media to the selected provider and can incur provider charges.
+Edit directly in the browser or ask an AI assistant to prepare your edit through
+MCP. Optional ElevenLabs and Sync integrations can transcribe speech, translate
+and dub videos, and sync the speaker's lips to the new audio. These features use
+your own API keys, send media to those services, and may incur charges. Editing
+and exporting require no API keys.
 
 ## Quick start
 
