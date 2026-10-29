@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill,Sequence,Html5Video,Html5Audio,OffthreadVideo,Img,getRemotionEnvironment,useCurrentFrame} from 'remotion';
 import {FPS,gainAt,clipsInRenderOrder,type Asset,type Clip,type Project} from '../model';
 import {CaptionOverlay} from './Captions';
+import {VideoTextOverlay} from './VideoText';
 import {CoverOverlay,VisualLayer} from './Visuals';
 export type EditorProps={project:Project;assets:Asset[];coverMode?:boolean};
 function MediaClip({clip,asset,muted}:{clip:Clip;asset:Asset;muted:boolean}){
@@ -20,5 +21,5 @@ export function EditComposition({project,assets,coverMode=false}:EditorProps){
     return <Sequence key={clip.id} from={clip.start} durationInFrames={clip.duration} layout={clip.kind==='audio'?'none':'absolute-fill'} premountFor={clip.kind==='video'?FPS:undefined}>
       <MediaClip clip={clip} asset={asset} muted={coverMode||!!project.tracks.find(t=>t.id===clip.trackId)?.muted}/>
     </Sequence>;
-  })}</VisualLayer>{!!project.captions?.length&&(!coverMode||project.cover?.showCaptions)&&<CaptionOverlay layers={project.captions}/>} {coverMode&&project.cover&&<CoverOverlay cover={project.cover}/>}</AbsoluteFill>;
+  })}</VisualLayer>{!!project.captions?.length&&(!coverMode||project.cover?.showCaptions)&&<CaptionOverlay layers={project.captions}/>}<VideoTextOverlay project={project}/>{coverMode&&project.cover&&<CoverOverlay cover={project.cover}/>}</AbsoluteFill>;
 }

@@ -1,8 +1,9 @@
-import React,{useEffect,useRef,useState} from 'react';
-import {X,ArrowDownToLine,Bold,Italic,Plus,Trash2,ChevronLeft,ChevronRight,LoaderCircle,AlignLeft,AlignCenter,AlignRight,Image as ImageIcon} from 'lucide-react';
-import {Button,IconButton,Input,Slider} from './ui/primitives';
+import React,{useEffect,useState} from 'react';
+import {X,ArrowDownToLine,Plus,ChevronLeft,ChevronRight,LoaderCircle,Image as ImageIcon} from 'lucide-react';
+import {Button,IconButton,Slider} from './ui/primitives';
 import {TimeValue} from './ClipAdjustments';
-import {CoverTextContent,coverTextPosition} from './remotion/Visuals';
+import {TextAppearance} from './TextAppearance';
+import {TextDragOverlay} from './TextDragOverlay';
 import {coverFrame,defaultCover,defaultCoverText,frameThumbnail,type Cover,type CoverText} from './visuals';
 import {clamp,endFrame,time,uid,type Asset,type Project} from './model';
 import {api} from './useEditor';
@@ -28,31 +29,10 @@ export function CoverPanel({project,assets,change,chooseFrame,checkpoint,selecte
   </section>;
 }
 
-function Color({label,value,change}:{label:string;value:string;change:(value:string)=>void}){return <label className="caption-color"><span>{label}</span><span className="caption-color-value"><Input type="color" aria-label={label} value={value} onChange={event=>change(event.target.value)}/><span>{value.toUpperCase()}</span></span></label>;}
-export function CoverInspector({text,change,remove,checkpoint}:{text?:CoverText;change:(patch:Partial<CoverText>,record?:boolean)=>void;remove:()=>void;checkpoint:()=>void}){
-  if(!text)return <div className="inspector-empty"><ImageIcon size={28}/><h3>Your first impression.</h3><p>Pick a frame on the left. Add a title to style it here, then drag it into place on the cover.</p></div>;
-  const range=(field:'fontSize'|'strokeWidth'|'padding'|'radius'|'width'|'x'|'y',label:string,min:number,max:number,step=1)=><div className="clip-adjustment"><div className="adjustment-heading"><span>{label}</span><output>{text[field]}{['width','x','y'].includes(field)?'%':' px'}</output></div><Slider label={label} min={min} max={max} step={step} value={[text[field]]} onPointerDown={checkpoint} onKeyDown={event=>{if(keys.has(event.key))checkpoint();}} onValueChange={([value])=>change({[field]:value},false)}/></div>;
-  return <div className="cover-inspector"><div className="inspector-section"><label className="field"><span>Title</span><textarea className="input cover-title-input" aria-label="Cover title" maxLength={500} value={text.text} onChange={event=>change({text:event.target.value})}/></label><div className="cover-style-presets" role="group" aria-label="Cover text styles">{([['box','Title card','#ffffff'],['lines','Highlight','#ffe501'],['none','Text only','#ffffff']] as const).map(([fill,label,fillColor])=><button key={fill} aria-pressed={text.fill===fill} onClick={()=>change({fill,fillColor,color:fill==='none'?'#ffffff':'#111111',fontWeight:800})}><span style={{background:fill==='none'?'transparent':fillColor,color:fill==='none'?'var(--foreground)':'#111111'}}>Aa</span><small>{label}</small></button>)}</div></div>
-    <div className="inspector-section"><label className="field"><span>Font</span><select className="input" value={text.fontFamily} onChange={event=>change({fontFamily:event.target.value as CoverText['fontFamily']})}>{['Inter Variable','DM Sans Variable','Manrope Variable'].map(font=><option key={font} value={font}>{font.replace(' Variable','')}</option>)}</select></label><div className="cover-format-toolbar" role="group" aria-label="Text formatting"><IconButton label="Bold cover text" aria-pressed={text.fontWeight>=700} onClick={()=>change({fontWeight:text.fontWeight>=700?400:800})}><Bold size={16}/></IconButton><IconButton label="Italic cover text" aria-pressed={text.italic} onClick={()=>change({italic:!text.italic})}><Italic size={16}/></IconButton><span/>{([['left',AlignLeft],['center',AlignCenter],['right',AlignRight]] as const).map(([align,Icon])=><IconButton key={align} label={`Align text ${align}`} aria-pressed={text.align===align} onClick={()=>change({align})}><Icon size={16}/></IconButton>)}</div>{range('fontSize','Size',16,200)}<Color label="Text color" value={text.color} change={color=>change({color})}/></div>
-    <div className="inspector-section"><label className="caption-toggle"><span>Text background</span><input type="checkbox" role="switch" checked={text.fill!=='none'} onChange={event=>change({fill:event.target.checked?'box':'none'})}/></label>{text.fill!=='none'&&<><Color label="Fill color" value={text.fillColor} change={fillColor=>change({fillColor})}/>{range('padding','Padding',0,60)}{range('radius','Roundness',0,100)}</>}<label className="caption-toggle"><span>Outline</span><input type="checkbox" role="switch" checked={text.stroke} onChange={event=>change({stroke:event.target.checked})}/></label>{text.stroke&&<><Color label="Outline color" value={text.strokeColor} change={strokeColor=>change({strokeColor})}/>{range('strokeWidth','Outline width',0,12,.5)}</>}</div>
-    <details className="inspector-section advanced"><summary><span>Position & size</span><ChevronRight size={15}/></summary><div className="advanced-content">{range('width','Text box width',10,96)}{range('x','Horizontal position',0,100)}{range('y','Vertical position',0,100)}<Button variant="outline" size="sm" onClick={()=>change({x:50})}>Center horizontally</Button><p className="field-hint">Drag the title on the cover to move it.</p></div></details><div className="inspector-section"><Button variant="ghost" size="sm" onClick={remove}><Trash2 size={15}/>Remove text</Button></div>
-  </div>;
-}
+export const CoverInspector=TextAppearance;
 
-export function CoverDragOverlay({project,selected,select,change,checkpoint}:{project:Project;selected:string|null;select:(id:string)=>void;change:(id:string,patch:Partial<CoverText>,record?:boolean)=>void;checkpoint:()=>void}){
-  const surface=useRef<HTMLDivElement>(null),cleanup=useRef<(()=>void)|null>(null),[scale,setScale]=useState(1);
-  useEffect(()=>{const element=surface.current;if(!element)return;const observer=new ResizeObserver(()=>setScale(element.clientWidth/project.width));observer.observe(element);return()=>observer.disconnect();},[project.width]);
-  useEffect(()=>()=>cleanup.current?.(),[]);
-  function drag(event:React.PointerEvent<HTMLDivElement>,text:CoverText){
-    if(event.button!==0||!event.isPrimary)return;event.preventDefault();event.stopPropagation();cleanup.current?.();select(text.id);
-    const element=event.currentTarget,rect=surface.current!.getBoundingClientRect(),box=element.getBoundingClientRect(),x=event.clientX,y=event.clientY;let started=false;
-    const halfW=Math.min(50,box.width/rect.width*50),halfH=Math.min(50,box.height/rect.height*50);
-    element.focus({preventScroll:true});element.setPointerCapture(event.pointerId);
-    const move=(next:PointerEvent)=>{if(next.pointerId!==event.pointerId)return;const dx=next.clientX-x,dy=next.clientY-y;if(!started&&Math.hypot(dx,dy)<2)return;if(!started){checkpoint();started=true;}change(text.id,{x:Math.round(clamp(text.x+dx/rect.width*100,halfW,100-halfW)*10)/10,y:Math.round(clamp(text.y+dy/rect.height*100,halfH,100-halfH)*10)/10},false);};
-    const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',finish);try{if(element.hasPointerCapture(event.pointerId))element.releasePointerCapture(event.pointerId);}catch{}cleanup.current=null;};
-    const up=(next:PointerEvent)=>{if(next.pointerId!==event.pointerId)return;move(next);finish();};const cancel=(next:PointerEvent)=>{if(next.pointerId!==event.pointerId)return;if(started)change(text.id,{x:text.x,y:text.y},false);finish();};cleanup.current=finish;window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',finish);
-  }
-  return <div className="cover-drag-surface" ref={surface}><div style={{position:'absolute',width:project.width,height:project.height,transform:`scale(${scale})`,transformOrigin:'top left',pointerEvents:'none'}}>{project.cover?.texts.map(text=><div key={text.id} role="button" tabIndex={0} aria-label={`Move cover text: ${text.text||'Empty title'}`} aria-pressed={selected===text.id} className="cover-drag-text" style={{...coverTextPosition(text),outline:selected===text.id?`${1.5/scale}px solid #ffffff`:undefined,outlineOffset:5/scale,minHeight:48,pointerEvents:'auto'}} onPointerDown={event=>drag(event,text)} onKeyDown={event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();select(text.id);return;}const step=event.shiftKey?5:1,dx=event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0,dy=event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0;if(dx||dy){event.preventDefault();event.stopPropagation();change(text.id,{x:clamp(text.x+dx,0,100),y:clamp(text.y+dy,0,100)});}}}><div style={{opacity:0}}><CoverTextContent text={text}/></div></div>)}</div></div>;
+export function CoverDragOverlay({project,...props}:{project:Project;selected:string|null;select:(id:string)=>void;change:(id:string,patch:Partial<CoverText>,record?:boolean)=>void;checkpoint:()=>void}){
+  return <TextDragOverlay width={project.width} height={project.height} texts={project.cover?.texts||[]} label="cover text" {...props}/>;
 }
 
 export function CoverTile({project,assets,active,open}:{project:Project;assets:Asset[];active:boolean;open:()=>void}){

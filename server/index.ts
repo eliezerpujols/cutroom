@@ -18,13 +18,14 @@ import {integrationSettings} from './integrations';
 import {finalizeExportMetadata} from './exportMetadata';
 import {captionEngine} from './captions';
 import {registerVisualRoutes} from './visuals';
+import {registerTextRoutes} from './texts';
 import {coverFrame} from '../src/visuals';
 import {companionProject,renderCompanion,savedCompanion,type CoverCompanion} from './coverExports';
 import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue} from '../src/captions';
-import {splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
+import {endFrame,splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
-function editorDestination(projectId:string,view?:'cover'|'adjustments'){const instanceId=randomUUID();return {editor_url:`http://127.0.0.1:${port}/?project=${projectId}&instance=${instanceId}${view?'&view='+view:''}`,editor_instance_id:instanceId,open_in_new_tab:true,next_action:'open_editor_in_new_tab'};}
+function editorDestination(projectId:string,view?:'cover'|'adjustments'|'text'){const instanceId=randomUUID();return {editor_url:`http://127.0.0.1:${port}/?project=${projectId}&instance=${instanceId}${view?'&view='+view:''}`,editor_instance_id:instanceId,open_in_new_tab:true,next_action:'open_editor_in_new_tab'};}
 await fs.mkdir(path.join(data,'uploads'),{recursive:true});
 const store=new ProjectStore(data,defaultProjectsDirectory());
 let legacy:{project:Project;assets:(Asset&{file:string})[]}|undefined;
@@ -36,7 +37,7 @@ const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
@@ -54,6 +55,7 @@ function publish(event:Record<string,unknown>){
 }
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
+registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
 app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
 app.post('/api/projects/:id/captions/estimate',async(req,res)=>res.json(await captions.estimate(z.string().uuid().parse(req.params.id),req.body.project)));
 app.post('/api/projects/:id/captions',async(req,res)=>{const language=z.string().regex(/^(auto|[a-z]{2,3})$/).optional().parse(req.body.language),requestId=z.string().uuid().optional().parse(req.body.requestId);res.status(202).json(await captions.start(z.string().uuid().parse(req.params.id),req.body.project,language,requestId));});
@@ -135,7 +137,7 @@ const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,bus
 const reserveExport:express.RequestHandler=(_req,res,next)=>{if(busy){res.status(409).json({error:'An export is already running. Let it finish first.'});return;}busy=true;res.once('finish',()=>{if(res.statusCode>=400)busy=false;});next();};
 app.post('/api/export',reserveExport,async(req,res)=>{
   const body=z.object({projectId:z.string().optional(),project:projectSchema.optional(),format:z.enum(['mp4','wav','mp3']),selection:z.object({start:z.number().int().min(0),end:z.number().int().min(1)}).optional()}).parse(req.body),pid=body.projectId||store.legacyId();
-  const document=await store.read(pid),workspace=await store.workspace(pid),project=validateProject(body.project||document.project,document.assets),duration=Math.max(1,...project.clips.map(c=>c.start+c.duration));
+  const document=await store.read(pid),workspace=await store.workspace(pid),project=validateProject(body.project||document.project,document.assets),duration=endFrame(project);
   if(!project.clips.length)throw new Error('Add a clip before exporting.');if(workspace.assets.some(a=>a.missing&&project.clips.some(c=>c.assetId===a.id)))throw new Error('Relink the missing media before exporting.');const range=body.selection;if(range&&(range.end<=range.start||range.end>duration))throw new Error('Choose a valid export range.');
   if(body.format==='mp4')companionProject(project);
   const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0};jobs.set(id,job);busy=true;res.status(202).json(job);

@@ -53,8 +53,10 @@ rebuild an existing `dist/` automatically.
 4. **Work on audio.** Adjust volume, mute, speed, and fades. Extract a WAV or
    detach video audio onto its own track. Avoid playing embedded and detached
    copies of the same sound together.
-5. **Add captions if needed.** Open **Text → Auto-transcript**, select the spoken
-   language, and request captions. This optional step uses ElevenLabs.
+5. **Add text or captions.** Open **Text → Add text** for a title at the playhead.
+   Choose Heading, Subtitle, or Body, then edit its timing and style on the right.
+   For speech captions, expand **Auto-transcript** and select the spoken language;
+   that optional operation uses ElevenLabs.
 6. **Style the result.** Use **Adjust** for edit-wide light/color controls, or
    a selected visual clip's **Adjustments** section for that clip only.
 7. **Design a cover.** Click the square **Cover** tile at the timeline's start.
@@ -93,11 +95,16 @@ extended, but have no source slip, playback speed, or embedded audio.
 
 The upper video track appears above lower tracks; overlapping audio tracks mix.
 A gap without video renders black. Caption cues have their own tracks and are
-edited individually; media box-selection groups video/audio clips. Ripple
-editing and clip-to-clip transitions are not implemented.
+edited individually, as is manual text. Media box-selection groups video/audio
+clips. Ripple editing and clip-to-clip transitions are not implemented.
 
-### Captions, covers, and adjustments
+### Text, captions, covers, and adjustments
 
+- **Manual text:** add titles, labels, or a call to action with a chosen start and
+  duration. Move text on the paused preview; change font, colors, background,
+  outline, bold/italic, alignment, and size in the inspector. Each title has its
+  own timeline row with move/trim, split, duplicate, hide and delete controls.
+  Manual text requires no API key or credits and is included in video exports.
 - **Captions:** edit the timestamped transcript and cue timing. Style Inter
   (default), DM Sans, or Manrope; font size/weight, color, outline, word highlight,
   placement, Word/Phrase/Sentence grouping, and None/Fade/Pop motion. MP4 burns in
@@ -252,6 +259,7 @@ Example requests:
 | Media/editing | `import_media`, `edit_project`, `extract_audio` |
 | Captions | `estimate_captions`, `generate_captions`, `list_caption_jobs`, `get_caption_job`, `apply_captions`, `edit_captions`, `export_caption_subtitles` |
 | Dubbing | `integration_status`, `prepare_dubbing`, `start_dubbing`, `get_dubbing_job`, `list_dubbing_jobs` |
+| Timed text | `add_text`, `edit_text`, `remove_text` |
 | Visuals | `set_cover`, `set_visual_adjustments` |
 | Exports | `export_project`, `export_cover`, `export_status` |
 
@@ -322,6 +330,7 @@ job; wait for it to finish. Remotion packages are pinned to one shared version.
 | `.agents/skills/cutroom/` | Reusable assistant instructions and workflow references. |
 
 Design rationale and implementation limits:
+[manual text](docs/manual-text.md),
 [captions](docs/captions-design.md),
 [covers/adjustments](docs/covers-and-adjustments.md),
 [cover guides](docs/cover-guides.md),

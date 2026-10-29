@@ -1,4 +1,4 @@
 interface:
   display_name: "Cutroom"
-  short_description: "Dub, caption, style covers, and edit video"
-  default_prompt: "Use $cutroom to dub, caption, design a cover, or adjust my video and open the finished project in Cutroom."
+  short_description: "Edit video, add text, caption, and dub"
+  default_prompt: "Use $cutroom to edit my video, add timed text, caption, dub, or design a cover and open the finished project in Cutroom."

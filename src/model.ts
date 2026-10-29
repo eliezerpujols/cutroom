@@ -9,10 +9,10 @@ export type Clip = {
   fadeIn:number; fadeOut:number; adjustments?:import('./visuals').VisualAdjustments;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
-export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments};
+export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments; texts?:import('./videoText').VideoText[]};
 export type Tool = 'select'|'slip';
 export const uid = () => crypto.randomUUID();
-export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration),...(p.captions||[]).flatMap(layer=>layer.cues.map(cue=>cue.start+cue.duration)));
+export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration),...(p.captions||[]).flatMap(layer=>layer.cues.map(cue=>cue.start+cue.duration)),...(p.texts||[]).map(text=>text.start+text.duration));
 export const clamp = (v:number,min:number,max:number) => Math.max(min,Math.min(max,v));
 export const seconds = (f:number) => f/FPS;
 export const time = (frames:number, precise=false) => {
