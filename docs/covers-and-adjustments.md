@@ -48,7 +48,10 @@ The main canvas and exported PNG use the same composition. A cover PNG keeps
 the project ratio, is exported separately, and never prepends footage or alters
 duration. MP4 exports
 automatically render a matching `-cover.png` from the same snapshot, in the same
-folder. Export stays in progress until that render finishes. A failed cover keeps
+folder. The companion resolves its own Remotion composition with `coverMode:true`;
+reusing the MP4's resolved props would omit cover titles and keep video captions.
+Passing different `inputProps` to `renderStill` alone does not replace those
+resolved props. Export stays in progress until that render finishes. A failed cover keeps
 the MP4 and reports a separate warning; its companion metadata is saved with the
 export manifest and restored when reopening the export. The cover panel has one
 X close button; the duplicate preview navigation button is removed.

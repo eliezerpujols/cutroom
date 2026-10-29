@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {renderStill} from '@remotion/renderer';
+import {renderStill,selectComposition} from '@remotion/renderer';
 import type {VideoConfig} from 'remotion';
 import {z} from 'zod';
 import {coverFrame,defaultCover} from '../src/visuals';
@@ -16,7 +16,15 @@ export function companionProject(project:Project):Project{
 }
 export async function renderCompanion({project,assets,composition,serveUrl,exportsDir,filename,projectId}:{project:Project;assets:Asset[];composition:VideoConfig;serveUrl:string;exportsDir:string;filename:string;projectId:string}):Promise<CoverCompanion>{
   const cover=companionProject(project),frame=coverFrame(cover),coverFilename=path.basename(filename,path.extname(filename))+'-cover.png',output=path.join(exportsDir,coverFilename);
-  try{await renderStill({composition,serveUrl,inputProps:{project:cover,assets,coverMode:true},frame,output,imageFormat:'png'});}
+  const inputProps={project:cover,assets,coverMode:true};
+  try{
+    // renderStill consumes composition.props as the resolved component props.
+    // The MP4 composition was resolved without coverMode; inputProps alone does
+    // not replace that snapshot. Resolve again so cover text/caption visibility
+    // and calculated metadata match the same cover-only render as Export PNG.
+    const coverComposition=await selectComposition({serveUrl,id:composition.id,inputProps});
+    await renderStill({composition:coverComposition,serveUrl,inputProps,frame,output,imageFormat:'png'});
+  }
   catch(error){await fs.unlink(output).catch(()=>{});throw error;}
   return {filename:coverFilename,url:`/api/projects/${projectId}/exports/${encodeURIComponent(coverFilename)}`,frame};
 }
