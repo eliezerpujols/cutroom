@@ -42,7 +42,9 @@ the top. Each block can set:
 | `x`, `y`, `width` | Center position in 0–100% of the canvas; box width 10–96%. |
 | `align` | `left`, `center`, or `right` inside the text box. |
 
-The UI's square **Cover** tile opens its frame filmstrip and exact preview.
+The UI's square **Cover** tile shows the selected frame with its styled text,
+optional captions and adjustments, fitting the full composition inside the tile.
+It opens the frame filmstrip and full-size preview.
 Select a title to style it on the right; drag it in the canvas or use arrow keys
 to position it. Frame changes and text gestures use undo. The caption toggle
 affects only the still; the video keeps its own caption layers.

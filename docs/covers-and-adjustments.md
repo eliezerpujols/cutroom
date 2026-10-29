@@ -37,10 +37,16 @@ No Mobbin screenshot is bundled or used as a UI asset.
 ## Behavior and implementation
 
 The square Cover tile lives in the timeline's sticky label column; frame zero
-and clip positions do not move. The tile/picker reuse approximate cached media
-thumbnails to avoid new rendering during editing; the main canvas and exported
-PNG use the exact selected timeline frame. A cover PNG keeps the project ratio,
-is exported separately, and never prepends footage or alters duration. MP4 exports
+and clip positions do not move. The tile uses a silent Remotion Thumbnail of the
+shared composition at the selected frame, including styled cover text, active
+timed text, optional captions, upper video tracks and color adjustments. The
+whole composition fits inside the square, preserving its ratio; it has no fake
+title label or image crop/opacity treatment. Its memoized content does not update
+with unrelated playhead changes. This is a browser preview, not a server render
+or an exported file. The frame-picker filmstrip still uses cached media images.
+The main canvas and exported PNG use the same composition. A cover PNG keeps
+the project ratio, is exported separately, and never prepends footage or alters
+duration. MP4 exports
 automatically render a matching `-cover.png` from the same snapshot, in the same
 folder. Export stays in progress until that render finishes. A failed cover keeps
 the MP4 and reports a separate warning; its companion metadata is saved with the

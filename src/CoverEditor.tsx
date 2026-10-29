@@ -1,11 +1,13 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
+import {Thumbnail} from '@remotion/player';
 import {X,ArrowDownToLine,Plus,ChevronLeft,ChevronRight,LoaderCircle,Image as ImageIcon} from 'lucide-react';
 import {Button,IconButton,Slider} from './ui/primitives';
 import {TimeValue} from './ClipAdjustments';
 import {TextAppearance} from './TextAppearance';
 import {TextDragOverlay} from './TextDragOverlay';
+import {EditComposition} from './remotion/Composition';
 import {coverFrame,defaultCover,defaultCoverText,frameThumbnail,type Cover,type CoverText} from './visuals';
-import {clamp,endFrame,time,uid,type Asset,type Project} from './model';
+import {FPS,clamp,endFrame,time,uid,type Asset,type Project} from './model';
 import {api} from './useEditor';
 
 type Change=(patch:Partial<Cover>,record?:boolean)=>void;
@@ -35,7 +37,11 @@ export function CoverDragOverlay({project,...props}:{project:Project;selected:st
   return <TextDragOverlay width={project.width} height={project.height} texts={project.cover?.texts||[]} label="cover text" {...props}/>;
 }
 
+function CoverThumbnailFallback(){return <span className="cover-thumbnail-fallback"><ImageIcon size={18}/></span>;}
+const CoverThumbnail=React.memo(function CoverThumbnail({project,assets}:{project:Project;assets:Asset[]}){
+  const inputProps=useMemo(()=>({project,assets,coverMode:true}),[project,assets]);
+  return <Thumbnail component={EditComposition} inputProps={inputProps} frameToDisplay={coverFrame(project)} durationInFrames={endFrame(project)} compositionWidth={project.width} compositionHeight={project.height} fps={FPS} className="cover-tile-composition" style={{width:'100%',height:'100%'}} renderLoading={CoverThumbnailFallback} errorFallback={CoverThumbnailFallback}/>;
+});
 export function CoverTile({project,assets,active,open}:{project:Project;assets:Asset[];active:boolean;open:()=>void}){
-  const thumb=frameThumbnail(project,assets,coverFrame(project));
-  return <button className="timeline-cover" aria-label="Edit cover" aria-pressed={active} onClick={open}><span className="timeline-cover-image">{thumb?<img src={thumb} alt=""/>:<ImageIcon size={18}/>}<span className="timeline-cover-title">{project.cover?.texts[0]?.text}</span></span><span>Cover</span></button>;
+  return <button className="timeline-cover" aria-label="Edit cover" aria-pressed={active} onClick={open}><span className="timeline-cover-image" aria-hidden="true"><CoverThumbnail project={project} assets={assets}/></span><span>Cover</span></button>;
 }
