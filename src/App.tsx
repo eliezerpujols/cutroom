@@ -19,6 +19,7 @@ import type {CaptionSelection,CaptionStyle} from './captions';
 import {AudioFadeControls,PlaybackControls,TimingControls} from './ClipAdjustments';
 import {arrangeTimelineTracks,changedTimelineClipIds} from './videoTracks';
 import {moveSelection} from './timelineSelection';
+import {copyEditorSelection,removeEditorSelection,pasteEditorClipboard,type ObjectSelection,type EditorClipboard} from './editorClipboard';
 import {api,useEditor} from './useEditor';
 import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,type Asset,type Clip,type Project,type Tool} from './model';
 
@@ -38,6 +39,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const [libraryTab,setLibraryTab]=useState<'media'|'text'|'adjustments'>(()=>new URLSearchParams(location.search).get('view')==='adjustments'?'adjustments':new URLSearchParams(location.search).get('view')==='text'?'text':'media');
   const [coverEditing,setCoverEditing]=useState(()=>new URLSearchParams(location.search).get('view')==='cover'),[coverTextId,setCoverTextId]=useState<string|null>(()=>initialProject.cover?.texts[0]?.id||null);
   const clipAdjustments=useRef<HTMLDetailsElement>(null);
+  const objectClipboard=useRef<EditorClipboard|null>(null);
   const coverGuides=useCoverGuides(initial.projectId,initial.editorInstanceId);
   const [assets,setAssets]=useState(initial.assets),[selection,setSelection]=useState<string[]>(()=>!textSelected&&initial.project.clips[0]?[initial.project.clips[0].id]:[]);
   const selectClips=useCallback((ids:string[])=>{setTextSelected(null);setCoverEditing(false);setCaptionSelection(null);setCaptionStyleOpen(false);setSelection(previous=>previous.length===ids.length&&previous.every((id,index)=>id===ids[index])?previous:ids);},[]);
@@ -106,12 +108,57 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     setTool(next);
   },[assets,current,selected,toast]);
   useEffect(()=>{if(tool==='slip'&&(!clip||!asset||asset.kind==='image'||asset.frames-clip.duration*clip.rate<1))setTool('select');},[asset,clip,tool]);
-  const remove=useCallback(()=>{
-    if(textSelected&&current.current.texts?.some(text=>text.id===textSelected)){edit(p=>({...p,texts:p.texts?.filter(text=>text.id!==textSelected)}));selectText(null);return;}
-    if(captionSelection){const {layerId,cueId}=captionSelection;edit(p=>({...p,captions:cueId?p.captions?.map(layer=>layer.id===layerId?{...layer,cues:layer.cues.filter(cue=>cue.id!==cueId)}:layer):p.captions?.filter(layer=>layer.id!==layerId)}));setCaptionSelection(cueId?{layerId}:null);return;}
-    if(!current.current.clips.some(c=>selection.includes(c.id)))return;edit(p=>({...p,clips:p.clips.filter(c=>!selection.includes(c.id))}));setSelected(null);
-  },[textSelected,selectText,captionSelection,current,edit,selection,setSelected]);
-  const duplicate=()=>{if(videoText){if((project.texts?.length||0)>=100){toast('Remove an unused text clip first.');return;}const copy={...videoText,id:uid(),start:Math.min(108000,videoText.start+videoText.duration)};edit(p=>({...p,texts:[copy,...(p.texts||[])]}));selectText(copy.id);return;}if(!clip)return;const copy={...clip,id:uid(),start:clip.start+clip.duration};edit(p=>({...p,clips:[...p.clips,copy]}));setSelected(copy.id);toast('Clip duplicated.');};
+  const objectSelection=useCallback((target?:HTMLElement):ObjectSelection=>{
+    const textId=target?.closest<HTMLElement>('[data-text-id]')?.dataset.textId;
+    if(coverEditing)return {kind:'cover',id:coverTextId||textId||null};
+    if(textSelected&&current.current.texts?.some(text=>text.id===textSelected))return {kind:'text',id:textSelected};
+    if(captionSelection)return {kind:'caption',...captionSelection};
+    if(selection.some(id=>current.current.clips.some(clip=>clip.id===id)))return {kind:'media',ids:selection};
+    if(textId&&current.current.texts?.some(text=>text.id===textId))return {kind:'text',id:textId};
+    const cueId=target?.closest<HTMLElement>('[data-caption-id]')?.dataset.captionId,layer=cueId?current.current.captions?.find(layer=>layer.cues.some(cue=>cue.id===cueId)):undefined;
+    if(layer)return {kind:'caption',layerId:layer.id,cueId};
+    const clipId=target?.closest<HTMLElement>('[data-clip-id]')?.dataset.clipId;
+    return {kind:'media',ids:clipId?[clipId]:[]};
+  },[coverEditing,coverTextId,current,textSelected,captionSelection,selection]);
+  const selectObject=useCallback((value:ObjectSelection)=>{
+    if(value.kind==='cover'){setCoverTextId(value.id);return;}
+    if(value.kind==='text'){selectText(value.id);return;}
+    if(value.kind==='caption'){selectCaption({layerId:value.layerId,...(value.cueId?{cueId:value.cueId}:{})});return;}
+    selectClips(value.ids);
+  },[selectText,selectCaption,selectClips]);
+  const objectCommand=useCallback((command:'delete'|'copy'|'cut'|'paste'|'duplicate',target?:HTMLElement)=>{
+    const selectedObject=objectSelection(target),snapshot=command==='paste'?objectClipboard.current:copyEditorSelection(current.current,selectedObject);
+    if(!snapshot)return false;
+    try{
+      if(command==='copy'||command==='cut')objectClipboard.current=snapshot;
+      if(command==='delete'||command==='cut'){
+        player.current?.pause();edit(removeEditorSelection(current.current,selectedObject));
+        if(selectedObject.kind==='cover')setCoverTextId(null);else selectClips([]);
+      }else if(command==='paste'||command==='duplicate'){
+        const pasted=pasteEditorClipboard(current.current,snapshot,coverEditing,player.current?.getCurrentFrame()??frame,command==='duplicate');
+        // Resolve track collisions before changing selection or recording undo.
+        const next=arrangeTimelineTracks(pasted.project,changedTimelineClipIds(current.current,pasted.project));
+        player.current?.pause();edit(next);selectObject(pasted.selection);
+      }
+      if(command==='cut'||command==='copy')toast(command==='cut'?'Cut. Paste with ⌘/Ctrl+V.':'Copied. Paste with ⌘/Ctrl+V.');
+    }catch(error){toast((error as Error).message);}
+    return true;
+  },[objectSelection,current,coverEditing,frame,edit,selectClips,selectObject,toast]);
+  const remove=useCallback(()=>{objectCommand('delete');},[objectCommand]);
+  const duplicate=()=>{objectCommand('duplicate');};
+  useEffect(()=>{
+    const onObjectKey=(event:KeyboardEvent)=>{
+      if(event.isComposing||event.defaultPrevented||exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
+      const target=event.target;if(!(target instanceof HTMLElement)||target.closest('input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="menu"],[role^="menuitem"]'))return;
+      if(target.closest('[role="slider"]')&&!target.closest('.ruler'))return;
+      const modified=event.metaKey||event.ctrlKey,key=event.key.toLowerCase();
+      const command=!event.altKey&&!event.shiftKey&&modified?({d:'duplicate',x:'cut',c:'copy',v:'paste'} as const)[key as 'd'|'x'|'c'|'v']:!modified&&!event.altKey&&(key==='delete'||key==='backspace')?'delete':undefined;
+      if(!command)return;
+      if(event.repeat){event.preventDefault();event.stopPropagation();return;}
+      if(objectCommand(command,target)){event.preventDefault();event.stopPropagation();}
+    };
+    window.addEventListener('keydown',onObjectKey,true);return()=>window.removeEventListener('keydown',onObjectKey,true);
+  },[exportOpen,helpOpen,objectCommand]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{
     if(exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
     const target=e.target as HTMLElement;if(target.closest('input,textarea,select,summary,[contenteditable="true"],[role="slider"],[role="menu"],[role="menuitem"]'))return;
@@ -124,8 +171,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?30:1),0,duration-1));}
     if(e.key==='Home'){e.preventDefault();seek(0);}if(e.key==='End'){e.preventDefault();seek(duration-1);}
     if(e.key.toLowerCase()==='v')changeTool('select');if(e.key.toLowerCase()==='s'){e.preventDefault();if(!e.repeat)split();}if(e.key.toLowerCase()==='y'&&!e.repeat)changeTool('slip');
-    if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}if(e.key==='Escape'){setSelected(null);setTool('select');}
-  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[coverEditing,changeTool,current,duration,exportOpen,frame,helpOpen,redo,remove,seek,selectClips,setSelected,split,undo]);
+    if(e.key==='Escape'){setSelected(null);setTool('select');}
+  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[coverEditing,changeTool,current,duration,exportOpen,frame,helpOpen,redo,seek,selectClips,setSelected,split,undo]);
   async function importFiles(files:File[]){if(!files.length)return;setImporting(true);const form=new FormData();for(const file of files)form.append('files',file);
     try{const result=await api<{assets:Asset[]}>(`/api/import?projectId=${initial.projectId}`,{method:'POST',body:form});setAssets(prev=>[...prev,...result.assets.filter(a=>!prev.some(p=>p.id===a.id))]);toast(`${result.assets.length===1?'File':'Files'} added to your media.`);setMediaOpen(true);}catch(e){toast((e as Error).message);}finally{setImporting(false);if(fileInput.current)fileInput.current.value='';}}
   const add=useCallback((assetId:string,at:number,requestedTrack?:string)=>{const a=assets.find(a=>a.id===assetId);if(!a||a.missing)return;
@@ -189,7 +236,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
         <div className="transport"><div className="transport-time"><strong>{time(frame,true)}</strong><span>/ {time(duration,true)}</span></div><div className="transport-buttons" style={coverEditing?{visibility:'hidden'}:undefined}><IconButton label="Jump to start" onClick={()=>seek(0)}><SkipBack size={17}/></IconButton><IconButton label={playing?'Pause':'Play'} className="play-button" onClick={()=>player.current?.toggle()}>{playing?<Pause size={19} fill="currentColor"/>:<Play size={19} fill="currentColor"/>}</IconButton><IconButton label="Jump to end" onClick={()=>seek(duration-1)}><SkipForward size={17}/></IconButton></div><div className="preview-meta">{project.height}p <span>·</span> 30 fps</div></div>
       </section>
       <aside className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{coverEditing?'Cover text':videoText?'Text settings':captionLayer?'Caption settings':multiple?'Selection':clip?'Clip settings':'Make it yours'}</h2></div>
-        {coverEditing?<CoverInspector text={coverText} change={(patch,record)=>{if(coverTextId)changeCoverText(coverTextId,patch,record);}} remove={()=>{changeCover({texts:project.cover?.texts.filter(text=>text.id!==coverTextId)||[]});setCoverTextId(null);}} checkpoint={checkpoint}/>:videoText?<VideoTextInspector text={videoText} timelineEnd={duration} change={(patch,record)=>changeVideoText(videoText.id,patch,record)} checkpoint={checkpoint} remove={remove} duplicate={duplicate}/>:captionLayer?<CaptionInspector key={captionCue?.id||captionLayer.id} layer={captionLayer} cue={captionCue} timelineEnd={duration} edit={edit} checkpoint={checkpoint} remove={remove} openStyle={()=>{setLibraryTab('text');setMediaOpen(true);setCaptionStyleOpen(true);}}/>:multiple?<SelectionInspector clips={selectedClips} move={start=>edit(p=>moveSelection(p,selectedIds,start-Math.min(...selectedClips.map(c=>c.start))))} remove={remove}/>:clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{asset.kind==='image'?'Image clip':clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
+        {coverEditing?<CoverInspector text={coverText} change={(patch,record)=>{if(coverTextId)changeCoverText(coverTextId,patch,record);}} remove={remove} checkpoint={checkpoint}/>:videoText?<VideoTextInspector text={videoText} timelineEnd={duration} change={(patch,record)=>changeVideoText(videoText.id,patch,record)} checkpoint={checkpoint} remove={remove} duplicate={duplicate}/>:captionLayer?<CaptionInspector key={captionCue?.id||captionLayer.id} layer={captionLayer} cue={captionCue} timelineEnd={duration} edit={edit} checkpoint={checkpoint} remove={remove} openStyle={()=>{setLibraryTab('text');setMediaOpen(true);setCaptionStyleOpen(true);}}/>:multiple?<SelectionInspector clips={selectedClips} move={start=>edit(p=>moveSelection(p,selectedIds,start-Math.min(...selectedClips.map(c=>c.start))))} remove={remove}/>:clip&&asset?<><div className="selected-clip-heading"><span className={`selected-icon ${clip.kind}`}>{clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>}</span><div><h3>{clip.name}</h3><p>{asset.kind==='image'?'Image clip':clip.kind==='video'?'Video clip':'Audio clip'} <span>· {time(clip.duration,true)}</span></p></div></div>
           <div className="inspector-section"><div className="section-title"><h3>Timing</h3></div><TimingControls key={clip.id} project={project} clip={clip} asset={asset} edit={edit} checkpoint={checkpoint}/><div className="clip-actions"><Button variant="outline" size="sm" onClick={split} disabled={!splitTarget(project,selected,frame)}><Scissors size={14}/>Split at playhead</Button><IconButton label="Duplicate clip" onClick={duplicate}><Copy size={15}/></IconButton><IconButton label="Delete clip" className="delete-clip" onClick={remove}><Trash2 size={15}/></IconButton></div></div>
           {asset.hasAudio&&<div className="inspector-section"><div className="section-title"><h3>{clip.kind==='video'?'Clip audio':'Volume'}</h3><IconButton label={clip.muted?'Unmute clip':'Mute clip'} aria-pressed={clip.muted} onClick={()=>updateClip({muted:!clip.muted})}>{clip.muted?<VolumeX size={16}/>:<Volume2 size={16}/>}</IconButton></div><div className="volume-control"><Slider label="Clip volume" min={0} max={2} step={.01} value={[clip.volume]} onPointerDown={checkpoint} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))checkpoint();}} onValueChange={([v])=>updateClip({volume:v,muted:false},false)}/><span>{clip.muted?'Muted':Math.round(clip.volume*100)+'%'}</span></div>
             {clip.kind==='video'&&clip.muted&&<p className="field-hint">Embedded sound is muted. Your separate audio track still plays.</p>}
@@ -208,7 +255,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       {!job||job.status==='failed'?<><div className="export-formats">{([{id:'mp4',label:'Video',sub:'MP4 + PNG',icon:Film},{id:'wav',label:'Audio',sub:'WAV',icon:AudioLines},{id:'mp3',label:'Audio',sub:'MP3',icon:Music2}] as const).map(({id,label,sub,icon:Icon})=><button key={id} className={`format-option ${format===id?'chosen':''}`} aria-pressed={format===id} onClick={()=>setFormat(id)}><Icon size={22}/><span>{label}</span><small>{sub}</small>{format===id&&<Check className="format-check" size={13}/>}</button>)}</div><div className="export-summary"><span>Duration</span><strong>{time(selectionOnly&&clip?clip.duration:duration,true)}</strong>{format==='mp4'&&<><span>Resolution</span><strong>{project.width} × {project.height}</strong></>}</div>{clip&&<label className="checkbox-label"><input type="checkbox" checked={selectionOnly} onChange={e=>setSelectionOnly(e.target.checked)}/>Selected time range only <span>{time(clip.start)}–{time(clip.start+clip.duration)}</span></label>}{job?.error&&<p className="inline-error" role="alert">{job.error}</p>}<Button className="export-submit" onClick={()=>void startExport()}><ArrowUpRight size={17}/>Export {displayFormat}</Button></>:job.status==='completed'?<><div className="export-success"><Check size={30}/></div><div className="export-filename">{job.filename}</div><a className="button button-primary export-submit" href={job.url} download><Download size={17}/>Download {displayFormat}</a><p className="export-path">{initial.exportsDir}</p></>:<div className="export-progress"><div className="progress-track" role="progressbar" aria-label="Export progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.progress*100)}><div style={{width:`${Math.max(2,job.progress*100)}%`}}/></div><p>{Math.round(job.progress*100)}%</p></div>}
       {job?.status==='completed'&&<ExportCompanion cover={job.cover} error={job.coverError}/>}
     </DialogContent></Dialog>
-    <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent title="A few handy shortcuts" description="Small shortcuts, a little more flow."><div className="shortcuts-list">{[['Play / pause','Space'],['Move playhead one frame','← / →'],['Nudge focused clips','← / → · Shift for 1 second'],['Move clips','V'],['Zoom timeline','⌘ / Ctrl + mouse wheel'],['Select several clips','Drag empty timeline space'],['Add / remove from selection','Shift / ⌘ / Ctrl + click'],['Select all timeline clips','⌘ / Ctrl + A in timeline'],['Clear selection','Escape'],['Split at playhead','S or ⌘ / Ctrl + B'],['Slip source content','Y'],['Undo','⌘ / Ctrl + Z'],['Redo','Shift + ⌘ / Ctrl + Z'],['Delete selected clips','Backspace'],['Temporarily disable snapping','Hold Shift while dragging']].map(([l,k])=><div key={l}><span>{l}</span><kbd>{k}</kbd></div>)}</div></DialogContent></Dialog>
+    <Dialog open={helpOpen} onOpenChange={setHelpOpen}><DialogContent title="A few handy shortcuts" description="Small shortcuts, a little more flow."><div className="shortcuts-list">{[['Play / pause','Space'],['Move playhead one frame','← / →'],['Nudge focused clips','← / → · Shift for 1 second'],['Move clips','V'],['Zoom timeline','⌘ / Ctrl + mouse wheel'],['Select several clips','Drag empty timeline space'],['Add / remove from selection','Shift / ⌘ / Ctrl + click'],['Select all timeline clips','⌘ / Ctrl + A in timeline'],['Clear selection','Escape'],['Split at playhead','S or ⌘ / Ctrl + B'],['Slip source content','Y'],['Undo','⌘ / Ctrl + Z'],['Redo','Shift + ⌘ / Ctrl + Z'],['Delete selected object','Backspace / Delete'],['Duplicate selection','⌘ / Ctrl + D'],['Cut / copy selection','⌘ / Ctrl + X / C'],['Paste at playhead or on cover','⌘ / Ctrl + V'],['Temporarily disable snapping','Hold Shift while dragging']].map(([l,k])=><div key={l}><span>{l}</span><kbd>{k}</kbd></div>)}</div></DialogContent></Dialog>
   </div>;
 }
 function SelectionInspector({clips,move,remove}:{clips:Clip[];move:(start:number)=>void;remove:()=>void}){

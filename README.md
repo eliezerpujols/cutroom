@@ -84,9 +84,18 @@ the export result or open that folder directly.
 | Move a selection together | Drag any selected clip; spacing stays intact |
 | Nudge focused clips | Left/Right arrow; Shift for one second |
 | Undo / redo | Command/Ctrl+Z / Shift+Command/Ctrl+Z |
-| Delete selected clips | Backspace / Delete |
+| Delete selected object | Backspace / Delete |
+| Duplicate selection | Command/Ctrl+D |
+| Cut / copy selection | Command/Ctrl+X / Command/Ctrl+C |
+| Paste on cover or at playhead | Command/Ctrl+V |
 | Zoom timeline | Command/Ctrl + mouse wheel, or the zoom controls |
 | Resize timeline height | Drag its top divider; double-click resets it |
+
+Object shortcuts work for cover text, timed text, caption cues/layers, and selected
+video/audio clips. The object clipboard stays in the current editor tab; cut and
+paste preserve styling, and media groups keep their spacing. Duplicate places
+timeline copies after the original selection; cover copies are slightly offset.
+Text fields keep their normal typing, selection, and clipboard shortcuts.
 
 Timing uses **30 fps**. In the inspector, Timing sliders accept precise seconds.
 Slipping changes the source window without moving the clip; changing playback

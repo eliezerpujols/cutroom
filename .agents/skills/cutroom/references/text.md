@@ -34,7 +34,12 @@ collapsible Auto-transcript option. UI creation uses the current playhead and a
 three-second default. Select text to edit its content, timing and style on the
 right. While paused, drag it on the canvas, or use arrow keys for position.
 Timeline dragging changes timing; its edge handles trim the display interval.
-Split, duplicate, hide and remove are available. Media multi-selection remains
+Split, duplicate, hide and remove are available. Outside text fields, Delete or
+Backspace removes the selected object, Command/Ctrl+D duplicates it, X/C cut or
+copy with Command/Ctrl, and Command/Ctrl+V pastes on the cover or at the playhead.
+The object clipboard stays in the current editor tab; cover and timed text can
+be copied between those two contexts, preserving style. Undo restores a cut or
+delete. Normal text editing shortcuts are preserved inside fields. Media multi-selection remains
 separate; manual text and automatic caption cues are edited individually.
 
 Returned URLs include a new editor instance, `view=text`, and the focused text

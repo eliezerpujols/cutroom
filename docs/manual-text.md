@@ -42,6 +42,19 @@ checks IDs, timing and style bounds, with 100 text objects and 500 characters pe
 object. Old projects need no rewrite. MCP edits require the saved revision and
 return a new scoped editor URL focused at the selected title's start.
 
+## Object shortcuts
+
+The editor shares Delete, Command/Ctrl+D, X/C/V with Command/Ctrl across cover
+text, timed text, media selections and caption cues/layers. Cut stores a cloned
+object snapshot before removing it. Paste creates fresh IDs, preserves styling
+and group spacing, and places timeline items at the playhead. Duplicate places
+timeline copies after the selected interval; cover copies have a small position
+offset. Text can move between cover and video contexts. The clipboard is kept
+in memory for the current editor tab; native text fields keep OS clipboard
+behavior. Object commands use a guarded capture listener so child clip handlers
+do not apply Delete twice. Undo/redo use the same project history as other edits.
+Limits are checked before edits; failed pastes leave the project untouched.
+
 ## Validation boundary
 
 TypeScript and production compilation pass. No live controls, screenshots, user
