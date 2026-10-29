@@ -47,6 +47,15 @@ Select a title to style it on the right; drag it in the canvas or use arrow keys
 to position it. Frame changes and text gestures use undo. The caption toggle
 affects only the still; the video keeps its own caption layers.
 
+The cover-mode canvas toolbar also has **Cover guides**: click to toggle the
+last guide, or use its dropdown for TikTok profile / Instagram grid (3:4),
+portrait feed (4:5), or square (1:1). These are approximate centered crop previews,
+not guaranteed platform safe zones or simulations of playback UI. The dimmed
+outside area is a viewing aid, and text remains draggable. This preference is
+scoped to the project/editor instance in the browser; it does not change project
+dimensions, the project file, undo history, or exported PNG/MP4 content. There is
+no MCP project-edit operation for this view-only overlay.
+
 ## Video and image adjustments
 
 `set_visual_adjustments` changes the **entire edit** when `clip_ids` is omitted.
