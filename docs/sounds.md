@@ -44,6 +44,11 @@ For an explicitly requested batch:
 node --import tsx scripts/import-soundbuttonsworld.ts --limit 50
 ```
 
+`--limit` is the target total of SoundButtonsWorld entries, including sounds
+already in the library. Existing source entries are reused without re-downloading
+their audio. The bounded category-page list provides candidates for larger
+authorized batches; it does not crawl the whole site.
+
 The importer reads public catalog data embedded in public pages and fetches the
 public `/uploads/` MP3 files. It does not use accounts, cookies, private APIs or
 provider keys. Requests are sequential and paced; access/rate-limit rejections

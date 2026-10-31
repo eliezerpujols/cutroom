@@ -25,7 +25,10 @@ batches of 20 audio files. MP3/WAV/OGG/OPUS/M4A/AAC/FLAC are accepted, up to 25 
 and two minutes per file. Browser preview codec support varies by format.
 
 For a specifically authorized SoundButtonsWorld download batch, the checkout has
-`scripts/import-soundbuttonsworld.ts`. Run with an explicit `--limit` (1–200).
+`scripts/import-soundbuttonsworld.ts`. Run with an explicit `--limit` (1–200),
+which is the target total of SoundButtonsWorld sounds in the library, not an
+additional download count. Existing source entries count toward the target and
+are reused without downloading them again.
 It reads public page state and public MP3 downloads, retains names/categories and
 source links, paces requests, and writes a local import report. Existing content
 is deduplicated. It stops on 401/403/429 without retrying access restrictions;

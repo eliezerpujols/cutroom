@@ -25,6 +25,10 @@ async function download(url:string,maxBytes:number){
 }
 type Candidate={id:number;name:string;fileName:string;url:string;categoryName:string};
 const candidates:Candidate[]=[],ids=new Set<number>();
+const existing=(await library.list()).sounds.filter(sound=>sound.source==='SoundButtonsWorld'&&sound.sourceUrl?.startsWith(site+'/sound-button/'));
+const sounds=new Set(existing.map(sound=>sound.id)),knownUrls=new Set(existing.map(sound=>sound.sourceUrl));
+const results:Record<string,unknown>[]=existing.map(sound=>({id:sound.id,name:sound.name,category:sound.category,sourceUrl:sound.sourceUrl})),errors:{name:string;error:string}[]=[];
+let added=0,duplicates=existing.length,stopped=false;
 function collect(value:unknown){
   if(Array.isArray(value)){value.forEach(collect);return;}if(!value||typeof value!=='object')return;
   const item=value as Record<string,unknown>;
@@ -34,14 +38,15 @@ function collect(value:unknown){
   for(const child of Object.values(item))if(typeof child==='object')collect(child);
 }
 // Read only public page state. No accounts, cookies, private APIs or sign-in.
-for(const page of ['/categories/sound%20effects%20soundboard','/categories/reactions%20soundboard','/']){
+for(const page of ['/categories/sound%20effects%20soundboard','/categories/reactions%20soundboard','/','/categories/memes%20soundboard','/categories/games%20soundboard','/categories/movies%20soundboard','/categories/anime%20soundboard']){
+  if(sounds.size>=limit||candidates.length>=limit+30)break;
   const html=(await download(site+page,4*1024**2)).toString('utf8'),raw=html.match(/<script id="serverApp-state"[^>]*>([\s\S]*?)<\/script>/)?.[1];if(!raw)throw new Error('The site changed its public catalog format.');
   const escapes:Record<string,string>={q:'"',a:'&',l:'<',g:'>',s:"'"},state=JSON.parse(raw.replace(/&([qalgs]);/g,(_,key:string)=>escapes[key]));
   for(const [key,value] of Object.entries(state))if(key.startsWith('/api/memes/'))collect(value);
 }
-const sounds=new Set<string>(),results:Record<string,unknown>[]=[],errors:{name:string;error:string}[]=[];let added=0,duplicates=0,stopped=false;
+console.log(`${sounds.size}/${limit} sounds already available; existing downloads will be reused.`);
 for(const candidate of candidates){
-  if(sounds.size>=limit)break;const temporary=path.join(library.folder,'.incoming',randomUUID()+'.mp3');
+  if(sounds.size>=limit)break;if(knownUrls.has(site+'/sound-button/'+candidate.url))continue;const temporary=path.join(library.folder,'.incoming',randomUUID()+'.mp3');
   try{
     const bytes=await download(site+'/uploads/'+candidate.fileName,25*1024**2);await fs.writeFile(temporary,bytes,{flag:'wx'});
     const result=await library.importFile(temporary,candidate.name,candidate.categoryName,{source:'SoundButtonsWorld',sourceUrl:site+'/sound-button/'+candidate.url});
