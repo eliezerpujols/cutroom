@@ -32,8 +32,10 @@ The panel accepts audio files or a selected folder in batches of 20. MCP imports
 accept up to 100 paths. Project placement copies media into the project, creates
 an ordinary audio clip and uses the existing overlap/track rules. Browser edits
 use the current draft; MCP placement requires a saved revision and never
-overwrites a conflict. Search returns up to 200 matches, so larger collections
-can be narrowed by name or category. Only one preview plays in the panel, and it
+overwrites a conflict. Search returns 100 matches per page, with a Load more button for the rest.
+MCP supports `offset`/`limit` and a `nextOffset` cursor, with at most 200 per page.
+The batch importer reads all existing entries for its source, independently of
+UI pagination, so reuse counts stay correct beyond 200 sounds. Only one preview plays in the panel, and it
 stops when the panel closes or the user begins dragging/adding a sound.
 
 ## SoundButtonsWorld batch
@@ -49,7 +51,8 @@ already in the library. Existing source entries are reused without re-downloadin
 their audio. The bounded category-page list provides candidates for larger
 authorized batches; it does not crawl the whole site.
 
-The importer reads public catalog data embedded in public pages and fetches the
+The importer reads public catalog data embedded in public pages and its public
+category-pagination endpoint, and fetches the
 public `/uploads/` MP3 files. It does not use accounts, cookies, private APIs or
 provider keys. Requests are sequential and paced; access/rate-limit rejections
 stop the batch. A JSON report beside the library records completion and errors.

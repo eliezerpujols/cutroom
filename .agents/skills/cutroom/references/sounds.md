@@ -7,7 +7,8 @@ project's media folder, so its export does not depend on the shared library.
 
 - `list_sounds`: search names with `query`, optionally filter by `category`.
   Returns IDs, durations, categories, source links, waveforms and local preview
-  URLs. Returns up to 200 matches; narrow the search for larger libraries.
+  URLs. Returns 100 matches per page (up to 200 with `limit`). Pass `nextOffset`
+  as `offset` with the same filters to read the next page.
 - `import_sounds`: import up to 100 absolute audio file paths with an optional
   category. Files are copied and deduplicated by SHA-256. Each file has its own
   success, duplicate or error result. This does not change the timeline.
@@ -20,12 +21,13 @@ The UI's Sounds tab supports search, categories, a preview button for each named
 sound, and drag-and-drop onto the timeline. Dropping on a video row still creates
 an audio clip. The drop marker snaps to clip edges when snapping is enabled.
 The plus button adds the sound at the playhead as a keyboard-accessible alternative.
+Use Load more to browse the next page without changing filters.
 File/folder import is available in the panel's plus menu; a folder is uploaded in
 batches of 20 audio files. MP3/WAV/OGG/OPUS/M4A/AAC/FLAC are accepted, up to 25 MB
 and two minutes per file. Browser preview codec support varies by format.
 
 For a specifically authorized SoundButtonsWorld download batch, the checkout has
-`scripts/import-soundbuttonsworld.ts`. Run with an explicit `--limit` (1–200),
+`scripts/import-soundbuttonsworld.ts`. Run with an explicit `--limit` (1–500),
 which is the target total of SoundButtonsWorld sounds in the library, not an
 additional download count. Existing source entries count toward the target and
 are reused without downloading them again.

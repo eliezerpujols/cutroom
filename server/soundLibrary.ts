@@ -32,10 +32,12 @@ export class SoundLibrary{
   private async records(){try{const file=path.join(this.folder,'library.json');if((await fs.stat(file)).size>20*1024**2)throw new Error('The sound library index is too large.');return indexSchema.parse(JSON.parse(await fs.readFile(file,'utf8'))).sounds;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return [];throw error;}}
   async initialize(){await fs.mkdir(this.folder,{recursive:true});await fs.mkdir(path.join(this.folder,'.incoming'),{recursive:true});}
   private publicSound({file:_file,...sound}:SoundRecord):LibrarySound{return {...sound,url:`/api/sounds/${sound.id}/audio`};}
-  async list(query='',category=''){
+  async sourceSounds(source:string){return (await this.records()).filter(sound=>sound.source===source).map(sound=>this.publicSound(sound));}
+  async list(query='',category='',offset=0,limit=100){
     const records=await this.records(),needle=query.toLocaleLowerCase().trim();
     const sounds=records.filter(sound=>(!category||sound.category===category)&&(!needle||`${sound.name} ${sound.category}`.toLocaleLowerCase().includes(needle))).sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
-    return {sounds:sounds.slice(0,200).map(sound=>this.publicSound(sound)),categories:[...new Set(records.map(sound=>sound.category))].sort(),total:records.length,matched:sounds.length,folder:this.folder};
+    const page=sounds.slice(offset,offset+limit);
+    return {sounds:page.map(sound=>this.publicSound(sound)),categories:[...new Set(records.map(sound=>sound.category))].sort(),total:records.length,matched:sounds.length,nextOffset:offset+page.length<sounds.length?offset+page.length:null,folder:this.folder};
   }
   async file(id:string){
     z.string().regex(/^[a-f0-9]{64}$/).parse(id);const record=(await this.records()).find(sound=>sound.id===id);if(!record)throw new Error('Sound not found in your library.');
