@@ -32,3 +32,6 @@ projects/
 
 # Local visual review embeds private project screenshots.
 docs/project-dialog-comparison.html
+
+# Reusable sound catalog and downloads stay local, including custom roots.
+**/Sound Library/

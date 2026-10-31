@@ -107,6 +107,19 @@ A gap without video renders black. Caption cues have their own tracks and are
 edited individually, as is manual text. Media box-selection groups video/audio
 clips. Ripple editing and clip-to-clip transitions are not implemented.
 
+### Sound effects
+
+Open **Sounds** in the left toolbar. Search names, choose a category, and use
+Play to preview a sound. Drag a row onto the timeline, or use its plus button to
+place it at the playhead. Sound clips can be trimmed, moved and mixed like other
+audio. Overlapping sounds get separate audio tracks.
+
+The panel's plus menu imports audio files or a whole folder into a reusable
+library at `~/Documents/Cut Room/Sound Library`. Content hashes prevent duplicate
+files. Each project receives its own media copy when a sound is used. No audio
+files are included in this repository. See [sound library setup and the optional
+SoundButtonsWorld batch importer](docs/sounds.md).
+
 ### Text, captions, covers, and adjustments
 
 - **Manual text:** add titles, labels, or a call to action with a chosen start and
@@ -266,6 +279,7 @@ Example requests:
 | --- | --- |
 | Projects | `list_projects`, `get_project`, `create_project`, `open_project` |
 | Media/editing | `import_media`, `edit_project`, `extract_audio` |
+| Sound effects | `list_sounds`, `import_sounds`, `add_sound` |
 | Captions | `estimate_captions`, `generate_captions`, `list_caption_jobs`, `get_caption_job`, `apply_captions`, `edit_captions`, `export_caption_subtitles` |
 | Dubbing | `integration_status`, `prepare_dubbing`, `start_dubbing`, `get_dubbing_job`, `list_dubbing_jobs` |
 | Timed text | `add_text`, `edit_text`, `remove_text` |

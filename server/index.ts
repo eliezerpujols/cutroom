@@ -19,6 +19,7 @@ import {finalizeExportMetadata} from './exportMetadata';
 import {captionEngine} from './captions';
 import {registerVisualRoutes} from './visuals';
 import {registerTextRoutes} from './texts';
+import {registerSoundRoutes} from './sounds';
 import {coverFrame} from '../src/visuals';
 import {companionProject,renderCompanion,savedCompanion,type CoverCompanion} from './coverExports';
 import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue} from '../src/captions';
@@ -37,7 +38,7 @@ const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
@@ -56,6 +57,7 @@ function publish(event:Record<string,unknown>){
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
 registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
+await registerSoundRoutes(app,store,media,path.join(defaultProjectsDirectory(),'Sound Library'),(id,revision)=>{publish({projectId:id,revision});const destination=editorDestination(id);return {...destination,editor_url:destination.editor_url+'&view=sounds'};});
 app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
 app.post('/api/projects/:id/captions/estimate',async(req,res)=>res.json(await captions.estimate(z.string().uuid().parse(req.params.id),req.body.project)));
 app.post('/api/projects/:id/captions',async(req,res)=>{const language=z.string().regex(/^(auto|[a-z]{2,3})$/).optional().parse(req.body.language),requestId=z.string().uuid().optional().parse(req.body.requestId);res.status(202).json(await captions.start(z.string().uuid().parse(req.params.id),req.body.project,language,requestId));});
