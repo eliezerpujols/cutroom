@@ -370,7 +370,8 @@ been exercised. No new UI tests or paid generations were run for this README upd
 ## Overlays and layer order
 
 Select a video or image clip, then choose **Make overlay** in Clip settings.
-It moves the same clip to a track above, preserving timing and audio. Drag the
+It raises clips that share a track; solo clips keep their row and name. Timing
+and audio are preserved. Drag the
 overlay in the paused preview to position it, or drag a corner to resize.
 The inspector has size/position controls and **Full frame** to reset its layout.
 

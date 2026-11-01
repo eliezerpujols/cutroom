@@ -1,10 +1,14 @@
 # Overlays and layer order
 
 Select a video or image clip, then choose **Make overlay** in the inspector's
-Layout section, above Timing. The same clip moves to a new video track directly
-above its old track. Its timing, source window and audio are preserved. It starts
-centered with an inset size that preserves the source aspect ratio. The original
-track remains available. The existing 12-media-track project limit still applies;
+Layout section, above Timing. If it shares a track with other clips, it moves to
+a new video track directly above. If it is alone, its existing row, ID, name and
+mute state are retained. Its timing, source window and audio are preserved. It
+starts centered with an inset size that preserves the source aspect ratio. Empty
+video rows are omitted when a non-overlay main video clip exists; this also hides
+rows left by earlier versions without rewriting a project on load. The next
+overlay conversion removes those redundant tracks from the saved edit.
+The existing 12-media-track project limit still applies to new allocations;
 a full project reports the same track-limit error without changing the clip.
 
 When paused, select the overlay on the preview and drag it to move it. Drag a
@@ -36,7 +40,7 @@ MCP tools:
 - `reorder_layers(project_id, expected_revision, layer_keys)` requires every
   current key once, in top-to-bottom order.
 - `set_clip_overlay(project_id, expected_revision, clip_id, enabled, placement)`
-  creates the raised track on the first enable only. `placement.x/y` are center
+  creates a raised track only when the clip shares its source row. `placement.x/y` are center
   percentages (0–100); `width` is percent of composition width (2–200).
   Later updates reuse the track; `enabled=false` restores full-frame layout.
 

@@ -92,8 +92,10 @@ embedded audio controls. Keep their copied files in the project media folder.
 ## Video/image overlays and layer order
 
 Use `set_clip_overlay` with a real video/image clip ID and current revision.
-The first enable moves the same clip onto a new video track immediately above
-its original track, preserving its timing, source and sound. Later calls update
+If the clip shares a track, enabling moves it onto a new track immediately above.
+If it is alone, its row, track ID and original name stay the same. Empty video
+rows are omitted when a non-overlay main clip exists. Timing, source and sound
+are preserved. Later calls update
 placement without creating another track. Placement x/y are center percentages
 (0–100); width is percent of composition width (2–200) with aspect ratio preserved.
 Use enabled=false for full-frame layout on the current track. The UI exposes

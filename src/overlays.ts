@@ -1,13 +1,21 @@
 import type {Asset,Clip,Project} from './model';
 import {placeTimelineClip} from './videoTracks';
 import {moveLayer,timelineLayers} from './layers';
+import {removeRedundantVideoTracks} from './trackVisibility';
 export type ClipOverlay={x:number;y:number;width:number};
 export function overlayHeight(project:Pick<Project,'width'|'height'>,asset:Pick<Asset,'width'|'height'>,width:number){return width*(project.width/project.height)/(asset.width>0&&asset.height>0?asset.width/asset.height:project.width/project.height);}
 export function makeOverlay(project:Project,id:string,patch:Partial<ClipOverlay>={},asset?:Pick<Asset,'width'|'height'>):Project{
+  project=removeRedundantVideoTracks(project);
   const clip=project.clips.find(item=>item.id===id);if(!clip||clip.kind!=='video')throw new Error('Select a video or image clip.');
   const fitted=asset&&asset.width>0&&asset.height>0?Math.max(2,Math.min(45,45*project.height/project.width*asset.width/asset.height)):45;
   const overlay={x:50,y:50,width:fitted,...clip.overlay,...patch};
-  if(clip.overlay)return {...project,clips:project.clips.map(item=>item.id===id?{...item,overlay}:item)};
+  const alone=!project.clips.some(item=>item.id!==id&&item.trackId===clip.trackId);
+  // Reuse an exclusive lane: keep its ID, position, name and mute state, and
+  // don't allocate a new track merely to leave the old one empty.
+  if(clip.overlay||alone){
+    const next={...project,clips:project.clips.map(item=>item.id===id?{...item,overlay}:item)};
+    return {...next,layerOrder:timelineLayers(next).map(layer=>layer.key)};
+  }
   const placed=placeTimelineClip(project,{...clip,overlay},{forceNewTrack:true});
   const raised=placed.clips.find(item=>item.id===id)!;
   return moveLayer({...placed,layerOrder:timelineLayers(placed).map(layer=>layer.key)},`track:${raised.trackId}`,`track:${clip.trackId}`,'before');
