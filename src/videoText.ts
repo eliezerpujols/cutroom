@@ -11,4 +11,4 @@ export function splitVideoText(text:VideoText,frame:number,rightId:string):Video
   if(frame<=text.start||frame>=text.start+text.duration)return [text];
   return [{...text,duration:frame-text.start},{...text,id:rightId,start:frame,duration:text.start+text.duration-frame}];
 }
-export const visibleVideoText=(project:Project,frame:number)=>(project.texts||[]).filter(text=>!text.muted&&text.start<=frame&&frame<text.start+text.duration);
+export const visibleVideoText=(project:Project,frame:number)=>(project.texts||[]).filter(text=>!text.muted&&!text.hidden&&text.start<=frame&&frame<text.start+text.duration);

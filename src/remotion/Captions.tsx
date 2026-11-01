@@ -8,7 +8,7 @@ import type {CaptionLayer} from '../captions';
 export function CaptionOverlay({layers}:{layers:CaptionLayer[]}){
   const frame=useCurrentFrame(),{width,height}=useVideoConfig(),scale=Math.min(width,height)/1080;
   return <AbsoluteFill style={{pointerEvents:'none'}}>{layers.filter(layer=>!layer.muted).map(layer=>{
-    let cue:CaptionLayer['cues'][number]|undefined;for(const candidate of layer.cues)if(frame>=candidate.start&&frame<candidate.start+candidate.duration)cue=candidate;if(!cue?.words.length)return null;
+    let cue:CaptionLayer['cues'][number]|undefined;for(const candidate of layer.cues)if(!candidate.hidden&&frame>=candidate.start&&frame<candidate.start+candidate.duration)cue=candidate;if(!cue?.words.length)return null;
     const local=frame-cue.start,style=layer.style;
     let active=0;for(let index=0;index<cue.words.length;index++)if(cue.words[index].start<=local)active=index;
     const start=style.display==='word'?active:style.display==='phrase'?Math.floor(active/6)*6:0;

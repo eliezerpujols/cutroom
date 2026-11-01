@@ -6,7 +6,7 @@ export type Asset = {
 };
 export type Clip = {
   id:string; assetId:string; name:string; trackId:string; kind:'video'|'audio';
-  start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean;
+  start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean; hidden?:boolean;
   fadeIn:number; fadeOut:number; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};

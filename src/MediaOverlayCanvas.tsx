@@ -40,7 +40,7 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
     const escape=(next:KeyboardEvent)=>{if(next.key==='Escape'){next.preventDefault();next.stopPropagation();revert();}};
     gesture.current=cleanup;window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('keydown',escape,true);window.addEventListener('blur',revert);
   }
-  return <div ref={root} className="media-overlay-canvas">{clipsInRenderOrder(project).filter(clip=>clip.overlay&&clip.start<=frame&&frame<clip.start+clip.duration).map(clip=>{
+  return <div ref={root} className="media-overlay-canvas">{clipsInRenderOrder(project).filter(clip=>!clip.hidden&&clip.overlay&&clip.start<=frame&&frame<clip.start+clip.duration).map(clip=>{
     const asset=assets.find(asset=>asset.id===clip.assetId);if(!asset||asset.missing)return null;const value=clip.overlay!,active=selected===clip.id;
     return <div key={clip.id} className={`media-overlay-box ${active?'selected':''}`} style={{left:`${value.x}%`,top:`${value.y}%`,width:`${value.width}%`,height:`${overlayHeight(project,asset,value.width)}%`}} role="button" tabIndex={0} aria-label={`Move overlay ${clip.name}`} aria-pressed={active} onPointerDown={event=>start(event,clip,asset)} onClick={event=>event.stopPropagation()} onKeyDown={event=>{
       if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();select(clip.id);}

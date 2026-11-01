@@ -15,7 +15,7 @@ export function MediaClip({clip,asset,muted}:{clip:Clip;asset:Asset;muted:boolea
     return <PreviewAudio src={props.src} trimBefore={props.trimBefore} playbackRate={props.playbackRate} preservePitch volume={volume} muted={props.muted} fallbackHtml5AudioProps={{useWebAudioApi:true,pauseWhenBuffering:false}}/>;
   }
   const Video=getRemotionEnvironment().isRendering?OffthreadVideo:Html5Video;
-  const content=<VisualLayer adjustments={clip.adjustments}>{asset.kind==='image'?<Img src={asset.url} style={{width:'100%',height:'100%',objectFit:'contain'}}/>:<Video {...props} style={{width:'100%',height:'100%',objectFit:'contain'}}/>}</VisualLayer>;
+  const content=<VisualLayer adjustments={clip.adjustments}>{asset.kind==='image'?<Img src={asset.url} style={{width:'100%',height:'100%',objectFit:'contain',visibility:clip.hidden?'hidden':undefined}}/>:<Video {...props} style={{width:'100%',height:'100%',objectFit:'contain',visibility:clip.hidden?'hidden':undefined}}/>}</VisualLayer>;
   if(!clip.overlay)return content;
   return <AbsoluteFill><div style={{position:'absolute',left:`${clip.overlay.x}%`,top:`${clip.overlay.y}%`,width:`${clip.overlay.width}%`,height:`${overlayHeight({width,height},asset,clip.overlay.width)}%`,transform:'translate(-50%,-50%)'}}>{content}</div></AbsoluteFill>;
 }

@@ -1,0 +1,6 @@
+/* One inspector action location and order for every selected content type. */
+.selected-content-heading>.selected-clip-info{flex:1;min-width:0}
+.selected-content-heading>.selected-clip-info>p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selected-content-heading>.selected-item-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.selected-item-actions>.button{width:25px;height:28px;padding:4px}
+@media(pointer:coarse){.selected-item-actions>.button{width:32px;height:32px}}
