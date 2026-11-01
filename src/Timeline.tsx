@@ -302,5 +302,5 @@ export function Timeline(props:Props){
     {soundDrop&&<div className="sound-drop-line" style={{left:132+soundDrop.frame*ppf}}><span>{time(soundDrop.frame,true)}</span></div>}
     <div className="playhead" style={{left:132+frame*ppf,height:'calc(100% - 4px)'}}><span>{time(frame,true)}</span><i/></div>
     {selectionBox&&<div className="timeline-selection-box" aria-hidden="true" style={selectionBox}/>}
-  </div></div><div className="timeline-footer"><div className="timeline-status"><span className="local-status"><span className="status-dot"/>All edits stay on this computer</span><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{selectedIds.length>1?`${selectedIds.length} selected · `:''}{project.clips.length+(project.texts?.length||0)} clips <span className="muted">·</span> {time(length,true)} total</span></div></section>;
+  </div></div><div className="timeline-footer"><div className="timeline-status"><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{selectedIds.length>1?`${selectedIds.length} selected · `:''}{project.clips.length+(project.texts?.length||0)} clips <span className="muted">·</span> {time(length,true)} total</span></div></section>;
 }
