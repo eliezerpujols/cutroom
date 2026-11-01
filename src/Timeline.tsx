@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,Scan,MousePointer2,Scissors,BetweenHorizontalStart,Magnet,Keyboard} from 'lucide-react';
+import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {FadeEnvelope} from './ClipAdjustments';
 import {CaptionTimeline} from './CaptionTimeline';
@@ -37,7 +37,8 @@ export function Timeline(props:Props){
   const [soundDrop,setSoundDrop]=useState<{frame:number;track?:string}|null>(null);
   useEffect(()=>{const clear=()=>setSoundDrop(null);window.addEventListener('dragend',clear);return()=>window.removeEventListener('dragend',clear);},[]);
   const [selectionBox,setSelectionBox]=useState<SelectionBox|null>(null),[dragScale,setDragScale]=useState<number|null>(null);
-  const [zoom,setZoom]=useState(1),[available,setAvailable]=useState(800),[snapping,setSnapping]=useState(true);
+  const [zoom,setZoom]=useState(1),[available,setAvailable]=useState(800);
+  const snapping=true;
   const length=endFrame(project);const extent=Math.max(length,FPS*8);
   const base=Math.max(.45,(available-48)/extent);const ppf=dragScale??base*zoom;const width=Math.max(available,extent*ppf+24);
   const zoomValue=useRef(zoom),renderedScale=useRef(ppf),zoomAnchor=useRef<{frame:number;offset:number}|null>(null);
@@ -276,9 +277,9 @@ export function Timeline(props:Props){
     <Tip label="Move clips · V. Drag empty space to select several clips, then drag a selected clip to move them together. Drag clip edges to trim."><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='select'?'active':'')} aria-label="Move clips · V" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/><span>Move</span></Button></Tip>
     <Tip label={splitHint}><span className="tool-tip-anchor"><Button variant="outline" size="sm" className="timeline-tool split-action" aria-label="Split at playhead · S" disabled={!canSplit} onClick={split}><Scissors size={16}/><span>Split</span></Button></span></Tip>
     <Tip label={slipHint}><span className="tool-tip-anchor"><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='slip'?'active':'')} aria-label="Slip source content · Y" aria-pressed={tool==='slip'} disabled={!canSlip} onClick={()=>setTool('slip')}><BetweenHorizontalStart size={16}/><span>Slip</span></Button></span></Tip>
-    <span className="toolbar-divider"/><IconButton label="Snap to clip edges" aria-pressed={snapping} className={snapping?'snap-active':''} onClick={()=>setSnapping(v=>!v)}><Magnet size={16}/></IconButton>
+
   </div>
-  <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>changeZoom(zoomValue.current-.25)}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={.1} value={[zoom]} onValueChange={([value])=>changeZoom(value)}/><IconButton label="Zoom in" onClick={()=>changeZoom(zoomValue.current+.25)}><Plus size={15}/></IconButton><IconButton label="Fit timeline" onClick={()=>{zoomAnchor.current=null;zoomValue.current=1;setZoom(1);if(viewport.current)viewport.current.scrollLeft=0;}}><Scan size={16}/></IconButton></div></div>
+  <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>changeZoom(zoomValue.current-.25)}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={.1} value={[zoom]} onValueChange={([value])=>changeZoom(value)}/><IconButton label="Zoom in" onClick={()=>changeZoom(zoomValue.current+.25)}><Plus size={15}/></IconButton></div></div>
   <div className="timeline-scroll" id="timeline-tracks" ref={viewport}><div className="timeline-board" onDragOver={event=>soundDragOver(event)} onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setSoundDrop(null);}} onDrop={event=>{if(event.dataTransfer.types.includes(SOUND_DRAG_TYPE))dropMedia(event);}} ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
     if(e.key==='Escape'){gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);}
     if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&selectedIds.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target as HTMLElement).closest('.ruler,.timeline-clip,.track-label')){e.preventDefault();e.stopPropagation();edit(p=>moveSelection(p,selectedIds,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));}

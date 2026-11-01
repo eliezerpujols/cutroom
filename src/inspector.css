@@ -9,3 +9,8 @@
 .workspace.inspector-hidden>aside.inspector{display:none}
 .preview-panel-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
 @media(max-width:800px){.workspace.inspector-hidden,.workspace.media-hidden.inspector-hidden{grid-template-columns:1fr}}
+/* Video, image and audio actions share the selected media's info row. */
+.selected-media-heading>.selected-clip-info{flex:1;min-width:0}
+.selected-media-heading>.selected-item-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.selected-item-actions>.button{width:25px;height:28px;padding:4px}
+@media(pointer:coarse){.selected-item-actions>.button{width:32px;height:32px}}
