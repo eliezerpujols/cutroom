@@ -9,6 +9,7 @@ import {bundle} from '@remotion/bundler';
 import {ensureBrowser,selectComposition,renderMedia,renderStill} from '@remotion/renderer';
 import {z} from 'zod';
 import {ProjectStore,atomicJson} from './projects';
+import {registerLayerRoutes} from './layers';
 import {captionLayerSchema,captionStyleSchema,projectSchema,validateProject} from './schema';
 import {mediaEngine} from './media';
 import {defaultProjectsDirectory} from './paths';
@@ -38,7 +39,7 @@ const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library','overlays','layer-order'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
@@ -55,6 +56,7 @@ function publish(event:Record<string,unknown>){
   return delivered;
 }
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
+registerLayerRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id);});
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
 registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
 await registerSoundRoutes(app,store,media,path.join(defaultProjectsDirectory(),'Sound Library'),(id,revision)=>{publish({projectId:id,revision});const destination=editorDestination(id);return {...destination,editor_url:destination.editor_url+'&view=sounds'};});

@@ -1,3 +1,4 @@
+import {timelineLayers} from './layers';
 export const FPS = 30;
 export type Asset = {
   id:string; name:string; kind:'video'|'audio'|'image'; duration:number; frames:number;
@@ -6,10 +7,10 @@ export type Asset = {
 export type Clip = {
   id:string; assetId:string; name:string; trackId:string; kind:'video'|'audio';
   start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean;
-  fadeIn:number; fadeOut:number; adjustments?:import('./visuals').VisualAdjustments;
+  fadeIn:number; fadeOut:number; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
-export type Project = {version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments; texts?:import('./videoText').VideoText[]};
+export type Project = {layerOrder?:string[];version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments; texts?:import('./videoText').VideoText[]};
 export type Tool = 'select'|'slip';
 export const uid = () => crypto.randomUUID();
 export const endFrame = (p:Project) => Math.max(1,...p.clips.map(c=>c.start+c.duration),...(p.captions||[]).flatMap(layer=>layer.cues.map(cue=>cue.start+cue.duration)),...(p.texts||[]).map(text=>text.start+text.duration));
@@ -21,7 +22,7 @@ export const time = (frames:number, precise=false) => {
 };
 export const maxDuration = (c:Clip, a:Asset) => a.kind==='image'?108000:Math.max(1,Math.floor((a.frames-c.sourceIn)/c.rate));
 export function clipsInRenderOrder(p:Project):Clip[]{
-  const order=new Map(p.tracks.map((t,i)=>[t.id,i]));
+  const order=new Map(timelineLayers(p).filter(layer=>layer.kind==='track').map((layer,i)=>[layer.id,i]));
   return [...p.clips].sort((a,b)=>(order.get(b.trackId)??Number.MAX_SAFE_INTEGER)-(order.get(a.trackId)??Number.MAX_SAFE_INTEGER));
 }
 export function splitTarget(p:Project,selected:string|null,frame:number):Clip|null {

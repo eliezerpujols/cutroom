@@ -1,0 +1,11 @@
+.overlay-controls .section-title>.button{font-size:9px;height:26px;padding:0 6px}
+.overlay-control-heading{display:flex;align-items:center;justify-content:space-between;font-size:10px;margin-bottom:6px}
+.overlay-control-heading>span:last-child{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:9px}
+.overlay-control-heading .input{width:56px;height:25px;padding:0 5px;text-align:center;font-size:10px;background:var(--subtle);border-color:transparent}
+.overlay-position{margin-top:14px;font-size:10px}.overlay-position summary{cursor:pointer;color:var(--muted);padding:3px 0}.overlay-position .field-grid{margin-top:12px}.overlay-position>.button{font-size:10px;margin-top:8px}
+.media-overlay-canvas{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.media-overlay-box{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:move;touch-action:none;outline:1px solid transparent}
+.media-overlay-box:hover{outline-color:var(--ring)}.media-overlay-box.selected{outline:2px solid var(--ring)}
+.media-overlay-handle{position:absolute;width:10px;height:10px;border:1px solid var(--ring);background:var(--surface);border-radius:2px;padding:0;touch-action:none;transform:translate(-50%,-50%)}
+.media-overlay-handle.nw{left:0;top:0;cursor:nwse-resize}.media-overlay-handle.ne{left:100%;top:0;cursor:nesw-resize}.media-overlay-handle.sw{left:0;top:100%;cursor:nesw-resize}.media-overlay-handle.se{left:100%;top:100%;cursor:nwse-resize}
+@media(pointer:coarse){.media-overlay-handle{width:18px;height:18px}}

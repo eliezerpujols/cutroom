@@ -1,0 +1,8 @@
+/* The grip occupies the existing label gutter; label text and row widths do not move. */
+.track-label>.layer-reorder-handle.button{position:absolute;left:2px;top:50%;transform:translateY(-50%);width:14px;min-width:0;height:26px;padding:0;margin:0;z-index:2;color:var(--muted);opacity:.6;cursor:grab;touch-action:none}
+.track-label>.layer-reorder-handle.button:hover,.track-label>.layer-reorder-handle.button:focus-visible{opacity:1;background:var(--subtle)}
+.track-label>.layer-reorder-handle.button[aria-grabbed=true]{cursor:grabbing;color:var(--primary);opacity:1}
+[data-timeline-layer]{position:relative}
+[data-layer-dragging=true]>.track-label{background:var(--subtle)}
+[data-layer-drop]:after{content:'';position:absolute;left:0;right:0;height:2px;background:var(--ring);pointer-events:none;z-index:20}
+[data-layer-drop=before]:after{top:0}[data-layer-drop=after]:after{bottom:0}

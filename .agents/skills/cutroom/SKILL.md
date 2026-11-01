@@ -1,6 +1,6 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, adjust video/image color, and create, reopen, edit, or export local Cutroom projects through its MCP.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, and create, reopen, edit, or export local Cutroom projects through its MCP.
 ---
 
 # Cutroom
@@ -10,7 +10,7 @@ For translation, dubbing or lip sync, read [the dubbing workflow](references/dub
 For the reusable sound library and audio placement, read [sound effects](references/sounds.md).
 For authored titles and text during a video, read [manual video text](references/text.md).
 For automatic transcription or caption styling, read [the captions workflow](references/captions.md).
-For cover text, frame selection, filters, or video/image color corrections, read
+For overlays, layer order, cover text, frame selection, filters, or video/image color corrections, read
 [the visual editing workflow](references/visuals.md).
 The user can provide a video and target language in one request; complete the
 provider workflow and open its finished result. Existing provider keys are loaded

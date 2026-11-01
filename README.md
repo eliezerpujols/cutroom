@@ -284,6 +284,7 @@ Example requests:
 | Dubbing | `integration_status`, `prepare_dubbing`, `start_dubbing`, `get_dubbing_job`, `list_dubbing_jobs` |
 | Timed text | `add_text`, `edit_text`, `remove_text` |
 | Visuals | `set_cover`, `set_visual_adjustments` |
+| Overlays and layers | `set_clip_overlay`, `list_layers`, `reorder_layers` |
 | Exports | `export_project`, `export_cover`, `export_status` |
 
 Agents should read real IDs and the current revision before editing, use timing
@@ -365,3 +366,16 @@ The source includes design-reference links, not reference screenshots or stock
 footage. Runtime validation varies by feature; see those notes. Setup commands
 are documented here without claiming every operating system/provider path has
 been exercised. No new UI tests or paid generations were run for this README update.
+
+## Overlays and layer order
+
+Select a video or image clip, then choose **Make overlay** in Clip settings.
+It moves the same clip to a track above, preserving timing and audio. Drag the
+overlay in the paused preview to position it, or drag a corner to resize.
+The inspector has size/position controls and **Full frame** to reset its layout.
+
+Drag the grip at the left of a timeline label to reorder media, text and caption
+layers. The top row is the top visual layer; timing stays intact. A focused grip
+also supports Up/Down and Home/End. Undo reverses either kind of edit.
+The saved layout is used by preview, video export and cover export. See
+[overlay and layer controls](docs/overlays-and-layers.md) for MCP parameters.

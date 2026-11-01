@@ -5,13 +5,14 @@ import {FadeEnvelope} from './ClipAdjustments';
 import {CaptionTimeline} from './CaptionTimeline';
 import {VideoTextTimeline} from './VideoTextTimeline';
 import {CoverTile} from './CoverEditor';
+import {useLayerReorder} from './useLayerReorder';
 import {SOUND_DRAG_TYPE} from './sounds';
 import type {CaptionSelection} from './captions';
 import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -30,6 +31,7 @@ export function Timeline(props:Props){
   const timeline=useRef<HTMLElement>(null),viewport=useRef<HTMLDivElement>(null),board=useRef<HTMLDivElement>(null);
   const gestureCleanup=useRef<(()=>void)|null>(null);
   const registerCaptionGesture=useCallback((cleanup:(()=>void)|null)=>{gestureCleanup.current=cleanup;},[]);
+  const reorder=useLayerReorder(project,edit,viewport,gestureCleanup,props.beforeReorder);
   const resizeCancel=useRef<(()=>void)|null>(null);
   const [resizing,setResizing]=useState(false),[timelineSize,setTimelineSize]=useState({height:294,max:1000});
   const [soundDrop,setSoundDrop]=useState<{frame:number;track?:string}|null>(null);
@@ -284,10 +286,11 @@ export function Timeline(props:Props){
     <div className="ruler-row cover-ruler-row"><div className="ruler-label cover-ruler-label"><CoverTile project={project} assets={assets} active={props.coverEditing} open={props.openCover}/><span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(props.coverEditing&&['ArrowLeft','ArrowRight'].includes(e.key))checkpoint();if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
-    <VideoTextTimeline texts={project.texts||[]} selected={props.textSelected} select={props.selectText} ppf={ppf} width={width} snapping={snapping} points={[0,frame,...project.clips.flatMap(c=>[c.start,c.start+c.duration])]} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/>
-    <CaptionTimeline layers={project.captions||[]} selection={props.captionSelection} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/>
-    {project.tracks.map(track=><div className={`track-row ${soundDrop?.track===track.id?'sound-drop-target':''}`} key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragOver={e=>{if(e.dataTransfer.types.includes(SOUND_DRAG_TYPE))soundDragOver(e,track.kind==='audio'?track.id:undefined);else{e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>dropMedia(e,track.id)}>
-      <div className="track-label"><span className={`track-kind ${track.kind}`}>{track.kind==='video'?<Film size={16}/>:<AudioLines size={16}/>}</span><span>{track.name}</span><IconButton label={`${track.muted?'Unmute':'Mute'} ${track.name.toLowerCase()} track`} aria-pressed={track.muted} onClick={()=>edit(p=>({...p,tracks:p.tracks.map(t=>t.id===track.id?{...t,muted:!t.muted}:t)}))}>{track.muted?<VolumeX size={14}/>:<Volume2 size={14}/>}</IconButton></div>
+    {reorder.layers.map(layer=>{
+      if(layer.kind==='text')return <React.Fragment key={layer.key}><VideoTextTimeline texts={[layer.text]} snapTexts={project.texts||[]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} rowNumber={layer.number} selected={props.textSelected} select={props.selectText} ppf={ppf} width={width} snapping={snapping} points={[0,frame,...project.clips.flatMap(c=>[c.start,c.start+c.duration])]} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
+      if(layer.kind==='caption')return <React.Fragment key={layer.key}><CaptionTimeline layers={[layer.layer]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} selection={props.captionSelection} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
+      const track=layer.track;return <div {...reorder.attributes(layer.key)} className={`track-row ${soundDrop?.track===track.id?'sound-drop-target':''}`} key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragOver={e=>{if(e.dataTransfer.types.includes(SOUND_DRAG_TYPE))soundDragOver(e,track.kind==='audio'?track.id:undefined);else{e.preventDefault();e.dataTransfer.dropEffect='copy';}}} onDrop={e=>dropMedia(e,track.id)}>
+      <div className="track-label">{reorder.handle(layer)}<span className={`track-kind ${track.kind}`}>{track.kind==='video'?<Film size={16}/>:<AudioLines size={16}/>}</span><span>{track.name}</span><IconButton label={`${track.muted?'Unmute':'Mute'} ${track.name.toLowerCase()} track`} aria-pressed={track.muted} onClick={()=>edit(p=>({...p,tracks:p.tracks.map(t=>t.id===track.id?{...t,muted:!t.muted}:t)}))}>{track.muted?<VolumeX size={14}/>:<Volume2 size={14}/>}</IconButton></div>
       <div className="track-lane" style={{width}}>
       {!project.clips.some(c=>c.trackId===track.id)&&<div className="empty-track">Drop {track.kind==='video'?'a video':'audio'} here</div>}
       {project.clips.filter(c=>c.trackId===track.id).map(c=>{const a=assets.find(a=>a.id===c.assetId);if(!a)return null;const selectedClip=selectedSet.has(c.id);
@@ -298,7 +301,7 @@ export function Timeline(props:Props){
           {c.kind==='audio'&&selectedClip&&(['fadeIn','fadeOut'] as const).map(field=>{const label=field==='fadeIn'?'Fade in':'Fade out',ratio=clamp(c[field]/Math.max(1,c.duration-1),0,1),position=field==='fadeIn'?ratio:1-ratio;return <div key={field} className="audio-fade-handle" role="slider" tabIndex={0} aria-label={`${label} duration`} aria-valuemin={0} aria-valuemax={Math.max(c.duration,c[field])/FPS} aria-valuenow={c[field]/FPS} aria-valuetext={`${(c[field]/FPS).toFixed(2)} seconds`} title={`${label}: ${(c[field]/FPS).toFixed(2)}s · Drag to adjust`} style={{left:`clamp(10px, ${position*100}%, calc(100% - 10px))`}} onPointerDown={e=>dragFade(e,c,field)} onKeyDown={e=>fadeKey(e,c,field)}><span/></div>;})}
         </div>;
       })}</div>
-    </div>)}
+    </div>;})}
     {soundDrop&&<div className="sound-drop-line" style={{left:132+soundDrop.frame*ppf}}><span>{time(soundDrop.frame,true)}</span></div>}
     <div className="playhead" style={{left:132+frame*ppf,height:'calc(100% - 4px)'}}><span>{time(frame,true)}</span><i/></div>
     {selectionBox&&<div className="timeline-selection-box" aria-hidden="true" style={selectionBox}/>}
