@@ -1,10 +1,13 @@
-import React,{useEffect,useRef} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {clamp,clipsInRenderOrder,type Asset,type Clip,type Project} from './model';
 import {overlayHeight,type ClipOverlay} from './overlays';
+import {snapCanvasPosition} from './canvasSnapping';
+import './canvasGuides.css';
 
 type Corner='nw'|'ne'|'sw'|'se';
 export function MediaOverlayCanvas({project,assets,frame,selected,select,change,checkpoint,beforeGesture}:{project:Project;assets:Asset[];frame:number;selected:string|null;select:(id:string)=>void;change:(id:string,patch:Partial<ClipOverlay>,record?:boolean)=>void;checkpoint:()=>void;beforeGesture:()=>void}){
   const root=useRef<HTMLDivElement>(null),gesture=useRef<(()=>void)|null>(null);
+  const [guides,setGuides]=useState<{x:number|null;y:number|null}>({x:null,y:null});
   useEffect(()=>()=>gesture.current?.(),[]);
   function start(event:React.PointerEvent,clip:Clip,asset:Asset,corner?:Corner){
     if(event.button!==0||!event.isPrimary||!clip.overlay||!root.current)return;
@@ -24,12 +27,13 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
         const w=clamp((vx+vy/ratio)/(1+1/(ratio*ratio)),rect.width*.02,rect.width*2),h=w/ratio;
         patch={width:w/rect.width*100,x:clamp((anchor.x+sx*w/2)/rect.width*100,0,100),y:clamp((anchor.y+sy*h/2)/rect.height*100,0,100)};
       }else{
-        const snap=(value:number,pixels:number)=>Math.abs(value-50)*pixels/100<5?50:clamp(value,0,100);
-        patch={...original,x:snap(original.x+(next.clientX-startX)/rect.width*100,rect.width),y:snap(original.y+(next.clientY-startY)/rect.height*100,rect.height)};
+        const position=snapCanvasPosition(original.x+(next.clientX-startX)/rect.width*100,original.y+(next.clientY-startY)/rect.height*100,original.width/2,overlayHeight(project,asset,original.width)/2,rect.width,rect.height,!next.shiftKey,false);
+        setGuides(position.guides);
+        patch={...original,x:position.x,y:position.y};
       }
       change(clip.id,patch,false);
     };
-    const cleanup=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('keydown',escape,true);window.removeEventListener('blur',revert);try{if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);}catch{}gesture.current=null;};
+    const cleanup=()=>{setGuides({x:null,y:null});window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('keydown',escape,true);window.removeEventListener('blur',revert);try{if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);}catch{}gesture.current=null;};
     const up=(next:PointerEvent)=>{if(next.pointerId===event.pointerId){move(next);cleanup();}};
     const revert=()=>{if(moved)change(clip.id,original,false);cleanup();};
     const cancel=(next:PointerEvent)=>{if(next.pointerId===event.pointerId)revert();};
@@ -43,5 +47,5 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(direction&&!event.metaKey&&!event.ctrlKey&&!event.altKey){event.preventDefault();event.stopPropagation();select(clip.id);const step=event.shiftKey?5:.5;change(clip.id,{x:clamp(value.x+direction[0]*step,0,100),y:clamp(value.y+direction[1]*step,0,100)});}
     }}>{active&&(['nw','ne','sw','se'] as const).map(corner=><button key={corner} className={`media-overlay-handle ${corner}`} role="slider" aria-label={`Resize overlay ${corner}`} aria-valuemin={2} aria-valuemax={200} aria-valuenow={Number(value.width.toFixed(2))} aria-valuetext={`${value.width.toFixed(1)} percent width`} onKeyDown={event=>{const sign=['ArrowLeft','ArrowUp'].includes(event.key)?-1:['ArrowRight','ArrowDown'].includes(event.key)?1:0;if(!sign&&event.key!=='Home'&&event.key!=='End')return;event.preventDefault();event.stopPropagation();change(clip.id,{width:event.key==='Home'?2:event.key==='End'?200:clamp(value.width+sign*(event.shiftKey?5:.5),2,200)});}} onPointerDown={event=>start(event,clip,asset,corner)} onClick={event=>event.stopPropagation()}/>)}</div>;
-  })}</div>;
+  })}{guides.x!==null&&<div className="canvas-snap-guide vertical" aria-hidden="true" style={{left:`${clamp(guides.x,.1,99.9)}%`}}/>}{guides.y!==null&&<div className="canvas-snap-guide horizontal" aria-hidden="true" style={{top:`${clamp(guides.y,.1,99.9)}%`}}/>}</div>;
 }

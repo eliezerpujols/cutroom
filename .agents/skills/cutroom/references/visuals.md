@@ -100,7 +100,9 @@ placement without creating another track. Placement x/y are center percentages
 (0–100); width is percent of composition width (2–200) with aspect ratio preserved.
 Use enabled=false for full-frame layout on the current track. The UI exposes
 Make overlay in the selected clip inspector and drag/resize handles in the paused
-preview. Changes are saved and used by MP4 and cover rendering.
+preview. Pink canvas guides mark center and edge snaps while moving overlays.
+Shift bypasses snapping; guides are preview-only and clear after the gesture.
+Placement changes are saved and used by MP4 and cover rendering.
 
 Call `list_layers` for the exact top-to-bottom layer keys and revision. Pass
 every key exactly once to `reorder_layers`; it changes stacking without shifting

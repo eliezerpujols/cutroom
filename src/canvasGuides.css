@@ -1,0 +1,4 @@
+/* Preview-only alignment guides shared by canvas text and media overlays. */
+.canvas-snap-guide{position:absolute;pointer-events:none;z-index:10;background:#e973bc;box-shadow:0 0 0 .5px #0002}
+.canvas-snap-guide.vertical{top:0;bottom:0;width:1px}
+.canvas-snap-guide.horizontal{left:0;right:0;height:1px}

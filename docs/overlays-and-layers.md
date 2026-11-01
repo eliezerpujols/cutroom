@@ -12,7 +12,11 @@ The existing 12-media-track project limit still applies to new allocations;
 a full project reports the same track-limit error without changing the clip.
 
 When paused, select the overlay on the preview and drag it to move it. Drag a
-corner to resize with its aspect ratio locked. Size and position are also editable
+corner to resize with its aspect ratio locked. Pink guides appear while dragging
+when the overlay snaps to the canvas center or edges, using the same preview-pixel
+threshold as text. Hold Shift to bypass snapping. Guides clear when the gesture
+ends or is canceled and are not saved or exported. Oversized overlays can still
+move for framing instead of being locked to the center. Size and position are also editable
 in the inspector. **Full frame** removes the placement on the current track.
 Undo restores the previous state. A drag creates one undo step; Escape cancels it.
 Arrow keys move an overlay, Shift increases the step, and the focused corner
