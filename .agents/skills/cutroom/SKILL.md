@@ -1,6 +1,6 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, and create, reopen, edit, or export local Cutroom projects through its MCP.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, and manage local Cutroom projects or clear project exports through its MCP.
 ---
 
 # Cutroom
@@ -136,6 +136,26 @@ with **Locate file** in the media panel, preserving the existing source windows.
   the media is undetectable or AI-free because metadata was cleaned.
 - To move or back up work, keep `project.cutroom`, `media/`, `thumbs/`, and
   `exports/` together. The manifest alone does not include the media.
+
+## Free space from exports
+
+Use `delete_exports` when the user asks to clear exports or free space from
+exported files. It covers all recognized project folders inside
+`~/Documents/Cut Room` only, even when `CUTROOM_PROJECTS_DIR` points elsewhere;
+there is no custom-root argument. It has no editor button and does not open or
+change project timelines.
+
+`{"dry_run": true}` previews eligible file counts and bytes without deleting.
+When the user explicitly requests cleanup, use `{"dry_run": false}` to delete
+eligible exports permanently. Adding or documenting this tool is not a request
+to run deletion. Do not invoke it automatically after exports or dubbing.
+
+It preserves project documents, sources, media and sound libraries, thumbnails,
+history, nested export folders, links, shared files, and exports referenced as
+source media. Active projects are skipped; a running export blocks cleanup.
+Report actual `deleted_files`, `freed_bytes` and any skipped items; a preview's
+`bytes` is potential space, not space already freed. Do not substitute recursive
+shell deletion if the tool refuses or skips files.
 
 ## Setup when tools are unavailable
 

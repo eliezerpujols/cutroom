@@ -1,3 +1,4 @@
+import {cleanupProjectExports,exportCleanupRoot,registerExportCleanupRoute} from './exportCleanup';
 import express from 'express';
 import multer from 'multer';
 import {fileURLToPath} from 'node:url';
@@ -138,6 +139,29 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
 
 type Job={id:string;projectId:string;status:'queued'|'rendering'|'rendering-cover'|'finalizing'|'completed'|'failed';progress:number;cover?:CoverCompanion;coverError?:string;format?:'png';url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
 const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,busy=false;
+registerExportCleanupRoute(app,async dryRun=>{
+  if(busy)throw Object.assign(new Error('An export or cleanup is running. Let it finish first.'),{status:409});
+  busy=true;
+  try{
+    const projects=await store.list();
+    return await cleanupProjectExports(exportCleanupRoot(),dryRun,{
+      protectedFiles:async()=>{
+        const files:string[]=[];
+        for(const item of projects){
+          if(!item.available)throw new Error('A registered project is unavailable; restore it before cleaning exports so its sources can be protected.');
+          const document=await store.read(item.id);
+          for(const asset of document.assets)for(const relative of [asset.file,...asset.thumbnails])files.push(await store.assetPath(item.id,relative));
+        }
+        return files;
+      },
+      isProjectBusy:async id=>{
+        if([...jobs.values()].some(job=>job.projectId===id&&!['completed','failed'].includes(job.status)))return true;
+        if((await dubbing.list()).jobs.some(job=>job.project_id===id&&job.running))return true;
+        return projects.some(project=>project.id===id)&&(await captions.list(id)).some(job=>job.running);
+      }
+    });
+  }finally{busy=false;}
+});
 const reserveExport:express.RequestHandler=(_req,res,next)=>{if(busy){res.status(409).json({error:'An export is already running. Let it finish first.'});return;}busy=true;res.once('finish',()=>{if(res.statusCode>=400)busy=false;});next();};
 app.post('/api/export',reserveExport,async(req,res)=>{
   const body=z.object({projectId:z.string().optional(),project:projectSchema.optional(),format:z.enum(['mp4','wav','mp3']),selection:z.object({start:z.number().int().min(0),end:z.number().int().min(1)}).optional()}).parse(req.body),pid=body.projectId||store.legacyId();
