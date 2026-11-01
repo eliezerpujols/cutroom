@@ -1,0 +1,15 @@
+/* Match Sounds without inheriting the former media-card/grid layout. */
+.media-panel.media-library-panel{min-width:0;overflow:hidden;padding:16px 15px 12px}
+.media-library-panel>.panel-heading,.media-library-panel>.sound-search,.media-library-panel>.sound-category,.media-library-panel>.sound-library-footer{flex-shrink:0}
+.media-library-results{flex:1;min-height:0;overflow:auto;padding:12px 0;scrollbar-gutter:stable}
+.media-row{gap:8px;min-height:60px}
+.media-row-leading{width:46px;height:46px;flex-shrink:0;display:grid;place-items:center;color:var(--muted)}
+.media-row-thumbnail{display:grid;place-items:center;width:44px;height:44px;overflow:hidden;border:1px solid var(--border);border-radius:6px;padding:0;background:var(--subtle);color:var(--muted);cursor:pointer}
+.media-row-thumbnail img{width:100%;height:100%;object-fit:cover}
+.media-row .sound-detail{flex-wrap:wrap;gap:4px 8px}
+.media-row .sound-detail>span{white-space:nowrap}
+.media-row-download{display:grid;place-items:center;min-width:24px;min-height:24px;color:var(--muted);border-radius:6px}
+.media-row-download:hover{background:var(--hover);color:var(--foreground)}
+.media-locate{display:inline-block;font-size:10px;color:var(--primary);line-height:1.8;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.media-locate:focus-within{outline:2px solid var(--ring);outline-offset:2px}
+@media(max-width:800px){.media-panel.media-library-panel{padding:16px 20px}.media-row-download{min-width:32px;min-height:32px}}
