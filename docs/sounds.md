@@ -48,8 +48,9 @@ node --import tsx scripts/import-soundbuttonsworld.ts --limit 50
 
 `--limit` is the target total of SoundButtonsWorld entries, including sounds
 already in the library. Existing source entries are reused without re-downloading
-their audio. The bounded category-page list provides candidates for larger
-authorized batches; it does not crawl the whole site.
+their audio. Catalog pages are fetched only as needed for the requested target.
+There is no 500-sound batch cap; `--limit` accepts positive safe integers.
+The shared library has a separate capacity of 10,000 records.
 
 The importer reads public catalog data embedded in public pages and its public
 category-pagination endpoint, and fetches the
