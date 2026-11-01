@@ -1,0 +1,8 @@
+/* Native select arrows ignore input padding. Draw a theme-aware chevron with a
+   consistent 12px inset and reserve text space across the editor's selectors. */
+:root{--select-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
+:root[data-theme=dark]{--select-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a5a5a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
+:root select:not([multiple]):is(:not([size]),[size="1"]){appearance:none;-webkit-appearance:none;padding-inline-end:38px;background-image:var(--select-chevron);background-repeat:no-repeat;background-position:right 12px center;background-size:14px 14px;text-overflow:ellipsis}
+button[aria-haspopup="menu"]:has(>svg.lucide-chevron-down){padding-inline:12px;min-width:38px}
+:root[dir=rtl] select:not([multiple]):is(:not([size]),[size="1"]){background-position:left 12px center}
+@media(forced-colors:active){:root select:not([multiple]):is(:not([size]),[size="1"]){appearance:auto;-webkit-appearance:menulist;background-image:none;padding-inline-end:12px}}
