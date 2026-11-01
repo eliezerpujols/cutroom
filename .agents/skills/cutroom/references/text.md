@@ -46,3 +46,11 @@ Returned URLs include a new editor instance, `view=text`, and the focused text
 ID when available. Open them in a **new tab** and preserve all query parameters.
 The new instance opens at that title's start. Existing editing tabs receive only
 a project-scoped change notice and are never navigated or reloaded automatically.
+
+## Dragging from panels
+
+The UI shows a shared green timeline insertion guide for Media, Sounds and Text
+panel drags. Text presets and Add text create a new timed text clip at the guide.
+Dragging an existing Your text row or transcript entry moves that text/caption
+without changing its style, duration or relative word timings. It is a local,
+undoable edit and does not run transcription. Shift bypasses snapping.

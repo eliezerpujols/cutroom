@@ -1,0 +1,5 @@
+.library-drop-line{position:absolute;top:0;bottom:0;width:2px;background:var(--primary);pointer-events:none;z-index:12}
+.library-drop-line>span{position:sticky;top:3px;display:inline-block;margin-left:5px;padding:3px 5px;border-radius:3px;background:var(--primary);color:var(--primary-foreground);font-size:9px;white-space:nowrap}
+.library-drop-target>.track-label{background:var(--subtle)}
+.video-text-presets button[draggable=true],.video-text-list-item[draggable=true],.caption-transcript-row[draggable=true]{cursor:grab}
+.video-text-presets button[draggable=true]:active,.video-text-list-item[draggable=true]:active,.caption-transcript-row[draggable=true]:active{cursor:grabbing}
