@@ -34,7 +34,9 @@ the word count redistributes timing within that cue, so review its sync. Changin
 duration rescales word timings. Captions remain independent of video/audio;
 later media edits can require caption timing adjustments.
 
-Inter is the default font; DM Sans and Manrope are also bundled. Style controls
+New captions default to Inter Bold (700), 47px, 120% line height, 0 letter
+spacing, white text (#ffffff), and an enabled black (#000000) 5px outline.
+Existing saved caption styles stay as authored. DM Sans and Manrope are also bundled. Style controls
 include fill, font weight/size, outline color/width, vertical position, spoken-word
 highlight and word/phrase/sentence display. The Highlight words popover offers
 None/Fade/Pop animation of only the active word (`highlightMotion`); it requires

@@ -7,7 +7,7 @@ export type CaptionCue={effects?:import('./effects').Effects;hidden?:boolean;id:
 export type CaptionStyle={shadow?:Partial<import('./effects').TextShadow>;fontFamily:FontFamily;fontSize:number;fontWeight:number;lineHeight?:number;letterSpacing?:number;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;display:'word'|'phrase'|'sentence';motion:'none'|'fade'|'pop';highlight:boolean;highlightColor:string;highlightMotion?:'none'|'fade'|'pop';x?:number;y:number;width?:number;align?:'left'|'center'|'right'};
 export type CaptionLayer={id:string;name:string;muted:boolean;language:string;style:CaptionStyle;cues:CaptionCue[];sourceJobId?:string;sourceSignature?:string};
 export type CaptionSelection={layerId:string;cueId?:string}|null;
-export const defaultCaptionStyle:CaptionStyle={fontFamily:'Inter Variable',fontSize:56,fontWeight:700,color:'#ffffff',stroke:true,strokeColor:'#111111',strokeWidth:3,display:'phrase',motion:'none',highlight:false,highlightColor:'#d9efad',y:82};
+export const defaultCaptionStyle:CaptionStyle={fontFamily:'Inter Variable',fontSize:47,fontWeight:700,lineHeight:1.2,letterSpacing:0,color:'#ffffff',stroke:true,strokeColor:'#000000',strokeWidth:5,display:'phrase',motion:'none',highlight:false,highlightColor:'#d9efad',y:82};
 export const cueText=(cue:CaptionCue)=>cue.words.map(word=>word.text).join(' ');
 export const effectiveCaptionStyle=(layer:CaptionLayer,cue:CaptionCue):CaptionStyle=>({...layer.style,...cue.style,...(layer.style.shadow||cue.style?.shadow?{shadow:mergeTextShadows(layer.style.shadow,cue.style?.shadow)}:{})});
 
