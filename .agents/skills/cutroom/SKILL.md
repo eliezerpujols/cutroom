@@ -48,6 +48,11 @@ replacing other style values.
 While Effects is active, selecting text, captions, media or a mixed selection
 keeps Effects open and updates its target. Only explicit navigation changes tools;
 other library tabs retain their usual selection-driven navigation.
+Use shared PositionSizeControls near the top of the inspector for text, cover,
+caption styles and media/Studio overlays: compact percentage X/Y/Width fields and
+separate horizontal/vertical centering buttons. Do not bury positioning after
+visual styles or use long stacks of position sliders and helper text. Preserve
+each target's width limits and mixed values; preview dragging remains available.
 For effects and transitions, use square image preview tiles with short names;
 show the effect on hover or keyboard focus and respect reduced motion. Verify the
 rendered result in the editor before presenting it.

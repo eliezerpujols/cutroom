@@ -1,8 +1,3 @@
-.overlay-controls .section-title>.button{font-size:9px;height:26px;padding:0 6px}
-.overlay-control-heading{display:flex;align-items:center;justify-content:space-between;font-size:10px;margin-bottom:6px}
-.overlay-control-heading>span:last-child{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:9px}
-.overlay-control-heading .input{width:56px;height:25px;padding:0 5px;text-align:center;font-size:10px;background:var(--subtle);border-color:transparent}
-.overlay-position{margin-top:14px;font-size:10px}.overlay-position summary{cursor:pointer;color:var(--muted);padding:3px 0}.overlay-position .field-grid{margin-top:12px}.overlay-position>.button{font-size:10px;margin-top:8px}
 .media-overlay-canvas{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
 .media-overlay-box{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:move;touch-action:none;outline:1px solid transparent}
 .media-overlay-box:hover{outline-color:var(--ring)}.media-overlay-box.selected{outline:2px solid var(--ring)}
