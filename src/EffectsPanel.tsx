@@ -1,16 +1,15 @@
+import {EffectTile} from './EffectTile';
 import {textAnimationOptions,textMotionOptions,textStyleOptions,textAppearanceOptions,textEffectDefaults,isTextAnimation} from './textEffects';
-import {AnimatedText} from './remotion/AnimatedText';
 import {textTransitionTargets} from './textTransitions';
 import {MotionTimingControls} from './MotionTimingControls';
 import React,{useEffect,useId,useState} from 'react';
 import {RotateCcw,X} from 'lucide-react';
 import {Button,IconButton} from './ui/primitives';
 import {commonStyleValue,StyleRange,StyleNumber,StyleColor} from './StyleControls';
-import {defaultEffects,effectStyle,maskStyle,motionOptions,motionStyle,selectedEffectItems,patchSelectionEffects,mapSelectionMotion,transitionPrevious,type Effects,type MotionKind} from './effects';
+import {defaultEffects,motionOptions,selectedEffectItems,patchSelectionEffects,mapSelectionMotion,transitionPrevious,type Effects,type MotionKind} from './effects';
 import {FPS,type Asset,type Project} from './model';
 import './effects.css';
 import {dynamicMotionOptions,styleOptions,continuousDefaults,supportsMotionTiming,resizeMotionTiming,withMotionTiming,type ContinuousEffects} from './continuousEffects';
-import {ContinuousLayer} from './remotion/ContinuousLayer';
 
 type EffectTab='enter'|'exit'|'transition';
 type EffectCategory='animation'|'motion'|'styles'|'appearance';
@@ -22,20 +21,6 @@ function EffectTabs<T extends string>({options,value,change,applied,id,label,cla
   return <div className={className} role="tablist" aria-label={label}>{options.map(([key,name],index)=><Button key={key} id={`${id}-${key}`} role="tab" variant="ghost" size="sm" aria-selected={value===key} aria-label={applied[key]?`${name}, effect applied`:name} aria-controls={`${id}-panel`} tabIndex={value===key?0:-1} onClick={()=>change(key)} onKeyDown={event=>{const next=event.key==='ArrowRight'?(index+1)%options.length:event.key==='ArrowLeft'?(index+options.length-1)%options.length:event.key==='Home'?0:event.key==='End'?options.length-1:null;if(next!==null){event.preventDefault();change(options[next][0]);document.getElementById(`${id}-${options[next][0]}`)?.focus();}}}>{name}{applied[key]&&<span className="status-dot" aria-hidden="true"/>}</Button>)}</div>;
 }
 
-function EffectTile({textPreview=false,preset,group,name,kind,mode='enter',thumbnail,previousThumbnail,mask,selected,disabled,choose}:{textPreview?:boolean;preset?:Partial<Effects>;group?:string;name:string;kind:MotionKind;mode?:EffectTab;thumbnail?:string;previousThumbnail?:string;mask?:Effects['mask'];selected:boolean;disabled?:boolean;choose:()=>void}){
-  const [hovered,setHovered]=useState(false),[focused,setFocused]=useState(false),[frame,setFrame]=useState(mode==='exit'?35:10);
-  useEffect(()=>{
-    if(!(hovered||focused)||matchMedia('(prefers-reduced-motion: reduce)').matches){setFrame(mode==='exit'?35:10);return;}
-    let request:number,start:number|undefined;
-    const tick=(now:number)=>{start??=now;setFrame(Math.floor((now-start)/1000*FPS)%54);request=requestAnimationFrame(tick);};
-    request=requestAnimationFrame(tick);return()=>cancelAnimationFrame(request);
-  },[hovered,focused,mode]);
-  const effects={...defaultEffects,enter:mode==='enter'?kind:'none',exit:mode==='exit'?kind:'none',enterFrames:24,exitFrames:24};
-  const previewFrame=!(hovered||focused)&&preset?.style==='negative'?1:frame;
-  const style=mask?maskStyle({...defaultEffects,mask}):mode==='transition'?motionStyle(kind,Math.min(1,frame/24)):effectStyle(effects,Math.min(frame,47),48);
-  const sample=(src?:string)=>textPreview?<span className={`effect-text-sample${preset?.textStyle&&preset.textStyle!=='none'||preset?.textAppearance&&preset.textAppearance!=='none'?' is-styled':''}`}><AnimatedText text={kind==='text-words'?'Hi there':'Hello'} effects={{...defaultEffects,...effects,...preset}} frame={Math.min(previewFrame,47)} duration={48}/></span>:src?<img src={src} alt="" loading="lazy" draggable={false}/>:<span className="effect-sample-fallback">Aa</span>;
-  return <Button variant="ghost" className="effect-tile" aria-label={`${group??(mask?'Mask':mode==='enter'?'Entrance':mode==='exit'?'Exit':'Transition')}: ${name}`} aria-pressed={selected} disabled={disabled} onClick={choose} onPointerEnter={()=>setHovered(true)} onPointerLeave={()=>setHovered(false)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}><span className="effect-tile-image" aria-hidden="true">{mode==='transition'&&kind!=='none'&&<span className="effect-sample effect-sample-previous">{sample(previousThumbnail??thumbnail)}</span>}<span className="effect-sample" style={preset?undefined:style}>{preset?<ContinuousLayer effects={preset} frame={previewFrame} duration={54} fill>{sample(thumbnail)}</ContinuousLayer>:sample(thumbnail)}</span></span><span className="effect-tile-label">{name}</span></Button>;
-}
 
 export function EffectsPanel({project,assets,ids,edit,checkpoint,hide,transitionRequest=0}:{transitionRequest?:number;project:Project;assets:Asset[];ids:string[];edit:(change:(project:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;hide:()=>void}){
   const [category,setCategory]=useState<EffectCategory>('animation'),[tab,setTab]=useState<EffectTab>('enter'),panelId=useId(),categoryId=useId();

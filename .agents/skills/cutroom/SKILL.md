@@ -53,6 +53,9 @@ caption styles and media/Studio overlays: compact percentage X/Y/Width fields an
 separate horizontal/vertical centering buttons. Do not bury positioning after
 visual styles or use long stacks of position sliders and helper text. Preserve
 each target's width limits and mixed values; preview dragging remains available.
+Caption Display uses shared EffectTile previews for None/Fade/Pop transitions;
+Highlight words uses StyleSettingsRow with a visibility toggle and color popover.
+Keep display mode, transitions and highlighting together; preserve mixed states.
 For effects and transitions, use square image preview tiles with short names;
 show the effect on hover or keyboard focus and respect reduced motion. Verify the
 rendered result in the editor before presenting it.

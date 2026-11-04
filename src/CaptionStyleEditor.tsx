@@ -1,3 +1,4 @@
+import {EffectTile} from './EffectTile';
 import {PositionSizeControls} from './PositionSizeControls';
 import {InspectorSection} from './InspectorSection';
 import {StyleSettingsRow} from './StyleSettingsRow';
@@ -8,7 +9,7 @@ import {FontPicker} from './ui/FontPicker';
 import {Button} from './ui/primitives';
 import {SlidersHorizontal} from 'lucide-react';
 import type {CaptionStyle} from './captions';
-import {commonStyleValue,StyleChoice,StyleColor,StyleNumber,StyleRange,StyleToggle} from './StyleControls';
+import {commonStyleValue,StyleChoice,StyleColor,StyleNumber,StyleRange} from './StyleControls';
 
 type Props={style?:CaptionStyle;styles?:CaptionStyle[];scopeKey?:string;change:(patch:Partial<CaptionStyle>,record?:boolean)=>void;checkpoint:()=>void};
 export function CaptionStyleEditor({style,styles,scopeKey='captions',change,checkpoint}:Props){
@@ -26,8 +27,8 @@ export function CaptionStyleEditor({style,styles,scopeKey='captions',change,chec
     <OutlineControls key={scopeKey+'-outline'} values={values} change={change} checkpoint={checkpoint}/>
     <ShadowControls key={scopeKey} values={values} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
     <InspectorSection title="Display">{get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}<div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
-      <StyleChoice label="Transition" value={get('motion')} options={[["none","None"],["fade","Fade"],["pop","Pop"]]} change={motion=>change({motion:motion as CaptionStyle['motion']})}/>
-      <StyleToggle label="Highlight spoken word" value={get('highlight')} change={highlight=>change({highlight})}/>{values.some(value=>value.highlight)&&color('Highlight color','highlightColor')}
+      <div className="field"><span>Transition</span><div className="effect-grid" role="group" aria-label="Caption transition">{([['none','None'],['fade','Fade'],['pop','Pop']] as const).map(([motion,name])=><EffectTile key={motion} textPreview group="Caption transition" name={name} kind="none" previewStyle={frame=>{const progress=Math.min(1,frame/12);return {opacity:motion==='fade'?progress:1,transform:motion==='pop'?`scale(${.9+.1*(1-(1-progress)**3)})`:undefined};}} selected={get('motion')===motion} choose={()=>change({motion})}/>)}</div></div>
+      <StyleSettingsRow label="Highlight words" color={get('highlightColor')} enabled={get('highlight')} toggle={()=>change({highlight:get('highlight')!==true})}>{color('Highlight color','highlightColor')}</StyleSettingsRow>
     </InspectorSection>
 
   </div>;
