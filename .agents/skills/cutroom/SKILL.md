@@ -34,7 +34,11 @@ Keep editor panels compact: short labels, small existing type, and controls that
 appear when relevant. Avoid explanatory callouts and repeated helper paragraphs.
 Use background fills rather than decorative borders for fields, text presets,
 text rows and editor buttons. Keep keyboard focus rings and section dividers;
-text and media inspectors share the same section spacing.
+text and media inspectors share the same section spacing. Every divided property
+group has a visible heading using the shared section-title typography (11px,
+550 weight, 18px line height), with smaller regular-weight control labels inside.
+Use InspectorSection for text/caption groups; keep Text, Font, Color, Background,
+Outline and Shadows distinct rather than leaving unlabeled groups under Timing.
 For effects and transitions, use square image preview tiles with short names;
 show the effect on hover or keyboard focus and respect reduced motion. Verify the
 rendered result in the editor before presenting it.

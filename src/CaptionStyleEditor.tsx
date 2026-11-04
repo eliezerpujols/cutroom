@@ -1,3 +1,4 @@
+import {InspectorSection} from './InspectorSection';
 import {ShadowControls} from './ShadowControls';
 import React from 'react';
 import {FontPicker} from './ui/FontPicker';
@@ -13,17 +14,18 @@ export function CaptionStyleEditor({style,styles,scopeKey='captions',change,chec
   const range=(label:string,field:'fontSize'|'strokeWidth'|'x'|'y'|'width',min:number,max:number,step:number,unit:string)=><StyleRange label={label} value={get(field)} min={min} max={max} step={step} unit={unit} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
   const color=(label:string,field:'color'|'strokeColor'|'highlightColor')=><StyleColor label={label} value={get(field)} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
   return <div className="caption-style-controls">
-    <div className="caption-control-section"><div className="caption-section-label">Text</div><FontPicker key={scopeKey} value={get('fontFamily')} change={fontFamily=>change({fontFamily})}/>
+    <InspectorSection title="Font"><FontPicker hideLabel key={scopeKey} value={get('fontFamily')} change={fontFamily=>change({fontFamily})}/>
       <StyleChoice label="Weight" value={get('fontWeight')?.toString()} options={[["400","Regular"],["500","Medium"],["600","Semibold"],["700","Bold"],["800","Extra bold"],["900","Black"]]} change={fontWeight=>change({fontWeight:Number(fontWeight)})}/>
-      {range('Size','fontSize',16,160,1,' px')}<div className="text-spacing-controls"><StyleNumber key={scopeKey+'-line'} label="Line height" value={get('lineHeight')} min={80} max={300} scale={100} unit="%" checkpoint={checkpoint} change={lineHeight=>change({lineHeight},false)}/><StyleNumber key={scopeKey+'-letter'} label="Letter spacing" value={get('letterSpacing')} min={-10} max={30} scale={100} unit="%" checkpoint={checkpoint} change={letterSpacing=>change({letterSpacing},false)}/></div>{color('Text color','color')}
-    </div>
-    <div className="caption-control-section"><StyleToggle label="Outline" value={get('stroke')} change={stroke=>change({stroke})}/>{values.some(value=>value.stroke)&&<>{color('Outline color','strokeColor')}{range('Thickness','strokeWidth',0,12,.5,' px')}</>}</div>
+      {range('Size','fontSize',16,160,1,' px')}<div className="text-spacing-controls"><StyleNumber key={scopeKey+'-line'} label="Line height" value={get('lineHeight')} min={80} max={300} scale={100} unit="%" checkpoint={checkpoint} change={lineHeight=>change({lineHeight},false)}/><StyleNumber key={scopeKey+'-letter'} label="Letter spacing" value={get('letterSpacing')} min={-10} max={30} scale={100} unit="%" checkpoint={checkpoint} change={letterSpacing=>change({letterSpacing},false)}/></div>
+    </InspectorSection>
+    <InspectorSection title="Color">{color('Text color','color')}</InspectorSection>
+    <InspectorSection title="Outline"><StyleToggle label="Outline" value={get('stroke')} change={stroke=>change({stroke})}/>{values.some(value=>value.stroke)&&<>{color('Outline color','strokeColor')}{range('Thickness','strokeWidth',0,12,.5,' px')}</>}</InspectorSection>
     <ShadowControls key={scopeKey} values={values} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
-    <div className="caption-control-section"><div className="caption-section-label">Display {get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}</div><div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
+    <InspectorSection title="Display">{get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}<div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
       <StyleChoice label="Transition" value={get('motion')} options={[["none","None"],["fade","Fade"],["pop","Pop"]]} change={motion=>change({motion:motion as CaptionStyle['motion']})}/>
       <StyleToggle label="Highlight spoken word" value={get('highlight')} change={highlight=>change({highlight})}/>{values.some(value=>value.highlight)&&color('Highlight color','highlightColor')}
-    </div>
-    <div className="caption-control-section">{range('Horizontal position','x',0,100,1,'%')}{range('Vertical position','y',0,100,1,'%')}{range('Text box width','width',10,96,1,'%')}<Button variant="outline" size="sm" onClick={()=>change({x:50,y:50})}>Center on canvas</Button></div>
+    </InspectorSection>
+    <InspectorSection title="Position & size">{range('Horizontal position','x',0,100,1,'%')}{range('Vertical position','y',0,100,1,'%')}{range('Text box width','width',10,96,1,'%')}<Button variant="outline" size="sm" onClick={()=>change({x:50,y:50})}>Center on canvas</Button></InspectorSection>
   </div>;
 }
 

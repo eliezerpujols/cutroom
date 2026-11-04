@@ -13,7 +13,6 @@ import {EditComposition} from './remotion/Composition';
 import {Timeline} from './Timeline';
 import {SoundsPanel} from './SoundsPanel';
 import {MediaPanel} from './MediaPanel';
-import './inspector.css';
 import './overlays.css';
 import {OverlayControls} from './OverlayControls';
 import {MediaOverlayCanvas} from './MediaOverlayCanvas';
