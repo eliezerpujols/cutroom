@@ -4,10 +4,10 @@ import type {Project} from './model';
 import {textLineHeight,type CoverText} from './visuals';
 import {effectiveCaptionStyle,type CaptionCue,type CaptionLayer,type CaptionStyle} from './captions';
 
-export type SelectionStyle=Omit<CoverText,'id'|'text'>&Pick<CaptionStyle,'display'|'motion'|'highlight'|'highlightColor'>;
+export type SelectionStyle=Omit<CoverText,'id'|'text'>&Pick<CaptionStyle,'display'|'motion'|'highlight'|'highlightColor'|'highlightMotion'>;
 export type SelectionStylePatch=Partial<SelectionStyle>;
 const textKeys=['shadow','fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','italic','color','stroke','strokeColor','strokeWidth','fill','fillColor','padding','radius','x','y','width','align'] as const;
-const captionKeys=['shadow','fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','color','stroke','strokeColor','strokeWidth','display','motion','highlight','highlightColor','x','y','width','align'] as const;
+const captionKeys=['shadow','fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','color','stroke','strokeColor','strokeWidth','display','motion','highlight','highlightColor','highlightMotion','x','y','width','align'] as const;
 
 function only<K extends keyof SelectionStyle>(patch:SelectionStylePatch,keys:readonly K[]):Pick<SelectionStylePatch,K>{
   return Object.fromEntries(keys.filter(key=>patch[key]!==undefined).map(key=>[key,patch[key]])) as Pick<SelectionStylePatch,K>;

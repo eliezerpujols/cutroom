@@ -55,9 +55,11 @@ caption styles and media/Studio overlays: compact percentage X/Y/Width fields an
 separate horizontal/vertical centering buttons. Do not bury positioning after
 visual styles or use long stacks of position sliders and helper text. Preserve
 each target's width limits and mixed values; preview dragging remains available.
-Caption Display uses shared EffectTile previews for None/Fade/Pop transitions;
-Highlight words uses StyleSettingsRow with a visibility toggle and color popover.
-Keep display mode, transitions and highlighting together; preserve mixed states.
+Caption-wide animations belong in Effects. Caption Display contains grouping and
+Highlight words; its popover holds color and None/Fade/Pop highlighted-word animation
+(`highlightMotion`). It animates only the active spoken word when highlighting is
+enabled, in preview and MP4 export. Preserve mixed states. Legacy `motion` continues
+to render saved whole-caption animations; do not repurpose it as highlightMotion.
 For effects and transitions, use square image preview tiles with short names;
 show the effect on hover or keyboard focus and respect reduced motion. Verify the
 rendered result in the editor before presenting it.

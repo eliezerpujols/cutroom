@@ -36,25 +36,28 @@ later media edits can require caption timing adjustments.
 
 Inter is the default font; DM Sans and Manrope are also bundled. Style controls
 include fill, font weight/size, outline color/width, vertical position, spoken-word
-highlight, word/phrase/sentence display, and None/Fade/Pop motion. Sentence mode
+highlight and word/phrase/sentence display. The Highlight words popover offers
+None/Fade/Pop animation of only the active word (`highlightMotion`); it requires
+`highlight: true`. Use Effects / `set_effects` for caption-wide animation. Legacy
+`motion` values still render existing projects and are not highlight settings. Sentence mode
 shows a complete cue, grouped at punctuation or readability limits; phrase mode
 shows up to six words. MP4 exports burn in these styles. `export_caption_subtitles`
 writes SRT/VTT with the selected grouping and timings inside `exports/`; subtitle
 files do not retain the MP4's font, outline, colors or motion.
 
-The editor's Media/Text rail opens **Text → Auto-transcript**. Caption cues appear
+The editor's **Caption** rail opens Auto-transcript. Caption cues appear
 on separate timeline rows and in the transcript list. Select a cue to edit its
 text or timing; drag it or its edges to move/resize it. The Style button opens
 settings inside the left panel, leaving the video visible. Up to four caption
-layers are supported. Current box selection groups video/audio clips; caption
-cues are selected and moved individually.
+layers are supported. Box selection supports media, text and caption cues together.
 
 ## Editor navigation
 
 Caption has its own toolbar entry, separate from Text. It contains
 Auto-transcript generation, caption layers/rows, Caption style, and SRT/VTT
 export. The Text panel contains only manual title presets and authored text.
-Selecting a caption or opening its style inspector activates Caption.
+Selecting a caption activates Caption unless Effects is active; explicitly opening
+its style inspector activates Caption.
 `view=transcript` opens that panel directly; `view=text` remains manual text.
 Generation controls open by default in projects without caption layers. Merely
 opening Caption or checking availability never starts paid transcription.

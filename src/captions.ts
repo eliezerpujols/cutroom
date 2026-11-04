@@ -4,7 +4,7 @@ import type {FontFamily} from './fonts';
 
 export type CaptionWord={text:string;start:number;end:number};
 export type CaptionCue={effects?:import('./effects').Effects;hidden?:boolean;id:string;start:number;duration:number;words:CaptionWord[];style?:Partial<CaptionStyle>};
-export type CaptionStyle={shadow?:Partial<import('./effects').TextShadow>;fontFamily:FontFamily;fontSize:number;fontWeight:number;lineHeight?:number;letterSpacing?:number;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;display:'word'|'phrase'|'sentence';motion:'none'|'fade'|'pop';highlight:boolean;highlightColor:string;x?:number;y:number;width?:number;align?:'left'|'center'|'right'};
+export type CaptionStyle={shadow?:Partial<import('./effects').TextShadow>;fontFamily:FontFamily;fontSize:number;fontWeight:number;lineHeight?:number;letterSpacing?:number;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;display:'word'|'phrase'|'sentence';motion:'none'|'fade'|'pop';highlight:boolean;highlightColor:string;highlightMotion?:'none'|'fade'|'pop';x?:number;y:number;width?:number;align?:'left'|'center'|'right'};
 export type CaptionLayer={id:string;name:string;muted:boolean;language:string;style:CaptionStyle;cues:CaptionCue[];sourceJobId?:string;sourceSignature?:string};
 export type CaptionSelection={layerId:string;cueId?:string}|null;
 export const defaultCaptionStyle:CaptionStyle={fontFamily:'Inter Variable',fontSize:56,fontWeight:700,color:'#ffffff',stroke:true,strokeColor:'#111111',strokeWidth:3,display:'phrase',motion:'none',highlight:false,highlightColor:'#d9efad',y:82};

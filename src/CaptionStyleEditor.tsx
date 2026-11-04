@@ -1,3 +1,4 @@
+import {highlightAnimationStyle} from './highlightAnimation';
 import {EffectTile} from './EffectTile';
 import {PositionSizeControls} from './PositionSizeControls';
 import {InspectorSection} from './InspectorSection';
@@ -13,7 +14,7 @@ import {commonStyleValue,StyleChoice,StyleColor,StyleNumber,StyleRange} from './
 
 type Props={style?:CaptionStyle;styles?:CaptionStyle[];scopeKey?:string;change:(patch:Partial<CaptionStyle>,record?:boolean)=>void;checkpoint:()=>void};
 export function CaptionStyleEditor({style,styles,scopeKey='captions',change,checkpoint}:Props){
-  const values=(styles??(style?[style]:[])).map(value=>({...value,x:value.x??50,width:value.width??88,align:value.align??'center',lineHeight:value.lineHeight??1.2,letterSpacing:value.letterSpacing??0}));
+  const values=(styles??(style?[style]:[])).map(value=>({...value,x:value.x??50,width:value.width??88,align:value.align??'center',lineHeight:value.lineHeight??1.2,letterSpacing:value.letterSpacing??0,highlightMotion:value.highlightMotion??'none'}));
   const get=<K extends keyof CaptionStyle>(key:K)=>commonStyleValue(values,key);
   const range=(label:string,field:'fontSize'|'strokeWidth'|'x'|'y'|'width',min:number,max:number,step:number,unit:string)=><StyleRange label={label} value={get(field)} min={min} max={max} step={step} unit={unit} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
   const color=(label:string,field:'color'|'strokeColor'|'highlightColor')=><StyleColor label={label} value={get(field)} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
@@ -27,8 +28,10 @@ export function CaptionStyleEditor({style,styles,scopeKey='captions',change,chec
     <OutlineControls key={scopeKey+'-outline'} values={values} change={change} checkpoint={checkpoint}/>
     <ShadowControls key={scopeKey} values={values} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
     <InspectorSection title="Display">{get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}<div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
-      <div className="field"><span>Transition</span><div className="effect-grid" role="group" aria-label="Caption transition">{([['none','None'],['fade','Fade'],['pop','Pop']] as const).map(([motion,name])=><EffectTile key={motion} textPreview group="Caption transition" name={name} kind="none" previewStyle={frame=>{const progress=Math.min(1,frame/12);return {opacity:motion==='fade'?progress:1,transform:motion==='pop'?`scale(${.9+.1*(1-(1-progress)**3)})`:undefined};}} selected={get('motion')===motion} choose={()=>change({motion})}/>)}</div></div>
-      <StyleSettingsRow label="Highlight words" color={get('highlightColor')} enabled={get('highlight')} toggle={()=>change({highlight:get('highlight')!==true})}>{color('Highlight color','highlightColor')}</StyleSettingsRow>
+      <StyleSettingsRow label="Highlight words" color={get('highlightColor')} enabled={get('highlight')} toggle={()=>change({highlight:get('highlight')!==true})}>
+        {color('Highlight color','highlightColor')}
+        <div className="field"><span>Animation</span><div className="effect-grid" role="group" aria-label="Highlight animation">{([['none','None'],['fade','Fade'],['pop','Pop']] as const).map(([highlightMotion,name])=><EffectTile key={highlightMotion} textPreview group="Highlight animation" name={name} kind="none" previewStyle={frame=>highlightAnimationStyle(highlightMotion,frame,30)??{}} selected={get('highlightMotion')===highlightMotion} choose={()=>change({highlightMotion})}/>)}</div></div>
+      </StyleSettingsRow>
     </InspectorSection>
 
   </div>;
