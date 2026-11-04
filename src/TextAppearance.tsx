@@ -1,4 +1,5 @@
 import {InspectorSection} from './InspectorSection';
+import {OutlineControls} from './OutlineControls';
 import {ShadowControls} from './ShadowControls';
 import {InspectorItemHeader,InspectorActions} from './InspectorItemHeader';
 import React from 'react';
@@ -24,7 +25,7 @@ export function TextStyleControls({styles,scopeKey,change,checkpoint,children}:S
     </InspectorSection>
     <InspectorSection title="Color">{color('color','Text color')}</InspectorSection>
     <InspectorSection title="Background"><StyleToggle label="Text background" value={background} change={enabled=>change({fill:enabled?'box':'none'})}/>{styles.some(text=>text.fill!=='none')&&<>{color('fillColor','Fill color')}{range('padding','Padding',0,60)}{range('radius','Roundness',0,100)}</>}</InspectorSection>
-    <InspectorSection title="Outline"><StyleToggle label="Outline" value={get('stroke')} change={stroke=>change({stroke})}/>{styles.some(text=>text.stroke)&&<>{color('strokeColor','Outline color')}{range('strokeWidth','Outline width',0,12,.5)}</>}</InspectorSection>
+    <OutlineControls key={scopeKey+'-outline'} values={styles} change={change} checkpoint={checkpoint}/>
     <ShadowControls key={scopeKey} values={styles} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
     <details className="inspector-section advanced"><summary><span>Position & size</span><ChevronRight size={15}/></summary><div className="advanced-content">{range('width','Text box width',10,96)}{range('x','Horizontal position',0,100)}{range('y','Vertical position',0,100)}<Button variant="outline" size="sm" onClick={()=>change({x:50})}>Center horizontally</Button><p className="field-hint">Drag the text on the preview to move it.</p></div></details>
   </div>;

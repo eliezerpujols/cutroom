@@ -1,4 +1,5 @@
 import {InspectorSection} from './InspectorSection';
+import {OutlineControls} from './OutlineControls';
 import {ShadowControls} from './ShadowControls';
 import React from 'react';
 import {FontPicker} from './ui/FontPicker';
@@ -19,7 +20,7 @@ export function CaptionStyleEditor({style,styles,scopeKey='captions',change,chec
       {range('Size','fontSize',16,160,1,' px')}<div className="text-spacing-controls"><StyleNumber key={scopeKey+'-line'} label="Line height" value={get('lineHeight')} min={80} max={300} scale={100} unit="%" checkpoint={checkpoint} change={lineHeight=>change({lineHeight},false)}/><StyleNumber key={scopeKey+'-letter'} label="Letter spacing" value={get('letterSpacing')} min={-10} max={30} scale={100} unit="%" checkpoint={checkpoint} change={letterSpacing=>change({letterSpacing},false)}/></div>
     </InspectorSection>
     <InspectorSection title="Color">{color('Text color','color')}</InspectorSection>
-    <InspectorSection title="Outline"><StyleToggle label="Outline" value={get('stroke')} change={stroke=>change({stroke})}/>{values.some(value=>value.stroke)&&<>{color('Outline color','strokeColor')}{range('Thickness','strokeWidth',0,12,.5,' px')}</>}</InspectorSection>
+    <OutlineControls key={scopeKey+'-outline'} values={values} change={change} checkpoint={checkpoint}/>
     <ShadowControls key={scopeKey} values={values} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
     <InspectorSection title="Display">{get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}<div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
       <StyleChoice label="Transition" value={get('motion')} options={[["none","None"],["fade","Fade"],["pop","Pop"]]} change={motion=>change({motion:motion as CaptionStyle['motion']})}/>
