@@ -32,6 +32,8 @@ design. Reuse Cutroom's existing components, typography, spacing, colors and
 interaction patterns; references guide structure, not a replacement visual theme.
 Keep editor panels compact: short labels, small existing type, and controls that
 appear when relevant. Avoid explanatory callouts and repeated helper paragraphs.
+Use the shared 10px control radius for filled fields, search, dropdowns, presets
+and selected/hover rows; avoid introducing different corner radii per panel.
 Use background fills rather than decorative borders for fields, text presets,
 text rows and editor buttons. Keep keyboard focus rings and section dividers;
 text and media inspectors share the same section spacing. Every divided property

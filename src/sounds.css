@@ -9,7 +9,7 @@
 .sound-group{margin-top:17px}
 .sound-group>h3{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;margin:0 0 6px}
 .sound-group>h3>span{color:var(--muted);font-size:9px;font-weight:400}
-.sound-row{display:flex;align-items:center;gap:6px;padding:8px 2px;border-radius:6px;cursor:grab;min-width:0}
+.sound-row{display:flex;align-items:center;gap:6px;padding:8px 2px;border-radius:var(--control-radius);cursor:grab;min-width:0}
 .sound-row:hover,.sound-row.playing{background:var(--subtle)}
 .sound-row:active{cursor:grabbing}
 .sound-row .sound-play{width:30px;height:32px;flex-shrink:0;color:var(--primary)}

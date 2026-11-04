@@ -11,7 +11,7 @@
 .cover-frame-number{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
 .cover-frame-actions{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
 .cover-text-list{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
-.cover-text-item{display:flex;align-items:center;gap:9px;width:100%;padding:9px 7px;border:1px solid transparent;background:transparent;border-radius:7px;margin-top:6px;color:var(--foreground);text-align:left;font-size:11px}
+.cover-text-item{display:flex;align-items:center;gap:9px;width:100%;padding:9px 7px;border:1px solid transparent;background:transparent;border-radius:var(--control-radius);margin-top:6px;color:var(--foreground);text-align:left;font-size:11px}
 .cover-text-item>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cover-text-item[aria-pressed=true]{background:var(--subtle)}
 .cover-text-glyph{display:grid;place-items:center;width:27px;height:27px;background:var(--surface-raised);border:1px solid var(--border);border-radius:5px;font-weight:700;font-family:'Inter Variable',sans-serif}
@@ -23,7 +23,7 @@
 .cover-download{display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;margin-top:13px;text-decoration:underline;text-underline-offset:3px}
 .cover-title-input{min-height:90px;resize:vertical;padding:10px;line-height:1.5;font-size:13px}
 .cover-style-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:14px}
-.cover-style-presets button{display:flex;flex-direction:column;align-items:center;gap:9px;border:1px solid transparent;border-radius:7px;background:var(--background);padding:12px 4px 9px;min-width:0}
+.cover-style-presets button{display:flex;flex-direction:column;align-items:center;gap:9px;border:1px solid transparent;border-radius:var(--control-radius);background:var(--background);padding:12px 4px 9px;min-width:0}
 .cover-style-presets:only-child{margin-top:0}
 .cover-style-presets button:hover{background:var(--hover)}
 .cover-style-presets button[aria-pressed=true]{background:var(--accent);color:var(--accent-text)}
@@ -97,7 +97,7 @@
 
 .manual-text-tools{padding:19px 0 18px}
 .video-text-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
-.video-text-presets button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:74px;background:var(--background);border:1px solid transparent;border-radius:7px;color:var(--foreground);padding:10px 4px}
+.video-text-presets button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:74px;background:var(--background);border:1px solid transparent;border-radius:var(--control-radius);color:var(--foreground);padding:10px 4px}
 .video-text-presets button:hover{background:var(--hover)}
 .video-text-presets button>span{font-family:'Inter Variable',sans-serif;line-height:1.2;font-size:25px;font-weight:750}
 .video-text-presets button>.text-preset-subtitle{font-size:20px;font-weight:600}
@@ -106,7 +106,7 @@
 .video-text-list{padding:0 0 16px}
 .video-text-list>h3{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;margin:0 0 8px}
 .video-text-list>h3 span{color:var(--muted);font-size:9px;font-weight:400}
-.video-text-list-item{display:flex;align-items:center;gap:7px;width:100%;min-width:0;border:1px solid transparent;border-radius:6px;padding:8px 5px;background:transparent;color:var(--muted);font-size:10px;text-align:left}
+.video-text-list-item{display:flex;align-items:center;gap:7px;width:100%;min-width:0;border:1px solid transparent;border-radius:var(--control-radius);padding:8px 5px;background:transparent;color:var(--muted);font-size:10px;text-align:left}
 .video-text-list-item>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--foreground)}
 .video-text-list-item>small{font-size:8px;font-variant-numeric:tabular-nums}
 .video-text-list-item[aria-pressed=true]{background:var(--subtle)}

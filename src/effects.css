@@ -1,7 +1,7 @@
 .effects-panel .panel-heading{margin-bottom:16px}
 .effect-heading-actions{display:flex;align-items:center;gap:0}
 .effect-heading-actions .button-icon{width:26px;height:26px}
-.effect-tabs{display:flex;gap:2px;padding:3px;border-radius:7px;background:var(--subtle);margin-bottom:18px}
+.effect-tabs{display:flex;gap:2px;padding:3px;border-radius:var(--control-radius);background:var(--subtle);margin-bottom:18px}
 .effect-tabs .button{gap:4px;flex:1;min-width:0;height:28px;padding:0 8px;font-size:10px;color:var(--muted);border-radius:5px}
 .effect-tabs .button[aria-selected=true]{background:var(--surface);color:var(--foreground);box-shadow:0 1px 3px #0000000d}
 .effect-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 9px}
@@ -64,7 +64,7 @@
 .motion-timing-line{fill:none;stroke:var(--primary);stroke-width:1.8;stroke-linecap:round}
 .motion-timing-baseline{fill:none;stroke:var(--border);stroke-width:1}
 .motion-timing-guides{fill:none;stroke:var(--primary);stroke-opacity:.2;stroke-dasharray:2 3}
-.motion-timing-mixed{height:42px;display:grid;place-items:center;color:var(--muted);font-size:10px;background:var(--subtle);border-radius:5px}
+.motion-timing-mixed{height:42px;display:grid;place-items:center;color:var(--muted);font-size:10px;background:var(--subtle);border-radius:var(--control-radius)}
 .effect-text-sample{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:3px;background:var(--accent);color:var(--accent-text);font-size:14px;font-weight:650;line-height:1.3;text-align:center;letter-spacing:-.025em}
 .effect-group-label{font-size:10px;color:var(--muted);margin:20px 0 12px}
 .effect-text-controls{margin-top:16px}
