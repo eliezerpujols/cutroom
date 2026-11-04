@@ -116,12 +116,12 @@ each style panel continues to target only its own selected item type.
 Validation: TypeScript/production build and static review only. No browser
 selection gestures or edits to the user's project were exercised.
 
-## Separate Text and Transcript navigation
+## Separate Text and Caption navigation
 
-Text owns Add text, title presets and the authored text list. Transcript owns
+Text owns Add text, title presets and the authored text list. Caption owns
 caption generation, caption layers/rows, style editing and SRT/VTT downloads.
 Timeline/canvas title selection opens Text; caption selection/style opens
-Transcript. A mixed text/caption selection retains the current relevant panel.
+Caption. A mixed text/caption selection retains the current relevant panel.
 `view=transcript` is available for direct navigation; `view=text` is unchanged.
 Shared selection modifiers, drag payloads and style controls remain in use.
 

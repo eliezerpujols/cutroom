@@ -30,9 +30,9 @@ selected frame. The cover's caption toggle affects speech-caption layers only.
 SRT/VTT export uses automatic caption layers, not these independent title objects.
 
 The Text toolbar section contains Add text, Heading / Subtitle / Body presets,
-and Your text. Transcript is a separate toolbar section for generation, caption
+and Your text. Caption is a separate toolbar section for generation, caption
 rows, caption styling and SRT/VTT export. Selecting a title opens Text; selecting
-a caption or opening caption style opens Transcript. UI creation uses the current playhead and a
+a caption or opening caption style opens Caption. UI creation uses the current playhead and a
 three-second default. Select text to edit its content, timing and style on the
 right. While paused, drag it on the canvas, or use arrow keys for position.
 Timeline dragging changes timing; its edge handles trim the display interval.
