@@ -48,3 +48,13 @@ text or timing; drag it or its edges to move/resize it. The Style button opens
 settings inside the left panel, leaving the video visible. Up to four caption
 layers are supported. Current box selection groups video/audio clips; caption
 cues are selected and moved individually.
+
+## Editor navigation
+
+Transcript has its own toolbar entry, separate from Text. It contains
+Auto-transcript generation, caption layers/rows, Caption style, and SRT/VTT
+export. The Text panel contains only manual title presets and authored text.
+Selecting a caption or opening its style inspector activates Transcript.
+`view=transcript` opens that panel directly; `view=text` remains manual text.
+Generation controls open by default in projects without caption layers. Merely
+opening Transcript or checking availability never starts paid transcription.

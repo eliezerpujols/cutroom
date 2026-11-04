@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard} from 'lucide-react';
+import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard,Blend} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {FadeEnvelope} from './ClipAdjustments';
 import {CaptionTimeline} from './CaptionTimeline';
@@ -7,15 +7,17 @@ import {VideoTextTimeline} from './VideoTextTimeline';
 import {CoverTile} from './CoverEditor';
 import {useLayerReorder} from './useLayerReorder';
 import {SOUND_DRAG_TYPE} from './sounds';
-import {ASSET_DRAG_TYPE,ASSET_KIND_PREFIX,TEXT_PRESET_DRAG_TYPE,TEXT_DRAG_TYPE,CAPTION_DRAG_TYPE,isLibraryDrag,movingLibraryItem,isTextPreset} from './libraryDrag';
+import {STUDIO_DRAG_TYPE,ASSET_DRAG_TYPE,ASSET_KIND_PREFIX,TEXT_PRESET_DRAG_TYPE,TEXT_DRAG_TYPE,CAPTION_DRAG_TYPE,isLibraryDrag,movingLibraryItem,isTextPreset} from './libraryDrag';
 import {makeVideoText} from './videoText';
 import './libraryDrag.css';
+import {timelineTransitions} from './effects';
+import './timelineTransitions.css';
 import type {CaptionSelection} from './captions';
 import {placeTimelineClip} from './videoTracks';
-import {moveSelection,snapSelectionDelta} from './timelineSelection';
+import {moveSelection,snapSelectionDelta,timelineItems} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={addStudio:(id:string,at:number,trackId?:string)=>void;openTransition:(clipId:string)=>void;beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -31,6 +33,7 @@ export function Timeline(props:Props){
   const {project,assets,selectedIds,select,frame,seek,tool,setTool,edit,checkpoint,split,add}=props;
   const selected=selectedIds.length===1?selectedIds[0]:null;
   const selectedSet=new Set(selectedIds);
+  const transitions=timelineTransitions(project);
   const timeline=useRef<HTMLElement>(null),viewport=useRef<HTMLDivElement>(null),board=useRef<HTMLDivElement>(null);
   const gestureCleanup=useRef<(()=>void)|null>(null);
   const registerCaptionGesture=useCallback((cleanup:(()=>void)|null)=>{gestureCleanup.current=cleanup;},[]);
@@ -106,7 +109,7 @@ export function Timeline(props:Props){
     const target=project.tracks.find(item=>item.id===track),types=event.dataTransfer.types;
     if(types.includes(TEXT_PRESET_DRAG_TYPE)||movingLibraryItem(types))return undefined;
     if(types.includes(SOUND_DRAG_TYPE)||types.includes(ASSET_KIND_PREFIX+'audio'))return target?.kind==='audio'?target.id:undefined;
-    if(types.includes(ASSET_KIND_PREFIX+'video')||types.includes(ASSET_KIND_PREFIX+'image'))return target?.kind==='video'?target.id:undefined;
+    if(types.includes(STUDIO_DRAG_TYPE)||types.includes(ASSET_KIND_PREFIX+'video')||types.includes(ASSET_KIND_PREFIX+'image'))return target?.kind==='video'?target.id:undefined;
     return target?.id;
   }
   function libraryDragOver(event:React.DragEvent,track?:string){
@@ -119,6 +122,7 @@ export function Timeline(props:Props){
     if(event.dataTransfer.files.length||!isLibraryDrag(event.dataTransfer.types))return;
     event.preventDefault();event.stopPropagation();setLibraryDrop(null);
     const at=libraryDropFrame(event.clientX,event.shiftKey),target=compatibleDropTrack(event,track),soundId=event.dataTransfer.getData(SOUND_DRAG_TYPE);
+    const studioId=event.dataTransfer.getData(STUDIO_DRAG_TYPE);if(studioId){props.addStudio(studioId,at,target);return;}
     if(soundId){props.addSound(soundId,at,target);return;}
     const assetId=event.dataTransfer.getData(ASSET_DRAG_TYPE);if(assetId){add(assetId,at,target);return;}
     const preset=event.dataTransfer.getData(TEXT_PRESET_DRAG_TYPE);
@@ -169,16 +173,17 @@ export function Timeline(props:Props){
   }
 
   function selectArea(e:React.PointerEvent){
-    if(e.button!==0||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row,.caption-track-row,.video-text-track-row'))return;
+    if(e.button!==0||!e.isPrimary||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row'))return;
     e.preventDefault();e.stopPropagation();gestureCleanup.current?.();
     board.current!.focus({preventScroll:true});setTool('select');setDragScale(null);setResizing(false);
     const element=board.current!,scroller=viewport.current!;
     const initialRect=element.getBoundingClientRect(),x=e.clientX,y=e.clientY;
     const origin={x:x-initialRect.left,y:y-initialRect.top};
     const additive=e.shiftKey||e.metaKey||e.ctrlKey,previous=[...selectedIds];
-    const boxes=Array.from(element.querySelectorAll<HTMLElement>('[data-clip-id]')).map(clip=>{
+    element.setPointerCapture(e.pointerId);
+    const boxes=Array.from(element.querySelectorAll<HTMLElement>('[data-timeline-id]')).map(clip=>{
       const rect=clip.getBoundingClientRect();
-      return {id:clip.dataset.clipId!,left:rect.left-initialRect.left,right:rect.right-initialRect.left,top:rect.top-initialRect.top,bottom:rect.bottom-initialRect.top};
+      return {id:clip.dataset.timelineId!,left:rect.left-initialRect.left,right:rect.right-initialRect.left,top:rect.top-initialRect.top,bottom:rect.bottom-initialRect.top};
     });
     let started=false,lastX=x,lastY=y,animation=0;
     const update=()=>{
@@ -194,7 +199,7 @@ export function Timeline(props:Props){
       const speed=(value:number,min:number,max:number)=>value<min+28?-Math.min(18,(min+28-value)/2):value>max-28?Math.min(18,(value-max+28)/2):0;
       const left=scroller.scrollLeft,top=scroller.scrollTop;
       scroller.scrollLeft+=speed(lastX,rect.left+132,rect.right);
-      scroller.scrollTop+=speed(lastY,rect.top,rect.bottom);
+      scroller.scrollTop+=speed(lastY,rect.top+(element.querySelector<HTMLElement>('.ruler-row')?.offsetHeight||0),rect.bottom);
       if(left!==scroller.scrollLeft||top!==scroller.scrollTop)update();
       animation=requestAnimationFrame(scroll);
     };
@@ -207,7 +212,8 @@ export function Timeline(props:Props){
     };
     const cleanup=()=>{
       cancelAnimationFrame(animation);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',cancel);
-      window.removeEventListener('blur',blur);
+      window.removeEventListener('blur',blur);window.removeEventListener('keydown',escape,true);
+      try{if(element.hasPointerCapture(e.pointerId))element.releasePointerCapture(e.pointerId);}catch{}
       gestureCleanup.current=null;
     };
     const finish=(event:PointerEvent)=>{
@@ -218,16 +224,56 @@ export function Timeline(props:Props){
     };
     const cancel=(event:PointerEvent)=>{if(event.pointerId!==e.pointerId)return;cleanup();select(previous);setSelectionBox(null);};
     const blur=()=>{cleanup();setSelectionBox(null);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cleanup();select(previous);setSelectionBox(null);}};
     gestureCleanup.current=cleanup;
-    window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur);
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('blur',blur);window.addEventListener('keydown',escape,true);
+  }
+
+  function toggleItem(id:string,additive=false){select(additive?(selectedSet.has(id)?selectedIds.filter(value=>value!==id):[...selectedIds,id]):[id]);}
+  function nudgeItem(id:string,delta:number){
+    const group=selectedSet.has(id)?selectedIds:[id];
+    if(!selectedSet.has(id))select(group);
+    edit(p=>moveSelection(p,group,delta));
+  }
+  function dragItem(event:React.PointerEvent,id:string){
+    if(event.button!==0||!event.isPrimary)return;
+    event.preventDefault();event.stopPropagation();gestureCleanup.current?.();setSelectionBox(null);setResizing(false);
+    const element=event.currentTarget as HTMLElement,scroller=viewport.current!,additive=event.shiftKey||event.metaKey||event.ctrlKey;
+    const group=selectedSet.has(id)?selectedIds:additive?[...selectedIds,id]:[id],moving=timelineItems(project).filter(item=>group.includes(item.id));
+    if(!moving.length)return;
+    if(!selectedSet.has(id)&&!additive)select(group);
+    setTool('select');element.focus({preventScroll:true});element.setPointerCapture(event.pointerId);
+    const origin=event.clientX,scrollLeft=scroller.scrollLeft,newTrackIds=new Map(project.clips.filter(item=>group.includes(item.id)).map(item=>[item.id,uid()]));
+    const points=[0,frame,...timelineItems(project).filter(item=>!group.includes(item.id)).flatMap(item=>[item.start,item.start+item.duration])];
+    let started=false,lastDelta=0,dragged=false;
+    const move=(next:PointerEvent)=>{
+      if(next.pointerId!==event.pointerId)return;
+      const raw=(next.clientX-origin+scroller.scrollLeft-scrollLeft)/ppf;
+      if(!dragged&&Math.abs(raw*ppf)<3)return;dragged=true;
+      const delta=snapSelectionDelta(moving,raw,snapping&&!next.shiftKey?points:[],7/ppf);
+      if(delta===lastDelta)return;lastDelta=delta;
+      if(!started){checkpoint();started=true;select(group);setDragScale(ppf);}
+      edit(()=>moveSelection(project,group,delta,newTrackIds),false);
+    };
+    const cleanup=()=>{
+      window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',cancel);window.removeEventListener('keydown',escape,true);window.removeEventListener('blur',cleanup);
+      try{if(element.hasPointerCapture(event.pointerId))element.releasePointerCapture(event.pointerId);}catch{}
+      gestureCleanup.current=null;setDragScale(null);
+    };
+    const finish=(next:PointerEvent)=>{if(next.pointerId!==event.pointerId)return;move(next);if(!dragged)toggleItem(id,additive);cleanup();};
+    const revert=()=>{if(started)edit(()=>project,false);cleanup();};
+    const cancel=(next:PointerEvent)=>{if(next.pointerId===event.pointerId)revert();};
+    const escape=(next:KeyboardEvent)=>{if(next.key==='Escape'){next.preventDefault();next.stopPropagation();revert();}};
+    gestureCleanup.current=cleanup;window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('keydown',escape,true);window.addEventListener('blur',cleanup);
   }
 
   function drag(e:React.PointerEvent,c:Clip,edge?:'left'|'right'){
+    if(!edge&&tool==='select'&&((selectedSet.has(c.id)&&selectedIds.length>1)||e.shiftKey||e.metaKey||e.ctrlKey)){dragItem(e,c.id);return;}
     if(e.button!==0)return;e.stopPropagation();e.preventDefault();gestureCleanup.current?.();setSelectionBox(null);setResizing(false);board.current?.focus({preventScroll:true});
     const additive=!edge&&(e.shiftKey||e.metaKey||e.ctrlKey);
     const group=!edge&&tool==='select'?(selectedSet.has(c.id)?selectedIds:additive?[...selectedIds,c.id]:[c.id]):[c.id];
     if(edge||(!additive&&!selectedSet.has(c.id)))select([c.id]);
-    const moving=project.clips.filter(clip=>group.includes(clip.id));
+    const moving=timelineItems(project).filter(item=>group.includes(item.id));
     const dragTrackIds=new Map(moving.map(clip=>[clip.id,uid()]));
     const a=assets.find(a=>a.id===c.assetId)!;if(tool==='slip'&&!edge&&a.frames-c.duration*c.rate<1)return;const x=e.clientX,y=e.clientY,dragTrackId=uid(),scrollLeft=viewport.current!.scrollLeft;let started=false,dragged=false;
     const rows=Array.from(board.current!.querySelectorAll<HTMLElement>('.track-row')).map(row=>({id:row.dataset.trackId!,kind:row.dataset.trackKind!,rect:row.getBoundingClientRect()})).filter(row=>row.kind===c.kind);
@@ -297,9 +343,7 @@ export function Timeline(props:Props){
     }
     if((e.key==='ArrowRight'||e.key==='ArrowLeft')&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
       e.preventDefault();e.stopPropagation();
-      const group=selectedSet.has(c.id)?selectedIds:[c.id];
-      if(!selectedSet.has(c.id))select(group);
-      edit(p=>moveSelection(p,group,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));
+      nudgeItem(c.id,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1));
     }
   }
   return <section className="timeline" ref={timeline} aria-label="Editing timeline">
@@ -311,31 +355,40 @@ export function Timeline(props:Props){
 
   </div>
   <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>changeZoom(zoomValue.current-.25)}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={.1} value={[zoom]} onValueChange={([value])=>changeZoom(value)}/><IconButton label="Zoom in" onClick={()=>changeZoom(zoomValue.current+.25)}><Plus size={15}/></IconButton></div></div>
-  <div className="timeline-scroll" id="timeline-tracks" ref={viewport} onDragOver={event=>libraryDragOver(event)} onDrop={event=>dropMedia(event)} onDragLeave={event=>{if(event.relatedTarget instanceof Node&&event.currentTarget.contains(event.relatedTarget))return;const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom)setLibraryDrop(null);}}><div className="timeline-board" ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
+  <div className="timeline-scroll" id="timeline-tracks" ref={viewport} onDragEnter={event=>libraryDragOver(event)} onDragOver={event=>libraryDragOver(event)} onDrop={event=>dropMedia(event)} onDragLeave={event=>{if(event.relatedTarget instanceof Node&&event.currentTarget.contains(event.relatedTarget))return;const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom)setLibraryDrop(null);}}><div className="timeline-board" ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
     if(e.key==='Escape'){gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);}
     if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&selectedIds.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target as HTMLElement).closest('.ruler,.timeline-clip,.track-label')){e.preventDefault();e.stopPropagation();edit(p=>moveSelection(p,selectedIds,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));}
   }}>
     <div className="ruler-row cover-ruler-row"><div className="ruler-label cover-ruler-label"><CoverTile project={project} assets={assets} active={props.coverEditing} open={props.openCover}/><span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(props.coverEditing&&['ArrowLeft','ArrowRight'].includes(e.key))checkpoint();if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
+      <div className="ruler-playhead" aria-hidden="true" style={{left:frame*ppf}}><span>{time(frame,true)}</span><i/></div>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
     {reorder.layers.map(layer=>{
-      if(layer.kind==='text')return <React.Fragment key={layer.key}><VideoTextTimeline texts={[layer.text]} snapTexts={project.texts||[]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} rowNumber={layer.number} selected={props.textSelected} select={props.selectText} ppf={ppf} width={width} snapping={snapping} points={[0,frame,...project.clips.flatMap(c=>[c.start,c.start+c.duration])]} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
-      if(layer.kind==='caption')return <React.Fragment key={layer.key}><CaptionTimeline layers={[layer.layer]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} selection={props.captionSelection} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
-      const track=layer.track;return <div {...reorder.attributes(layer.key)} className={`track-row ${libraryDrop?.track===track.id?'library-drop-target':''}`} key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragOver={event=>libraryDragOver(event,track.id)} onDrop={e=>dropMedia(e,track.id)}>
+      if(layer.kind==='text')return <React.Fragment key={layer.key}><VideoTextTimeline texts={[layer.text]} snapTexts={project.texts||[]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} rowNumber={layer.number} selectedIds={selectedIds} dragItem={dragItem} nudge={nudgeItem} toggle={toggleItem} select={props.selectText} ppf={ppf} width={width} snapping={snapping} points={[0,frame,...project.clips.flatMap(c=>[c.start,c.start+c.duration])]} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
+      if(layer.kind==='caption')return <React.Fragment key={layer.key}><CaptionTimeline layers={[layer.layer]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} selectedIds={selectedIds} dragItem={dragItem} nudge={nudgeItem} toggle={toggleItem} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
+      const track=layer.track;return <div {...reorder.attributes(layer.key)} className={`track-row ${libraryDrop?.track===track.id?'library-drop-target':''}`} key={track.id} data-track-id={track.id} data-track-kind={track.kind} role="group" aria-label={`${track.name} track`} onDragEnter={event=>libraryDragOver(event,track.id)} onDragOver={event=>libraryDragOver(event,track.id)} onDrop={e=>dropMedia(e,track.id)}>
       <div className="track-label">{reorder.handle(layer)}<span className={`track-kind ${track.kind}`}>{track.kind==='video'?<Film size={16}/>:<AudioLines size={16}/>}</span><span>{track.name}</span><IconButton label={`${track.muted?'Unmute':'Mute'} ${track.name.toLowerCase()} track`} aria-pressed={track.muted} onClick={()=>edit(p=>({...p,tracks:p.tracks.map(t=>t.id===track.id?{...t,muted:!t.muted}:t)}))}>{track.muted?<VolumeX size={14}/>:<Volume2 size={14}/>}</IconButton></div>
       <div className="track-lane" style={{width}}>
       {!project.clips.some(c=>c.trackId===track.id)&&<div className="empty-track">Drop {track.kind==='video'?'a video':'audio'} here</div>}
       {project.clips.filter(c=>c.trackId===track.id).map(c=>{const a=assets.find(a=>a.id===c.assetId);if(!a)return null;const selectedClip=selectedSet.has(c.id);
-        return <div key={c.id} data-clip-id={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.hidden||c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>clipKey(e,c)}>
+        return <div key={c.id} data-clip-id={c.id} data-timeline-id={c.id} role="button" tabIndex={0} aria-label={`${c.name}, ${time(c.duration,true)}, ${c.kind} clip`} aria-pressed={selectedClip} className={`timeline-clip ${c.kind} ${selectedClip?'selected':''} ${tool==='slip'?'slip-cursor':''} ${c.hidden||c.muted||track.muted?'clip-muted':''}`} style={{left:c.start*ppf,width:Math.max(6,c.duration*ppf)}} onPointerDown={e=>drag(e,c)} onKeyDown={e=>clipKey(e,c)}>
           {c.kind==='video'?<div className="clip-filmstrip">{Array.from({length:Math.min(60,Math.ceil(c.duration*ppf/48))},(_,i)=>{const f=c.sourceIn+i*48/ppf*c.rate;const thumbnail=a.thumbnails[a.kind==='image'?0:Math.min(a.thumbnails.length-1,Math.floor(f/a.frames*a.thumbnails.length))];return <div key={i} style={{backgroundImage:thumbnail?`url("${thumbnail}")`:undefined}}/>;})}</div>:<><Waveform asset={a} clip={c}/><FadeEnvelope clip={c}/></>}
           <div className="clip-title">{c.kind==='video'?<Film size={11}/>:<AudioLines size={12}/>}<span>{c.name}</span>{c.muted&&<VolumeX size={12}/>}</div>
           <div className="clip-edge left" aria-label="Trim start" role="separator" onPointerDown={e=>drag(e,c,'left')}/><div className="clip-edge right" aria-label="Trim end" role="separator" onPointerDown={e=>drag(e,c,'right')}/>
           {c.kind==='audio'&&selectedClip&&(['fadeIn','fadeOut'] as const).map(field=>{const label=field==='fadeIn'?'Fade in':'Fade out',ratio=clamp(c[field]/Math.max(1,c.duration-1),0,1),position=field==='fadeIn'?ratio:1-ratio;return <div key={field} className="audio-fade-handle" role="slider" tabIndex={0} aria-label={`${label} duration`} aria-valuemin={0} aria-valuemax={Math.max(c.duration,c[field])/FPS} aria-valuenow={c[field]/FPS} aria-valuetext={`${(c[field]/FPS).toFixed(2)} seconds`} title={`${label}: ${(c[field]/FPS).toFixed(2)}s · Drag to adjust`} style={{left:`clamp(10px, ${position*100}%, calc(100% - 10px))`}} onPointerDown={e=>dragFade(e,c,field)} onKeyDown={e=>fadeKey(e,c,field)}><span/></div>;})}
         </div>;
+      })}
+      {transitions.filter(({clip})=>clip.trackId===track.id).map(({clip,previous,duration})=>{
+        const name=clip.effects!.transition==='fade'?'Crossfade':clip.effects!.transition==='wipe'?'Wipe':'Slide',seconds=Number((duration/FPS).toFixed(2)),label=`${name} transition · ${seconds}s · ${previous.name} to ${clip.name}`;
+        return <div key={`transition-${clip.id}`} className={`timeline-transition ${selectedSet.has(clip.id)?'is-selected':''}`} data-transition-for={clip.id} style={{left:clip.start*ppf,width:duration*ppf}}>
+          <span className="transition-duration-range" aria-hidden="true"/>
+          <Tip label={`${label} · Edit in Between`}><IconButton className="transition-marker" label={label} onPointerDown={event=>event.stopPropagation()} onKeyDown={event=>event.stopPropagation()} onClick={event=>{event.stopPropagation();props.openTransition(clip.id);}}><Blend size={13}/></IconButton></Tip>
+          <span className="transition-duration-label" aria-hidden="true">{seconds}s</span>
+        </div>;
       })}</div>
     </div>;})}
     {libraryDrop&&<div className="library-drop-line" style={{left:132+libraryDrop.frame*ppf}}><span>{time(libraryDrop.frame,true)}</span></div>}
-    <div className="playhead" style={{left:132+frame*ppf,height:'calc(100% - 4px)'}}><span>{time(frame,true)}</span><i/></div>
+    <div className="playhead" aria-hidden="true" style={{left:132+frame*ppf,height:'calc(100% - 4px)'}}/>
     {selectionBox&&<div className="timeline-selection-box" aria-hidden="true" style={selectionBox}/>}
-  </div></div><div className="timeline-footer"><div className="timeline-status"><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{selectedIds.length>1?`${selectedIds.length} selected · `:''}{project.clips.length+(project.texts?.length||0)} clips <span className="muted">·</span> {time(length,true)} total</span></div></section>;
+  </div></div><div className="timeline-footer"><div className="timeline-status"><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{selectedIds.length>1?`${selectedIds.length} selected · `:''}{timelineItems(project).length} items <span className="muted">·</span> {time(length,true)} total</span></div></section>;
 }

@@ -1,21 +1,30 @@
+import {ProjectFonts} from './ProjectFonts';
+import {isBundledFont,projectFontFamilies} from '../fonts';
 import React from 'react';
-import {MediaClip} from './MediaClip';
+import {withStudioAssets} from '../studio/registry';
+import {TransitionMedia} from './TransitionMedia';
 import {LayeredComposition} from './LayeredComposition';
+import '../fonts.css';
 import {AbsoluteFill,Sequence} from 'remotion';
 import {FPS,clipsInRenderOrder,type Asset,type Project} from '../model';
 import {CaptionOverlay} from './Captions';
 import {VideoTextOverlay} from './VideoText';
 import {CoverOverlay,VisualLayer} from './Visuals';
-export type EditorProps={project:Project;assets:Asset[];coverMode?:boolean};
-export function EditComposition({project,assets,coverMode=false}:EditorProps){
-  if(project.layerOrder)return <LayeredComposition project={project} assets={assets} coverMode={coverMode} cover={project.cover}/>;
+export type EditorProps={project:Project;assets:Asset[];fontProjectId?:string;coverMode?:boolean;hiddenTextIds?:string[];hiddenCaptionCueIds?:string[]};
+function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hiddenCaptionCueIds=[]}:EditorProps){
+  assets=withStudioAssets(assets);
+  const visibleProject=hiddenTextIds.length?{...project,texts:project.texts?.filter(text=>!hiddenTextIds.includes(text.id))}:project;
+  const visibleCover=project.cover&&hiddenTextIds.length?{...project.cover,texts:project.cover.texts.filter(text=>!hiddenTextIds.includes(text.id))}:project.cover;
+  if(project.layerOrder)return <LayeredComposition project={visibleProject} assets={assets} coverMode={coverMode} cover={visibleCover} hiddenCaptionCueIds={hiddenCaptionCueIds}/>;
   return <AbsoluteFill style={{backgroundColor:'#111111'}}><VisualLayer adjustments={project.adjustments}>{clipsInRenderOrder(project).map(clip=>{
     const asset=assets.find(a=>a.id===clip.assetId);if(!asset||asset.missing)return null;
     // Decode upcoming voices/effects before their cue instead of mounting cold
     // and stopping the video for every new audio clip. Pointer events pass through
     // audio wrappers; Sequence premounting requires an absolute-fill layout.
     return <Sequence key={clip.id} from={clip.start} durationInFrames={clip.duration} layout="absolute-fill" style={clip.kind==='audio'?{pointerEvents:'none'}:undefined} premountFor={clip.kind==='audio'?FPS*2:FPS}>
-      <MediaClip clip={clip} asset={asset} muted={coverMode||!!project.tracks.find(t=>t.id===clip.trackId)?.muted}/>
+      <TransitionMedia project={project} assets={assets} clip={clip} asset={asset} muted={coverMode||!!project.tracks.find(t=>t.id===clip.trackId)?.muted}/>
     </Sequence>;
-  })}</VisualLayer>{!!project.captions?.length&&(!coverMode||project.cover?.showCaptions)&&<CaptionOverlay layers={project.captions}/>}<VideoTextOverlay project={project}/>{coverMode&&project.cover&&<CoverOverlay cover={project.cover}/>}</AbsoluteFill>;
+  })}</VisualLayer>{!!project.captions?.length&&(!coverMode||project.cover?.showCaptions)&&<CaptionOverlay layers={project.captions} hiddenCueIds={hiddenCaptionCueIds}/>}<VideoTextOverlay project={visibleProject}/>{coverMode&&visibleCover&&<CoverOverlay cover={visibleCover}/>}</AbsoluteFill>;
 }
+
+export function EditComposition(props:EditorProps){const families=projectFontFamilies(props.project).filter(font=>!isBundledFont(font));return <><ProjectFonts key={props.fontProjectId+families.join("|")} families={families} projectId={props.fontProjectId}/><CompositionContent {...props}/></>;}

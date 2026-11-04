@@ -33,7 +33,7 @@ export function CoverPanel({project,assets,change,chooseFrame,checkpoint,selecte
 
 export const CoverInspector=TextAppearance;
 
-export function CoverDragOverlay({project,...props}:{project:Project;selected:string|null;select:(id:string)=>void;change:(id:string,patch:Partial<CoverText>,record?:boolean)=>void;checkpoint:()=>void}){
+export function CoverDragOverlay({project,...props}:{project:Project;selected:string|null;select:(id:string)=>void;change:(id:string,patch:Partial<CoverText>,record?:boolean)=>void;checkpoint:()=>void;editingChanged?:(id:string|null)=>void;reportError?:(message:string)=>void}){
   return <TextDragOverlay width={project.width} height={project.height} texts={(project.cover?.texts||[]).filter(text=>!text.hidden)} label="cover text" {...props}/>;
 }
 

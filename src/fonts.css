@@ -1,0 +1,7 @@
+@font-face {
+  font-family: 'Peacock';
+  src: url('./assets/fonts/Peacock-Bold.otf') format('opentype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+}

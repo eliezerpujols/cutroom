@@ -1,24 +1,32 @@
+import {ShadowControls} from './ShadowControls';
 import React from 'react';
-import {Button,Input,Slider} from './ui/primitives';
+import {FontPicker} from './ui/FontPicker';
+import {Button} from './ui/primitives';
+import {SlidersHorizontal} from 'lucide-react';
 import type {CaptionStyle} from './captions';
+import {commonStyleValue,StyleChoice,StyleColor,StyleNumber,StyleRange,StyleToggle} from './StyleControls';
 
-type Props={style:CaptionStyle;change:(patch:Partial<CaptionStyle>,record?:boolean)=>void;checkpoint:()=>void};
-const keys=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown']);
-function ColorControl({label,value,change}:{label:string;value:string;change:(value:string)=>void}){
-  return <label className="caption-color"><span>{label}</span><span className="caption-color-value"><Input type="color" aria-label={label} value={value} onChange={event=>change(event.target.value)}/><span>{value.toUpperCase()}</span></span></label>;
-}
-export function CaptionStyleEditor({style,change,checkpoint}:Props){
-  const range=(label:string,field:'fontSize'|'strokeWidth'|'y',min:number,max:number,step:number,unit:string)=><div className="clip-adjustment"><div className="adjustment-heading"><span>{label}</span><output>{style[field]}{unit}</output></div><Slider label={label} min={min} max={max} step={step} value={[style[field]]} valueText={`${style[field]}${unit}`} onPointerDown={checkpoint} onKeyDown={event=>{if(keys.has(event.key))checkpoint();}} onValueChange={([value])=>change({[field]:value},false)}/></div>;
+type Props={style?:CaptionStyle;styles?:CaptionStyle[];scopeKey?:string;change:(patch:Partial<CaptionStyle>,record?:boolean)=>void;checkpoint:()=>void};
+export function CaptionStyleEditor({style,styles,scopeKey='captions',change,checkpoint}:Props){
+  const values=(styles??(style?[style]:[])).map(value=>({...value,x:value.x??50,width:value.width??88,align:value.align??'center',lineHeight:value.lineHeight??1.2,letterSpacing:value.letterSpacing??0}));
+  const get=<K extends keyof CaptionStyle>(key:K)=>commonStyleValue(values,key);
+  const range=(label:string,field:'fontSize'|'strokeWidth'|'x'|'y'|'width',min:number,max:number,step:number,unit:string)=><StyleRange label={label} value={get(field)} min={min} max={max} step={step} unit={unit} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
+  const color=(label:string,field:'color'|'strokeColor'|'highlightColor')=><StyleColor label={label} value={get(field)} checkpoint={checkpoint} change={value=>change({[field]:value},false)}/>;
   return <div className="caption-style-controls">
-    <div className="caption-control-section"><div className="caption-section-label">Text</div><label className="field"><span>Font</span><select className="input" aria-label="Caption font" value={style.fontFamily} onChange={event=>change({fontFamily:event.target.value as CaptionStyle['fontFamily']})}>{['Inter Variable','DM Sans Variable','Manrope Variable'].map(font=><option key={font} value={font}>{font.replace(' Variable','')}</option>)}</select></label>
-      <label className="field"><span>Weight</span><select className="input" aria-label="Caption font weight" value={style.fontWeight} onChange={event=>change({fontWeight:Number(event.target.value)})}>{[[400,'Regular'],[500,'Medium'],[600,'Semibold'],[700,'Bold'],[800,'Extra bold'],[900,'Black']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-      {range('Size','fontSize',16,160,1,' px')}<ColorControl label="Text color" value={style.color} change={color=>change({color})}/>
+    <div className="caption-control-section"><div className="caption-section-label">Text</div><FontPicker key={scopeKey} value={get('fontFamily')} change={fontFamily=>change({fontFamily})}/>
+      <StyleChoice label="Weight" value={get('fontWeight')?.toString()} options={[["400","Regular"],["500","Medium"],["600","Semibold"],["700","Bold"],["800","Extra bold"],["900","Black"]]} change={fontWeight=>change({fontWeight:Number(fontWeight)})}/>
+      {range('Size','fontSize',16,160,1,' px')}<div className="text-spacing-controls"><StyleNumber key={scopeKey+'-line'} label="Line height" value={get('lineHeight')} min={80} max={300} scale={100} unit="%" checkpoint={checkpoint} change={lineHeight=>change({lineHeight},false)}/><StyleNumber key={scopeKey+'-letter'} label="Letter spacing" value={get('letterSpacing')} min={-10} max={30} scale={100} unit="%" checkpoint={checkpoint} change={letterSpacing=>change({letterSpacing},false)}/></div>{color('Text color','color')}
     </div>
-    <div className="caption-control-section"><label className="caption-toggle"><span>Outline</span><input type="checkbox" role="switch" checked={style.stroke} onChange={event=>change({stroke:event.target.checked})}/></label>{style.stroke&&<><ColorControl label="Outline color" value={style.strokeColor} change={strokeColor=>change({strokeColor})}/>{range('Thickness','strokeWidth',0,12,.5,' px')}</>}</div>
-    <div className="caption-control-section"><div className="caption-section-label">Display</div><div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={style.display===display} onClick={()=>change({display})}>{label}</Button>)}</div>
-      <label className="field"><span>Transition</span><select className="input" aria-label="Caption transition" value={style.motion} onChange={event=>change({motion:event.target.value as CaptionStyle['motion']})}><option value="none">None</option><option value="fade">Fade</option><option value="pop">Pop</option></select></label>
-      <label className="caption-toggle"><span>Highlight spoken word</span><input type="checkbox" role="switch" checked={style.highlight} onChange={event=>change({highlight:event.target.checked})}/></label>{style.highlight&&<ColorControl label="Highlight color" value={style.highlightColor} change={highlightColor=>change({highlightColor})}/>}
+    <div className="caption-control-section"><StyleToggle label="Outline" value={get('stroke')} change={stroke=>change({stroke})}/>{values.some(value=>value.stroke)&&<>{color('Outline color','strokeColor')}{range('Thickness','strokeWidth',0,12,.5,' px')}</>}</div>
+    <ShadowControls key={scopeKey} values={values} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
+    <div className="caption-control-section"><div className="caption-section-label">Display {get('display')===undefined&&<span className="style-mixed-label">Mixed</span>}</div><div className="caption-segments" role="group" aria-label="Caption display mode">{([['word','Word'],['phrase','Phrase'],['sentence','Sentence']] as const).map(([display,label])=><Button key={display} variant="ghost" size="sm" aria-pressed={get('display')===display} onClick={()=>change({display})}>{label}</Button>)}</div>
+      <StyleChoice label="Transition" value={get('motion')} options={[["none","None"],["fade","Fade"],["pop","Pop"]]} change={motion=>change({motion:motion as CaptionStyle['motion']})}/>
+      <StyleToggle label="Highlight spoken word" value={get('highlight')} change={highlight=>change({highlight})}/>{values.some(value=>value.highlight)&&color('Highlight color','highlightColor')}
     </div>
-    <div className="caption-control-section">{range('Vertical position','y',10,90,1,'%')}</div>
+    <div className="caption-control-section">{range('Horizontal position','x',0,100,1,'%')}{range('Vertical position','y',0,100,1,'%')}{range('Text box width','width',10,96,1,'%')}<Button variant="outline" size="sm" onClick={()=>change({x:50,y:50})}>Center on canvas</Button></div>
   </div>;
+}
+
+export function CaptionStyleAction({open,count}:{open:()=>void;count?:number}){
+  return <div className="inspector-section"><Button variant="outline" className="full-width" onClick={open}><SlidersHorizontal size={15}/>Edit caption style</Button>{count!==undefined&&<p className="field-hint">Changes apply to the {count} selected caption{count===1?'':'s'} in the Caption style panel.</p>}</div>;
 }

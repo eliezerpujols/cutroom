@@ -1,8 +1,9 @@
+import {ShadowText} from './Effects';
 import React,{useId} from 'react';
 import {AbsoluteFill} from 'remotion';
 import '@fontsource-variable/inter/wght-italic.css';
 import '@fontsource-variable/dm-sans/wght-italic.css';
-import {adjustmentFilter,colorMatrix,type Cover,type CoverText,type VisualAdjustments} from '../visuals';
+import {adjustmentFilter,colorMatrix,textLineHeight,type Cover,type CoverText,type VisualAdjustments} from '../visuals';
 
 export function VisualLayer({adjustments,children}:{adjustments?:VisualAdjustments;children:React.ReactNode}){
   const id='color-'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
@@ -10,9 +11,10 @@ export function VisualLayer({adjustments,children}:{adjustments?:VisualAdjustmen
 }
 
 export function coverTextPosition(text:CoverText):React.CSSProperties{return {position:'absolute',left:`${text.x}%`,top:`${text.y}%`,width:`${text.width}%`,transform:'translate(-50%, -50%)',textAlign:text.align};}
-export function CoverTextContent({text}:{text:CoverText}){
+export function CoverTextContent({text,children}:{text:CoverText;children?:React.ReactNode}){
   const stroke=text.stroke?text.strokeWidth:0;
-  const typography:React.CSSProperties={fontFamily:`'${text.fontFamily}', sans-serif`,fontSize:text.fontSize,fontWeight:text.fontWeight,fontStyle:text.italic?'italic':'normal',fontSynthesis:'style',lineHeight:1.2,letterSpacing:'-.02em',color:text.color,WebkitTextStroke:`${stroke}px ${text.strokeColor}`,paintOrder:'stroke fill',overflowWrap:'anywhere',whiteSpace:'pre-wrap'};
-  return <div style={{...typography,padding:text.fill==='box'?text.padding:0,background:text.fill==='box'?text.fillColor:undefined,borderRadius:text.fill==='box'?text.radius:0}}>{text.fill==='lines'?<span style={{background:text.fillColor,padding:`${text.padding*.2}px ${text.padding}px`,borderRadius:text.radius,boxDecorationBreak:'clone',WebkitBoxDecorationBreak:'clone',lineHeight:1.55}}>{text.text}</span>:text.text}</div>;
+  const typography:React.CSSProperties={fontFamily:`'${text.fontFamily}', sans-serif`,fontSize:text.fontSize,fontWeight:text.fontWeight,fontStyle:text.italic?'italic':'normal',fontSynthesis:'style',lineHeight:textLineHeight(text),letterSpacing:`${text.letterSpacing??-.02}em`,color:text.color,WebkitTextStroke:`${stroke}px ${text.strokeColor}`,paintOrder:'stroke fill',overflowWrap:'anywhere',whiteSpace:'pre-wrap'};
+  const content=<ShadowText shadow={text.shadow}>{children??text.text}</ShadowText>;
+  return <div style={{...typography,padding:text.fill==='box'?text.padding:0,background:text.fill==='box'?text.fillColor:undefined,borderRadius:text.fill==='box'?text.radius:0}}>{text.fill==='lines'?<span style={{background:text.fillColor,padding:`${text.padding*.2}px ${text.padding}px`,borderRadius:text.radius,boxDecorationBreak:'clone',WebkitBoxDecorationBreak:'clone'}}>{content}</span>:content}</div>;
 }
 export function CoverOverlay({cover}:{cover:Cover}){return <AbsoluteFill style={{pointerEvents:'none',overflow:'hidden'}}>{cover.texts.filter(text=>!text.hidden).map(text=><div key={text.id} style={coverTextPosition(text)}><CoverTextContent text={text}/></div>)}</AbsoluteFill>;}

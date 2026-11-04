@@ -1,0 +1,6 @@
+.timeline-transition{position:absolute;top:10px;bottom:12px;z-index:4;pointer-events:none}
+.transition-duration-range{position:absolute;inset:3px 0;border:1px solid var(--primary);border-radius:3px;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--primary) 25%,transparent) 0 3px,color-mix(in srgb,var(--surface) 38%,transparent) 3px 7px);box-shadow:inset -1px 0 var(--primary)}
+.timeline-transition .transition-marker{position:absolute;left:0;top:50%;transform:translate(-50%,-50%);height:23px;width:23px;padding:0;border:1px solid var(--surface);border-radius:5px;color:var(--primary-foreground);background:var(--primary);box-shadow:0 1px 4px #0003;pointer-events:auto}
+.timeline-transition .transition-marker:hover{background:var(--primary);filter:brightness(1.15)}
+.transition-duration-label{position:absolute;left:3px;top:calc(50% + 13px);padding:1px 3px;border-radius:3px;font-size:8px;line-height:11px;font-weight:550;font-variant-numeric:tabular-nums;white-space:nowrap;background:var(--surface);color:var(--foreground);box-shadow:0 0 0 1px var(--border)}
+.timeline-transition.is-selected .transition-marker{outline:2px solid var(--ring);outline-offset:2px}

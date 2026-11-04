@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cutroom Studio"
+  short_description: "Build reusable animated elements for Cutroom"
+  default_prompt: "Use $cutroom-studio to create a reusable animated overlay with editable properties."

@@ -1,4 +1,5 @@
 import {clamp,clipsInRenderOrder,endFrame,type Asset,type Project} from './model';
+import type {FontFamily} from './fonts';
 
 export type VisualAdjustments={preset:'none'|'clean'|'warm'|'cool'|'cinema'|'mono';intensity:number;exposure:number;brightness:number;contrast:number;saturation:number;warmth:number;tint:number};
 export const defaultAdjustments:VisualAdjustments={preset:'none',intensity:100,exposure:0,brightness:0,contrast:0,saturation:0,warmth:0,tint:0};
@@ -12,7 +13,9 @@ export function adjustmentFilter(input?:Partial<VisualAdjustments>){const a=reso
 export function colorMatrix(input?:Partial<VisualAdjustments>){const a=resolvedAdjustments(input),w=a.warmth/100,t=a.tint/100;return `${1+w*.15+t*.05} 0 0 0 0 0 ${1-t*.12} 0 0 0 0 0 ${1-w*.15+t*.05} 0 0 0 0 0 1 0`;}
 export const hasAdjustments=(input?:Partial<VisualAdjustments>)=>!!input&&Object.keys(defaultAdjustments).some(key=>input[key as keyof VisualAdjustments]!==undefined&&input[key as keyof VisualAdjustments]!==defaultAdjustments[key as keyof VisualAdjustments]);
 
-export type CoverText={hidden?:boolean;id:string;text:string;fontFamily:'Inter Variable'|'DM Sans Variable'|'Manrope Variable';fontSize:number;fontWeight:number;italic:boolean;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;fill:'none'|'box'|'lines';fillColor:string;padding:number;radius:number;x:number;y:number;width:number;align:'left'|'center'|'right'};
+export type CoverText={shadow?:Partial<import('./effects').TextShadow>;hidden?:boolean;id:string;text:string;fontFamily:FontFamily;fontSize:number;fontWeight:number;lineHeight?:number;letterSpacing?:number;italic:boolean;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;fill:'none'|'box'|'lines';fillColor:string;padding:number;radius:number;x:number;y:number;width:number;align:'left'|'center'|'right'};
+// Keep legacy highlight titles' looser spacing when a saved project has no override.
+export const textLineHeight=(text:Pick<CoverText,'fill'|'lineHeight'>)=>text.lineHeight??(text.fill==='lines'?1.55:1.2);
 export type Cover={frame:number;showCaptions:boolean;texts:CoverText[]};
 export const defaultCover:Cover={frame:0,showCaptions:false,texts:[]};
 export const defaultCoverText:Omit<CoverText,'id'>={text:'Your title here',fontFamily:'Inter Variable',fontSize:76,fontWeight:800,italic:false,color:'#111111',stroke:false,strokeColor:'#111111',strokeWidth:3,fill:'box',fillColor:'#ffffff',padding:24,radius:46,x:50,y:18,width:84,align:'center'};

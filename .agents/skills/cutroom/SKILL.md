@@ -1,6 +1,6 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, and manage local Cutroom projects or clear project exports through its MCP.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, use reusable Studio overlays and visual/text effects, and manage local Cutroom projects or clear project exports through its MCP.
 ---
 
 # Cutroom
@@ -12,6 +12,8 @@ For authored titles and text during a video, read [manual video text](references
 For automatic transcription or caption styling, read [the captions workflow](references/captions.md).
 For overlays, layer order, cover text, frame selection, filters, or video/image color corrections, read
 [the visual editing workflow](references/visuals.md).
+For animation, Motion/Styles/Appearance, text effects, dual shadows and current MCP coverage, read
+[effects and typography](references/effects.md).
 The user can provide a video and target language in one request; complete the
 provider workflow and open its finished result. Existing provider keys are loaded
 from the local ignored environment, never from prompts or tool arguments.
@@ -21,6 +23,35 @@ writing style. Automatic ElevenLabs dubbing cannot enforce a B2 script; explain
 that limitation without claiming exact control. Use adapted mode when explicit
 control of the translated text is requested; its Enterprise requirement is checked
 before any generation. Do not silently replace an explicitly required mode.
+
+## Building Cutroom features
+
+Before creating a new Cutroom feature or redesigning its UI, consult the Mobbin
+plugin and inspect relevant reference screens, unless the user has provided the
+design. Reuse Cutroom's existing components, typography, spacing, colors and
+interaction patterns; references guide structure, not a replacement visual theme.
+Keep editor panels compact: short labels, small existing type, and controls that
+appear when relevant. Avoid explanatory callouts and repeated helper paragraphs.
+For effects and transitions, use square image preview tiles with short names;
+show the effect on hover or keyboard focus and respect reduced motion. Verify the
+rendered result in the editor before presenting it.
+
+For reusable animated Remotion elements, use [Cutroom Studio](../cutroom-studio/SKILL.md).
+Studio templates expose editable props and behave as local timed overlays.
+
+## Font selection
+
+The Font picker searches bundled fonts and the Google Fonts catalog. Google
+fonts download on first selection and are stored in the project’s `fonts/`
+folder for offline preview and export. Use exact catalog family names for text,
+cover and caption styles; preserve `Inter Variable`, `DM Sans Variable`,
+`Manrope Variable` and `Peacock` for the bundled fonts. Keep `fonts/` with
+`project.cutroom` when moving or backing up a project. No Google API key is
+needed for the editor’s CSS2 download flow. The picker uses one vertical list,
+alphabetical within local and Google groups. Its All, Sans, Serif, Display, Script
+and Mono tabs filter together with search; category values follow the catalog.
+Use `list_fonts` for the same catalog search and category filtering through MCP,
+and `prepare_font` to make a family available offline in a project.
 
 ## Project location
 
@@ -135,7 +166,7 @@ with **Locate file** in the media panel, preserving the existing source windows.
   is not a guarantee about platform AI labels or content provenance; do not claim
   the media is undetectable or AI-free because metadata was cleaned.
 - To move or back up work, keep `project.cutroom`, `media/`, `thumbs/`, and
-  `exports/` together. The manifest alone does not include the media.
+  `exports/`, and `fonts/` together. The manifest alone does not include the media.
 
 ## Free space from exports
 
@@ -157,13 +188,37 @@ Report actual `deleted_files`, `freed_bytes` and any skipped items; a preview's
 `bytes` is potential space, not space already freed. Do not substitute recursive
 shell deletion if the tool refuses or skips files.
 
-## Setup when tools are unavailable
+## Global setup and current tools
 
-Use the checkout's README for installation. The MCP entry point is
-`server/mcp.ts`; on macOS register the absolute `Cutroom MCP.command` path with
-`codex mcp add cutroom -- /bin/zsh <absolute-launcher-path>`. A new Codex session
-may be needed after registration. Run from the checkout with Node 22.12+,
-`npm ci`, `npm run build`, and FFmpeg installed or `FFMPEG_PATH` configured.
-Local editing needs no provider keys. For dubbing, check `integration_status`;
-reuse configured `ELEVENLABS_API_KEY` and `SYNC_API_KEY` without asking again.
-Only report a missing variable when the tool actually says it is missing.
+The checkout is `/Users/eli/Documents/Marketing/video resources/cutroom`.
+Cutroom's MCP is registered in the global Codex configuration, not per project.
+The globally installed `cutroom` and `cutroom-studio` skill directories are
+symlinks to this repository's `.agents/skills/` sources, so edits stay synchronized.
+Do not create a second installation in whichever project is currently open.
+
+Run `npm run check:global` in the Cutroom checkout to verify registration and both
+links; `npm run setup:global` repairs them and backs up previous skill copies.
+`npm run check:mcp` starts a fresh connection from outside the checkout and checks
+Studio, fonts and effects discovery without editing a project or calling a paid
+provider. A rebuild of the editor is separate from MCP tool discovery.
+
+If the current chat's tool catalog is stale, continue through the same MCP with
+the fresh-connection bridge. From any working directory, run:
+
+```sh
+node "/Users/eli/Documents/Marketing/video resources/cutroom/scripts/call-mcp.mjs" list
+node "/Users/eli/Documents/Marketing/video resources/cutroom/scripts/call-mcp.mjs" list_studio < request.json
+```
+
+For `list_studio`, `request.json` contains `{}`. For other operations it contains
+the exact arguments from the listed tool's input schema. Use a JSON file or stdin,
+not interpolated shell arguments. The bridge supports the same revision checks,
+provider limits and user-authorization boundaries as native tool calls; it is not
+an alternative policy or a reason to repeat uncertain paid jobs. Do not stop an
+otherwise possible edit simply because the current chat omits a new tool.
+
+On a fresh installation, follow the checkout README: Node 22.12+, `npm ci`,
+`npm run build`, FFmpeg installed or `FFMPEG_PATH` configured, then
+`npm run setup:global`. Local editing needs no provider keys. For dubbing, check
+`integration_status`; reuse configured `ELEVENLABS_API_KEY` and `SYNC_API_KEY`
+without asking again. Only report a missing variable when the tool says so.

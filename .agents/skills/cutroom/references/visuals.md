@@ -35,7 +35,7 @@ the top. Each block can set:
 | --- | --- |
 | `fill` | `box`: one rounded card; `lines`: separate highlighted lines; `none`: text only. |
 | `fillColor`, `color` | Six-digit hex background and text colors. Yellow highlight reference: `#ffe501` with `#111111` text. |
-| `fontFamily` | `Inter Variable`, `DM Sans Variable`, or `Manrope Variable`. |
+| `fontFamily` | Bundled `Inter Variable`, `DM Sans Variable`, `Manrope Variable`, `Peacock`, or an exact Google catalog family. |
 | `fontSize`, `fontWeight`, `italic` | 16–200 composition pixels, 400–900, boolean. Manrope italic is synthesized. |
 | `stroke`, `strokeColor`, `strokeWidth` | Optional outline, hex color, 0–12 composition pixels. |
 | `padding`, `radius` | Background padding 0–60 and corner radius 0–100 composition pixels. |
@@ -57,6 +57,8 @@ outside area is a viewing aid, and text remains draggable. This preference is
 scoped to the project/editor instance in the browser; it does not change project
 dimensions, the project file, undo history, or exported PNG/MP4 content. There is
 no MCP project-edit operation for this view-only overlay.
+
+For dual shadows, text animations and effect controls, read [effects and typography](effects.md).
 
 ## Video and image adjustments
 

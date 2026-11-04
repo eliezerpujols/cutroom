@@ -25,8 +25,8 @@ No provider call or key is needed to create manual text.
 gets its own row; new text is topmost. Timing uses start-inclusive/end-exclusive
 30 fps frames. Timeline bodies move intervals, edges trim them, and the existing
 Split action splits a selected title at the playhead. Arrow keys, duplicate,
-hide, remove and normal undo are supported. Text is independent of media group
-selection and caption cue editing. Titles may extend the overall timeline.
+hide, remove and normal undo are supported. Box-selection and modifier-click include timed text, media and caption cues in
+one shared timeline selection. Dragging any selected item preserves the group's relative timing; trimming an edge edits that item alone. Titles may extend the overall timeline.
 
 Typography and canvas drag behavior were extracted from cover editing into shared
 components. The same fonts, color controls, background styles, bold/italic,
@@ -65,3 +65,66 @@ Static component compliance: **4/5, provisional**. Existing Button/Input/Slider,
 native details/select/color/switch patterns, theme tokens and icons are reused.
 The custom timeline and canvas targets are editor-specific and have keyboard
 alternatives. Browser/accessibility behavior has not been claimed as verified.
+
+## Direct canvas editing and alignment
+
+Double-click a cover title or paused video title to edit its text in place.
+Enter on a focused canvas text target also opens the editor. Enter inserts a
+line break; Command/Ctrl+Enter or clicking away commits one undoable edit, and
+Escape cancels it. Plain text paste preserves the object's typography. The
+rendered original is hidden only in the preview while its editable counterpart
+is shown; this transient state is never saved or exported.
+
+Dragging cover text, timed text or captions snaps their visible bounds to the
+canvas center and outer edges independently on each axis. Temporary pink guides
+show the matching alignment, including both axes at a corner. The threshold is
+8 preview pixels regardless of preview scale. Hold Shift to bypass snapping.
+Guides disappear on release/cancel; Escape during a drag restores its position.
+
+## Consistent style panels for a selection
+
+Cover text, single timed text and multiple timed texts use `TextStyleControls`.
+The inspector keeps the same Title card / Highlight / Text only cards, font and
+formatting toolbar, size and spacing, colors, background/outline and collapsed
+Position & size sections in the same order. Multiple selection omits the content
+field. Shared controls show Mixed for differing values and apply only the edited
+property. In a mixed media/text/caption selection, these controls target the text
+objects only.
+
+The existing Heading / Subtitle / Body cards in the Text panel apply their size,
+weight and outline thickness to selected texts (one undo step). The panel states
+this scope and marks an exact matching preset. With no text selected, the cards
+still create new text. Applying a preset preserves each object's words, time,
+font family, placement and background. Add text always creates a new object.
+
+## Selection from the left panel
+
+The text list and caption transcript share the editor's timeline selection.
+Plain click replaces it, Command/Ctrl-click toggles an item, Shift-click selects
+an inclusive range in the displayed list order, and Command/Ctrl+Shift-click adds
+that range to the existing selection. Each list keeps its own range anchor;
+caption anchors are scoped to their layer. A selection changed elsewhere resets
+the panel's anchors at its next selection gesture. Deleted anchors fall back to
+a selected item in the same list, then to the clicked item.
+
+Selected rows expose pressed state and remain highlighted. Modified Enter/Space
+on a focused row uses the same selection rules. Opening or closing caption style
+keeps the shared selection and range anchors; style changes and text presets also
+leave selection intact. Modifier selection may combine texts and captions while
+each style panel continues to target only its own selected item type.
+
+Validation: TypeScript/production build and static review only. No browser
+selection gestures or edits to the user's project were exercised.
+
+## Separate Text and Transcript navigation
+
+Text owns Add text, title presets and the authored text list. Transcript owns
+caption generation, caption layers/rows, style editing and SRT/VTT downloads.
+Timeline/canvas title selection opens Text; caption selection/style opens
+Transcript. A mixed text/caption selection retains the current relevant panel.
+`view=transcript` is available for direct navigation; `view=text` is unchanged.
+Shared selection modifiers, drag payloads and style controls remain in use.
+
+Reference reviewed: [Vimeo transcript panel on Mobbin](https://mobbin.com/screens/bd482934-e96c-4560-967f-2509d3c341d8).
+The reference informed the separation of transcript navigation from text tools;
+Cutroom retains its existing toolbar and panel styling.

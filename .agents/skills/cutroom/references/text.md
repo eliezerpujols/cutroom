@@ -29,8 +29,10 @@ Manual text is burned into MP4 and appears in a cover PNG when active at its
 selected frame. The cover's caption toggle affects speech-caption layers only.
 SRT/VTT export uses automatic caption layers, not these independent title objects.
 
-The Text panel offers Add text and Heading / Subtitle / Body presets before the
-collapsible Auto-transcript option. UI creation uses the current playhead and a
+The Text toolbar section contains Add text, Heading / Subtitle / Body presets,
+and Your text. Transcript is a separate toolbar section for generation, caption
+rows, caption styling and SRT/VTT export. Selecting a title opens Text; selecting
+a caption or opening caption style opens Transcript. UI creation uses the current playhead and a
 three-second default. Select text to edit its content, timing and style on the
 right. While paused, drag it on the canvas, or use arrow keys for position.
 Timeline dragging changes timing; its edge handles trim the display interval.
@@ -39,8 +41,8 @@ Backspace removes the selected object, Command/Ctrl+D duplicates it, X/C cut or
 copy with Command/Ctrl, and Command/Ctrl+V pastes on the cover or at the playhead.
 The object clipboard stays in the current editor tab; cover and timed text can
 be copied between those two contexts, preserving style. Undo restores a cut or
-delete. Normal text editing shortcuts are preserved inside fields. Media multi-selection remains
-separate; manual text and automatic caption cues are edited individually.
+delete. Normal text editing shortcuts are preserved inside fields. Multi-selection can apply shared compatible style/effect changes; preserve each
+item’s remaining properties. See [effects and typography](effects.md) for tool coverage.
 
 Returned URLs include a new editor instance, `view=text`, and the focused text
 ID when available. Open them in a **new tab** and preserve all query parameters.

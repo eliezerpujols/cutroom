@@ -1,3 +1,4 @@
+import {ensureProjectFonts} from './fonts';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
@@ -80,7 +81,7 @@ export class ProjectStore{
     await fs.mkdir(path.join(folder,'media'),{recursive:true});await fs.mkdir(path.join(folder,'thumbs'),{recursive:true});await fs.mkdir(path.join(folder,'exports'),{recursive:true});
     let project:Project={version:1,name,width:1080,height:1920,fps:30,tracks:[{id:'video-1',name:'Video',kind:'video',muted:false},{id:'audio-1',name:'Audio',kind:'audio',muted:false}],clips:[]};
     let assets:StoredAsset[]=[];
-    if(templateId){const source=await this.read(templateId);project={...source.project,name};assets=structuredClone(source.assets);for(const a of assets){const src=await this.assetPath(templateId,a.file);if(await exists(src)){await fs.mkdir(path.dirname(within(folder,a.file)),{recursive:true});await fs.copyFile(src,within(folder,a.file));}for(const thumb of a.thumbnails){const srcThumb=await this.assetPath(templateId,thumb);if(await exists(srcThumb)){await fs.mkdir(path.dirname(within(folder,thumb)),{recursive:true});await fs.copyFile(srcThumb,within(folder,thumb));}}}}
+    if(templateId){const source=await this.read(templateId);const sourceFonts=path.join(this.entry(templateId).folder,'fonts');if(await exists(sourceFonts))await fs.cp(sourceFonts,path.join(folder,'fonts'),{recursive:true});project={...source.project,name};assets=structuredClone(source.assets);for(const a of assets){const src=await this.assetPath(templateId,a.file);if(await exists(src)){await fs.mkdir(path.dirname(within(folder,a.file)),{recursive:true});await fs.copyFile(src,within(folder,a.file));}for(const thumb of a.thumbnails){const srcThumb=await this.assetPath(templateId,thumb);if(await exists(srcThumb)){await fs.mkdir(path.dirname(within(folder,thumb)),{recursive:true});await fs.copyFile(srcThumb,within(folder,thumb));}}}}
     else if(legacy){project={...legacy.project,name};for(const old of legacy.assets){const file=`media/${old.id}${path.extname(old.file)}`;const thumbnails:string[]=[];if(await exists(old.file))await fs.copyFile(old.file,within(folder,file));
       for(const oldUrl of old.thumbnails){const src=path.join(this.data,'thumbs',old.id,path.basename(oldUrl));if(await exists(src)){const relative=`thumbs/${old.id}/${path.basename(oldUrl)}`;await fs.mkdir(path.dirname(within(folder,relative)),{recursive:true});await fs.copyFile(src,within(folder,relative));thumbnails.push(relative);}}
       const {url:_,file:_file,thumbnails:_thumbs,...meta}=old;assets.push({...meta,file,thumbnails});
@@ -111,7 +112,7 @@ export class ProjectStore{
     await this.lock('registry',async()=>{this.registry.entries=this.registry.entries.filter(e=>e.id!==doc.id);this.registry.entries.push({id:doc.id,folder,name:doc.project.name});await atomicJson(this.registryFile,this.registry);});return doc.id;
   }
   async save(id:string,input:unknown,expectedRevision?:number){return this.lock(id,async()=>{const d=await this.read(id);if(expectedRevision!==undefined&&d.revision!==expectedRevision)throw new ProjectConflict();const parsed=validateProject(input,d.assets);const project=validateProject(arrangeTimelineTracks(parsed,changedTimelineClipIds(d.project,parsed)),d.assets);
-    const folder=this.entry(id).folder;await atomicJson(path.join(folder,'history',String(d.revision).padStart(6,'0')+'.json'),d.project);
+    const folder=this.entry(id).folder;await ensureProjectFonts(path.join(this.data,'fonts'),folder,project);await atomicJson(path.join(folder,'history',String(d.revision).padStart(6,'0')+'.json'),d.project);
     const next={...d,project,revision:d.revision+1,updatedAt:new Date().toISOString()};await atomicJson(path.join(folder,'project.cutroom'),next);return next;
   });}
   async addAsset(id:string,asset:StoredAsset){storedAssetSchema.parse(asset);return this.lock(id,async()=>{const d=await this.read(id);validateProject(d.project,[...d.assets.filter(a=>a.id!==asset.id),asset]);const next={...d,assets:[...d.assets.filter(a=>a.id!==asset.id),asset],updatedAt:new Date().toISOString()};await atomicJson(path.join(this.entry(id).folder,'project.cutroom'),next);return asset;});}

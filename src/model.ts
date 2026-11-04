@@ -7,7 +7,7 @@ export type Asset = {
 export type Clip = {
   id:string; assetId:string; name:string; trackId:string; kind:'video'|'audio';
   start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean; hidden?:boolean;
-  fadeIn:number; fadeOut:number; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
+  studio?:import('./studio/registry').StudioInstance; fadeIn:number; fadeOut:number; effects?:import('./effects').Effects; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
 export type Project = {layerOrder?:string[];version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments; texts?:import('./videoText').VideoText[]};

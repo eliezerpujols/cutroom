@@ -1,0 +1,28 @@
+import React,{createContext,useContext,useEffect,useId,useMemo,useRef,useState} from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import {Check,ChevronDown,Download,LoaderCircle,Search} from 'lucide-react';
+import {Button,Input} from './primitives';
+import {fontLabel,fontCategories,fontPickerOptions,type FontCategory} from '../fonts';
+import {loadProjectFont} from '../fontLoading';
+import './font-picker.css';
+export const FontProjectContext=createContext('');
+export function FontPicker({value,change}:{value:string|undefined;change:(family:string)=>void}){
+  const projectId=useContext(FontProjectContext),id=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLDivElement>(null),request=useRef(0);
+  const [category,setCategory]=useState<FontCategory>('All');
+  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState(0),[pending,setPending]=useState(''),[error,setError]=useState(''),[installed,setInstalled]=useState<string[]>([]);
+  useEffect(()=>()=>{request.current++;},[]);
+  useEffect(()=>{if(open)void fetch('/api/fonts').then(r=>r.json()).then(d=>setInstalled(d.installed??[])).catch(()=>{});},[open]);
+  const options=useMemo(()=>fontPickerOptions({query,category,installed,value}),[query,category,installed,value]);
+  useEffect(()=>{setActive(0);if(list.current)list.current.scrollTop=0;},[options]);
+  function toggle(next:boolean){request.current++;setOpen(next);setPending('');setError('');if(next){setQuery('');setCategory('All');setActive(0);}}
+  async function choose(family:string){if(pending)return;const token=++request.current;setPending(family);setError('');try{await loadProjectFont(projectId,family);if(token!==request.current)return;change(family);setOpen(false);setPending('');}catch(e){if(token===request.current){setError((e as Error).message);setPending('');}}}
+  function move(index:number){const next=Math.max(0,Math.min(options.length-1,index));setActive(next);list.current?.querySelector(`[data-index="${next}"]`)?.scrollIntoView({block:'nearest'});}
+  return <div className="field"><span id={id+'-label'}>Font</span><Popover.Root open={open} onOpenChange={toggle}><Popover.Trigger asChild><Button variant="ghost" className="input font-picker-trigger" aria-label="Font" aria-labelledby={id+'-label '+id+'-value'}><span id={id+'-value'}>{value?fontLabel(value):'Mixed'}</span><ChevronDown size={14}/></Button></Popover.Trigger><Popover.Portal><Popover.Content className="font-picker-popover" align="end" sideOffset={6} collisionPadding={12} aria-label="Choose font" onEscapeKeyDown={event=>event.stopPropagation()} onOpenAutoFocus={event=>{event.preventDefault();input.current?.focus();}} onKeyDown={event=>event.stopPropagation()}>
+    <div className="font-picker-search"><Search size={14}/><Input ref={input} placeholder="Search fonts…" aria-label="Search fonts" role="combobox" aria-expanded="true" aria-controls={id+'-list'} aria-autocomplete="list" aria-activedescendant={options[active]?id+'-'+active:undefined} value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();move(active+(event.key==='ArrowDown'?1:-1));}else if(event.key==='Enter'&&options[active]){event.preventDefault();void choose(options[active].family);}else if(event.key==='Escape'){event.preventDefault();toggle(false);}}}/></div>
+    <div className="font-category-tabs" role="tablist" aria-label="Font style">{fontCategories.map(([key,label],index)=><Button key={key} id={`${id}-category-${index}`} role="tab" variant="ghost" size="sm" aria-label={key} aria-selected={category===key} aria-controls={id+'-panel'} tabIndex={category===key?0:-1} disabled={!!pending} onClick={()=>setCategory(key)} onKeyDown={event=>{const next=event.key==='ArrowRight'?(index+1)%fontCategories.length:event.key==='ArrowLeft'?(index+fontCategories.length-1)%fontCategories.length:event.key==='Home'?0:event.key==='End'?fontCategories.length-1:null;if(next!==null){event.preventDefault();setCategory(fontCategories[next][0]);document.getElementById(`${id}-category-${next}`)?.focus();}else if(event.key==='ArrowDown'){event.preventDefault();input.current?.focus();}}}>{label}</Button>)}</div>
+    <div className="font-picker-results" role="tabpanel" id={id+'-panel'} aria-labelledby={`${id}-category-${fontCategories.findIndex(([key])=>key===category)}`}>
+    <div ref={list} className="font-picker-list" id={id+'-list'} role="listbox" aria-label="Fonts" aria-busy={!!pending}>{options.map((font,index)=><React.Fragment key={font.family}>{(index===0||font.local!==options[index-1].local)&&<div className="font-picker-group" role="presentation">{font.local?'On this device':'Google Fonts'}</div>}<Button role="option" aria-selected={value===font.family} aria-disabled={!!pending} tabIndex={-1} id={id+'-'+index} data-index={index} variant="ghost" className={'font-picker-option'+(active===index?' highlighted':'')} onPointerMove={()=>setActive(index)} onClick={()=>void choose(font.family)}><span style={font.local?{fontFamily:`"${font.family}", sans-serif`}:undefined}>{fontLabel(font.family)}</span>{pending===font.family?<LoaderCircle size={13} className="spin"/>:value===font.family?<Check size={13}/>:!font.local?<Download size={12}/>:null}</Button></React.Fragment>)}{!options.length&&<p className="font-picker-empty">No fonts found.</p>}</div>
+    </div>
+    {(pending||error)&&<div className="font-picker-status" role={error?'alert':'status'}>{error||`Downloading ${pending}…`}</div>}
+  </Popover.Content></Popover.Portal></Popover.Root></div>;
+}

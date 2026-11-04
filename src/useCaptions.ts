@@ -44,7 +44,7 @@ export function useCaptions(projectId:string,project:Project,enabled:boolean,edi
     edit(p=>p.captions?.some(item=>item.sourceJobId===job.id)?p:{...p,captions:[...(p.captions||[]),layer]});
     try{localStorage.removeItem(key);}catch{}onAdded.current(layer.id);
   },[edit,job,key]);
-  useEffect(()=>{if(pointerActive.current||document.activeElement?.matches('input,textarea,select,[contenteditable="true"],[role="slider"]'))return;if(job?.status==='completed'&&!applied.current.has(job.id)&&job.sourceSignature===captionSourceSignature(latest.current))apply();},[apply,job,settled]);
+  useEffect(()=>{if(pointerActive.current||document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"]'))return;if(job?.status==='completed'&&!applied.current.has(job.id)&&job.sourceSignature===captionSourceSignature(latest.current))apply();},[apply,job,settled]);
   async function start(language:string){
     if(starting||(job?.running&&job.status!=='completed'&&job.status!=='failed'))return;setStarting(true);setError('');
     const id=requestId.current||crypto.randomUUID();requestId.current=id;try{localStorage.setItem(key,id);}catch{}

@@ -1,8 +1,9 @@
 import {InspectorItemHeader,InspectorActions} from './InspectorItemHeader';
 import React,{useEffect,useRef,useState} from 'react';
-import {ClosedCaption,SlidersHorizontal} from 'lucide-react';
+import {ClosedCaption} from 'lucide-react';
 import {Button,Slider} from './ui/primitives';
 import {TimeValue} from './ClipAdjustments';
+import {CaptionStyleAction} from './CaptionStyleEditor';
 import {FPS,clamp,time,type Project} from './model';
 import {setItemVisibility,type VisibilityTarget} from './itemVisibility';
 import {cueText,replaceCueText,resizeCaptionCue,type CaptionCue,type CaptionLayer} from './captions';
@@ -25,7 +26,7 @@ export function CaptionInspector({layer,cue,timelineEnd,edit,checkpoint,openStyl
   const update=(next:CaptionCue,record=true)=>edit(p=>({...p,captions:p.captions?.map(item=>item.id===layer.id?{...item,cues:item.cues.map(current=>current.id===next.id?next:current).sort((a,b)=>a.start-b.start)}:item)}),record);
   return <>
     <InspectorItemHeader icon={<ClosedCaption size={21}/>} title={layer.name} detail={cue?`${time(cue.start,true)} · ${time(cue.duration,true)}`:`${layer.cues.length} captions · ${layer.language}`} actions={<InspectorActions label={cue?'caption':'caption layer'} visible={visible} toggle={()=>edit(p=>setItemVisibility(p,[target],!visible))} duplicate={duplicate} remove={remove}/>}/>
-    <div className="inspector-section"><Button variant="outline" className="full-width" onClick={openStyle}><SlidersHorizontal size={15}/>Edit caption style</Button></div>
+    <CaptionStyleAction open={openStyle}/>
     {cue&&<><div className="inspector-section"><div className="section-title"><h3>Caption text</h3></div><textarea className="input caption-text-input" aria-label="Caption text" value={text} maxLength={2000} onFocus={()=>{editing.current=true;cancelled.current=false;}} onChange={event=>setText(event.target.value)} onBlur={()=>{editing.current=false;if(cancelled.current){setText(cueText(cue));return;}try{if(text.trim()!==cueText(cue))update(replaceCueText(cue,text));setError('');}catch(err){setError((err as Error).message);}}} onKeyDown={event=>{event.stopPropagation();if(event.key==='Escape'){cancelled.current=true;event.currentTarget.blur();}if((event.metaKey||event.ctrlKey)&&event.key==='Enter')event.currentTarget.blur();}}/>{error&&<p className="caption-error" role="alert">{error}</p>}</div>
     <div className="inspector-section"><div className="section-title"><h3>Timing</h3></div><CaptionTiming cue={cue} timelineEnd={timelineEnd} change={update} checkpoint={checkpoint}/></div></>}
   </>;

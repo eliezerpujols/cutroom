@@ -16,7 +16,7 @@ export function companionProject(project:Project):Project{
 }
 export async function renderCompanion({project,assets,composition,serveUrl,exportsDir,filename,projectId}:{project:Project;assets:Asset[];composition:VideoConfig;serveUrl:string;exportsDir:string;filename:string;projectId:string}):Promise<CoverCompanion>{
   const cover=companionProject(project),frame=coverFrame(cover),coverFilename=path.basename(filename,path.extname(filename))+'-cover.png',output=path.join(exportsDir,coverFilename);
-  const inputProps={project:cover,assets,coverMode:true};
+  const inputProps={project:cover,assets,coverMode:true,fontProjectId:projectId};
   try{
     // renderStill consumes composition.props as the resolved component props.
     // The MP4 composition was resolved without coverMode; inputProps alone does

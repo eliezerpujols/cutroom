@@ -69,6 +69,9 @@ rebuild an existing `dist/` automatically.
 
 Exports are saved in the project's `exports/` directory. Download the files from
 the export result or open that folder directly.
+  **Show in Finder** selects the saved export in its project folder without
+  downloading another copy. Reopening Export restores the last completed full
+  export; choose **New export…** to render later edits or another format.
 
 ### Timeline controls
 
@@ -78,10 +81,10 @@ the export result or open that folder directly.
 | Move/select | **V**, then drag clips or their edges |
 | Split at playhead | **S** or Command/Ctrl+B |
 | Slip source content | **Y**, then drag inside a clip with unused source footage |
-| Select several clips | Drag across empty timeline space |
+| Select clips, text and captions | Drag across empty timeline space |
 | Add/remove from selection | Shift, Command, or Ctrl + click |
-| Select all media clips | Command/Ctrl+A while the timeline has focus |
-| Move a selection together | Drag any selected clip; spacing stays intact |
+| Select all timeline items | Command/Ctrl+A while the timeline has focus |
+| Move a selection together | Drag any selected item; spacing stays intact |
 | Nudge focused clips | Left/Right arrow; Shift for one second |
 | Undo / redo | Command/Ctrl+Z / Shift+Command/Ctrl+Z |
 | Delete selected object | Backspace / Delete |
@@ -103,9 +106,14 @@ speed changes its duration. Still images begin at five seconds and can be
 extended, but have no source slip, playback speed, or embedded audio.
 
 The upper video track appears above lower tracks; overlapping audio tracks mix.
-A gap without video renders black. Caption cues have their own tracks and are
-edited individually, as is manual text. Media box-selection groups video/audio
-clips. Ripple editing and clip-to-clip transitions are not implemented.
+A gap without video renders black. Box-selection and modifier-click work across
+video, audio, timed text and caption cues. Drag or nudge any selected item to move
+the group with one shared time offset; group copy, cut, paste, duplicate and delete
+use the same selection. The selection inspector edits text and caption styles
+together, showing Mixed for properties that differ. Only the edited property is
+applied; words and timing are preserved. Caption style changes affect selected
+cues, with the layer style updated when all its cues are selected. The time ruler and playhead marker stay visible during
+vertical timeline scrolling. Ripple editing and clip-to-clip transitions are not implemented.
 
 ### Sound effects
 
@@ -246,26 +254,38 @@ project revision. See the [caption workflow](.agents/skills/cutroom/references/c
 
 ## Connect an AI assistant with MCP
 
-Build the app first. For **Codex on macOS**, register the launcher using the
-absolute path to your checkout:
+Build the app first, then register it globally for Codex on macOS:
 
 ```sh
-codex mcp add cutroom -- /bin/zsh "/absolute/path/to/cutroom/Cutroom MCP.command"
+npm run setup:global
+npm run check:global
+npm run check:mcp
 ```
 
-Restart the MCP connection or open a new Codex chat if the tools do not appear.
-For another MCP client, configure **stdio** transport with
-`npm run mcp --silent` and the checkout as the working directory. The MCP starts
-or reuses the local editor server; no separate MCP API key is required.
+Setup registers the absolute `Cutroom MCP.command` launcher in Codex's global
+configuration and links both **`$cutroom`** and **`$cutroom-studio`** from
+`~/.codex/skills/` to this repository's `.agents/skills/` sources. Previous copied
+skills are backed up under `~/.codex/skill-backups/`. Keep the checkout in place;
+rerun setup if you move it. No per-project installation or duplicate skill copy
+is needed. `CODEX_HOME` is honored when explicitly configured.
 
-The bundled **`$cutroom` skill** is in
-[`.agents/skills/cutroom`](.agents/skills/cutroom/SKILL.md). To make it available
-across Codex projects:
+MCP 2.9 includes Studio discovery/insertion/props, `list_fonts`/`prepare_font`,
+and `list_effects`/`set_effects` for media, Studio, manual titles and caption cues.
+Batch effect patches preserve independent values and require the current revision.
+All local editing runs without provider credits; downloading a new Google font
+requires network access. AI background removal/speaker tracking remains research.
+
+`check:mcp` uses a fresh stdio connection from outside the checkout. If a running
+chat has cached an older tool list, its skill can use the same MCP immediately:
 
 ```sh
-mkdir -p "$HOME/.codex/skills"
-cp -R .agents/skills/cutroom "$HOME/.codex/skills/"
+node /absolute/path/to/cutroom/scripts/call-mcp.mjs list
+node /absolute/path/to/cutroom/scripts/call-mcp.mjs list_studio < request.json
 ```
+
+Use `{}` for the `list_studio` request; other calls use the discovered tool schema.
+For other MCP clients, configure stdio with `npm run mcp --silent` and this checkout
+as cwd. The launcher starts/reuses the local editor; it needs no separate MCP key.
 
 Example requests:
 
@@ -380,3 +400,5 @@ layers. The top row is the top visual layer; timing stays intact. A focused grip
 also supports Up/Down and Home/End. Undo reverses either kind of edit.
 The saved layout is used by preview, video export and cover export. See
 [overlay and layer controls](docs/overlays-and-layers.md) for MCP parameters.
+
+Searchable Google Fonts, offline font storage and catalog updates: [font guide](docs/google-fonts.md).

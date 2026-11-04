@@ -1,12 +1,28 @@
+import {mergeTextShadows} from './shadows';
 import {FPS,clamp,uid} from './model';
+import type {FontFamily} from './fonts';
 
 export type CaptionWord={text:string;start:number;end:number};
-export type CaptionCue={hidden?:boolean;id:string;start:number;duration:number;words:CaptionWord[]};
-export type CaptionStyle={fontFamily:'Inter Variable'|'DM Sans Variable'|'Manrope Variable';fontSize:number;fontWeight:number;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;display:'word'|'phrase'|'sentence';motion:'none'|'fade'|'pop';highlight:boolean;highlightColor:string;y:number};
+export type CaptionCue={effects?:import('./effects').Effects;hidden?:boolean;id:string;start:number;duration:number;words:CaptionWord[];style?:Partial<CaptionStyle>};
+export type CaptionStyle={shadow?:Partial<import('./effects').TextShadow>;fontFamily:FontFamily;fontSize:number;fontWeight:number;lineHeight?:number;letterSpacing?:number;color:string;stroke:boolean;strokeColor:string;strokeWidth:number;display:'word'|'phrase'|'sentence';motion:'none'|'fade'|'pop';highlight:boolean;highlightColor:string;x?:number;y:number;width?:number;align?:'left'|'center'|'right'};
 export type CaptionLayer={id:string;name:string;muted:boolean;language:string;style:CaptionStyle;cues:CaptionCue[];sourceJobId?:string;sourceSignature?:string};
 export type CaptionSelection={layerId:string;cueId?:string}|null;
 export const defaultCaptionStyle:CaptionStyle={fontFamily:'Inter Variable',fontSize:56,fontWeight:700,color:'#ffffff',stroke:true,strokeColor:'#111111',strokeWidth:3,display:'phrase',motion:'none',highlight:false,highlightColor:'#d9efad',y:82};
 export const cueText=(cue:CaptionCue)=>cue.words.map(word=>word.text).join(' ');
+export const effectiveCaptionStyle=(layer:CaptionLayer,cue:CaptionCue):CaptionStyle=>({...layer.style,...cue.style,...(layer.style.shadow||cue.style?.shadow?{shadow:mergeTextShadows(layer.style.shadow,cue.style?.shadow)}:{})});
+
+// Use the same active phrase for both the rendered caption and its canvas controls.
+export function activeCaptionCue(layer:CaptionLayer,frame:number){
+  if(layer.muted)return undefined;
+  let active:CaptionCue|undefined;for(const cue of layer.cues)if(!cue.hidden&&frame>=cue.start&&frame<cue.start+cue.duration)active=cue;return active;
+}
+export function captionWindow(cue:CaptionCue,style:CaptionStyle,frame:number){
+  const local=frame-cue.start;
+  let active=0;for(let index=0;index<cue.words.length;index++)if(cue.words[index].start<=local)active=index;
+  const start=style.display==='word'?active:style.display==='phrase'?Math.floor(active/6)*6:0;
+  const words=style.display==='word'?cue.words.slice(start,start+1):style.display==='phrase'?cue.words.slice(start,start+6):cue.words;
+  return {local,active,start,words};
+}
 
 export function captionsFromWords(words:CaptionWord[]):CaptionCue[]{
   const cues:CaptionCue[]=[];let group:CaptionWord[]=[];
@@ -38,8 +54,9 @@ export function resizeCaptionCue(cue:CaptionCue,duration:number):CaptionCue{
 export function captionSubtitles(layer:CaptionLayer,format:'srt'|'vtt'){
   const stamp=(frames:number)=>{const ms=Math.round(frames/FPS*1000),h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}${format==='srt'?',':'.'}${String(ms%1000).padStart(3,'0')}`;};
   const cues=layer.cues.filter(cue=>!cue.hidden).flatMap(cue=>{
-    if(layer.style.display==='sentence')return [{start:cue.start,end:cue.start+cue.duration,text:cueText(cue)}];
-    const size=layer.style.display==='word'?1:6,result:{start:number;end:number;text:string}[]=[];
+    const style=effectiveCaptionStyle(layer,cue);
+    if(style.display==='sentence')return [{start:cue.start,end:cue.start+cue.duration,text:cueText(cue)}];
+    const size=style.display==='word'?1:6,result:{start:number;end:number;text:string}[]=[];
     for(let index=0;index<cue.words.length;index+=size){const words=cue.words.slice(index,index+size);result.push({start:cue.start+words[0].start,end:cue.start+(cue.words[index+size]?.start??cue.duration),text:words.map(word=>word.text).join(' ')});}
     return result;
   }).filter(cue=>cue.text&&cue.end>cue.start).sort((a,b)=>a.start-b.start);

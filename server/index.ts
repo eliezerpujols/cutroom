@@ -1,3 +1,6 @@
+import {registerFontRoutes,ensureProjectFonts} from './fonts';
+import {registerStudioRoutes} from './studio';
+import {studioAssets} from '../src/studio/registry';
 import {cleanupProjectExports,exportCleanupRoot,registerExportCleanupRoute} from './exportCleanup';
 import express from 'express';
 import multer from 'multer';
@@ -18,6 +21,7 @@ import {chooseProjectFile} from './projectPicker';
 import {dubbingEngine} from './dubbing';
 import {integrationSettings} from './integrations';
 import {finalizeExportMetadata} from './exportMetadata';
+import {latestExport,revealExport} from './exports';
 import {captionEngine} from './captions';
 import {registerVisualRoutes} from './visuals';
 import {registerTextRoutes} from './texts';
@@ -25,6 +29,7 @@ import {registerSoundRoutes} from './sounds';
 import {coverFrame} from '../src/visuals';
 import {companionProject,renderCompanion,savedCompanion,type CoverCompanion} from './coverExports';
 import {captionSourceSignature,captionSubtitles,replaceCueText,resizeCaptionCue} from '../src/captions';
+import {patchCaptionLayerStyle} from '../src/selectionStyles';
 import {endFrame,splitClip,trimClip,slipClip,setClipRate,type Asset,type Project} from '../src/model';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),data=path.join(root,'data'),port=4317;
@@ -38,8 +43,9 @@ await store.migrateManagedRoot(path.join(root,'projects'));
 const media=mediaEngine(root,store);
 const captions=captionEngine(store,media);
 const app=express();app.disable('x-powered-by');
-app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
+app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;res.setHeader('X-Content-Type-Options','nosniff');if(/^\/api\/projects\/[^/]+\/(fonts|font-files)\//.test(req.path)&&req.method==='GET'&&(!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin))){res.setHeader('Access-Control-Allow-Origin',origin||'*');res.setHeader('Vary','Origin');next();return;}if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
+registerFontRoutes(app,store,data);
 app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library','overlays','layer-order'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
@@ -57,6 +63,7 @@ function publish(event:Record<string,unknown>){
   return delivered;
 }
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
+registerStudioRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});const d=editorDestination(id);return {...d,editor_url:d.editor_url+'&view=studio'};});
 registerLayerRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id);});
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
 registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
@@ -81,7 +88,7 @@ app.post('/api/projects/:id/caption-edits',async(req,res)=>{
   for(const operation of body.operations){
     const layer=project.captions?.find(item=>item.id===operation.layerId);if(!layer)throw new Error('Choose a caption layer ID from this project.');
     if(operation.action==='remove_layer'){project.captions=project.captions?.filter(item=>item.id!==layer.id);continue;}
-    if(operation.action==='style'){if(!operation.style)throw new Error('Provide caption style values.');layer.style={...layer.style,...operation.style};continue;}
+    if(operation.action==='style'){if(!operation.style)throw new Error('Provide caption style values.');Object.assign(layer,patchCaptionLayerStyle(layer,operation.style));continue;}
     if(operation.action==='mute'){if(operation.value!==0&&operation.value!==1)throw new Error('Caption mute is 0 or 1.');layer.muted=!!operation.value;continue;}
     const cue=layer.cues.find(item=>item.id===operation.cueId);if(!cue)throw new Error('Choose a cue ID from this caption layer.');
     if(operation.action==='remove_cue'){layer.cues=layer.cues.filter(item=>item.id!==cue.id);continue;}
@@ -129,7 +136,7 @@ app.post('/api/extract',async(req,res)=>{const id=projectId(req),{assetId}=z.obj
 
 const operationSchema=z.object({action:z.enum(['trim_start','trim_end','move','slip','split','speed','volume','mute','fade_in','fade_out','remove']),clipId:z.string(),value:z.number().finite().optional()});
 app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),operations:z.array(operationSchema).min(1).max(100),open:z.boolean().optional()}).parse(req.body);const d=await store.read(id);let p=structuredClone(d.project);
-  for(const op of body.operations){const c=p.clips.find(c=>c.id===op.clipId),a=d.assets.find(a=>a.id===c?.assetId);if(!c||!a)throw new Error('Choose a clip ID from this project.');if(a.kind==='image'&&['slip','speed'].includes(op.action))throw new Error('Still images have no source slip or playback speed. Change their duration instead.');if(op.action==='remove'){p.clips=p.clips.filter(v=>v.id!==c.id);continue;}const n=op.value;if(n===undefined)throw new Error('This operation needs a numeric value. Timing values use frames at 30 fps.');let next=c;
+  for(const op of body.operations){const c=p.clips.find(c=>c.id===op.clipId),a=d.assets.find(a=>a.id===c?.assetId)??studioAssets.find(a=>a.id===c?.assetId);if(!c||!a)throw new Error('Choose a clip ID from this project.');if(a.kind==='image'&&['slip','speed'].includes(op.action))throw new Error('Still images have no source slip or playback speed. Change their duration instead.');if(op.action==='remove'){p.clips=p.clips.filter(v=>v.id!==c.id);continue;}const n=op.value;if(n===undefined)throw new Error('This operation needs a numeric value. Timing values use frames at 30 fps.');let next=c;
     if(op.action==='split'){p.clips=p.clips.flatMap(v=>v.id===c.id?splitClip(c,Math.round(n),randomUUID()):[v]);continue;}
     const asset={...a,url:'',thumbnails:[],missing:false};
     if(op.action==='trim_start')next=trimClip(c,n,'left',asset);if(op.action==='trim_end')next=trimClip(c,n,'right',asset);if(op.action==='slip')next=slipClip(c,n,asset);if(op.action==='move')next={...c,start:Math.max(0,Math.round(n))};
@@ -137,7 +144,7 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
   }await store.save(id,p,body.expectedRevision);const w=await store.workspace(id);if(body.open)publish({projectId:id,revision:w.revision});res.json({...w,...(body.open?editorDestination(id):{})});
 });
 
-type Job={id:string;projectId:string;status:'queued'|'rendering'|'rendering-cover'|'finalizing'|'completed'|'failed';progress:number;cover?:CoverCompanion;coverError?:string;format?:'png';url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
+type Job={id:string;projectId:string;status:'queued'|'rendering'|'rendering-cover'|'finalizing'|'completed'|'failed';progress:number;cover?:CoverCompanion;coverError?:string;format?:'mp4'|'wav'|'mp3'|'png';selection?:{start:number;end:number};url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
 const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,busy=false;
 registerExportCleanupRoute(app,async dryRun=>{
   if(busy)throw Object.assign(new Error('An export or cleanup is running. Let it finish first.'),{status:409});
@@ -168,8 +175,8 @@ app.post('/api/export',reserveExport,async(req,res)=>{
   const document=await store.read(pid),workspace=await store.workspace(pid),project=validateProject(body.project||document.project,document.assets),duration=endFrame(project);
   if(!project.clips.length)throw new Error('Add a clip before exporting.');if(workspace.assets.some(a=>a.missing&&project.clips.some(c=>c.assetId===a.id)))throw new Error('Relink the missing media before exporting.');const range=body.selection;if(range&&(range.end<=range.start||range.end>duration))throw new Error('Choose a valid export range.');
   if(body.format==='mp4')companionProject(project);
-  const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0};jobs.set(id,job);busy=true;res.status(202).json(job);
-  (async()=>{try{const inputs={project,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`}))};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps:inputs});job.status='rendering';
+  const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0,format:body.format,...(range?{selection:range}:{})};jobs.set(id,job);busy=true;res.status(202).json(job);
+  (async()=>{try{await ensureProjectFonts(path.join(data,'fonts'),workspace.folder,project);const inputs={project,fontProjectId:pid,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`}))};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps:inputs});job.status='rendering';
     const filename=project.name.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+body.format,output=path.join(workspace.exportsDir,filename);await fs.mkdir(workspace.exportsDir,{recursive:true});
     await renderMedia({composition,serveUrl,inputProps:inputs,codec:body.format==='mp4'?'h264':body.format,outputLocation:output,...(range?{frameRange:[range.start,range.end-1] as [number,number]}:{}),concurrency:2,onProgress:({progress})=>job.progress=progress*(body.format==='mp4'?.94:.97),...(body.format==='mp4'?{crf:18,pixelFormat:'yuv420p' as const}:{})});
     job.status='finalizing';job.progress=body.format==='mp4'?.95:.98;Object.assign(job,await finalizeExportMetadata(output,media.run));
@@ -184,13 +191,15 @@ app.post('/api/projects/:id/cover/export',reserveExport,async(req,res)=>{
   if(workspace.assets.some(a=>a.missing&&project.clips.some(c=>c.assetId===a.id&&c.kind==='video'&&c.start<=at&&at<c.start+c.duration)))throw new Error('Relink the missing cover media before exporting.');
   const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0,format:'png'};jobs.set(id,job);busy=true;res.status(202).json(job);
   void(async()=>{let output:string|undefined;try{
-    const inputProps={project,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`})),coverMode:true};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps});job.status='rendering';job.progress=.25;
+    await ensureProjectFonts(path.join(data,'fonts'),workspace.folder,project);const inputProps={project,fontProjectId:pid,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`})),coverMode:true};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps});job.status='rendering';job.progress=.25;
     const filename=(project.name.replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-')||'Cutroom')+'-cover-'+id.slice(0,8)+'.png';output=path.join(workspace.exportsDir,filename);await fs.mkdir(workspace.exportsDir,{recursive:true});
     await renderStill({composition,serveUrl,inputProps,frame:at,output,imageFormat:'png'});const completed={...job,status:'completed' as const,progress:1,filename,url:`/api/projects/${pid}/exports/${encodeURIComponent(filename)}`};await atomicJson(path.join(workspace.exportsDir,id+'.export.json'),completed);Object.assign(job,completed);
   }catch(e){job.status='failed';job.error=(e as Error).message;if(output)await fs.unlink(output).catch(()=>{});}finally{busy=false;}})();
 });
 app.get('/api/export/:id',(req,res)=>{const j=jobs.get(String(req.params.id));j?res.json(j):res.status(404).json({error:'Export not found. It may have ended when the server restarted.'});});
 app.get('/api/projects/:id/export-companion/:jobId',async(req,res)=>{const id=z.string().uuid().parse(req.params.id),jobId=z.string().uuid().parse(req.params.jobId);res.json(await savedCompanion(path.join(store.entry(id).folder,'exports'),id,jobId));});
+app.get('/api/projects/:id/exports/latest',async(req,res)=>{const id=z.string().uuid().parse(req.params.id),format=z.enum(['mp4','wav','mp3']).default('mp4').parse(req.query.format);res.json({job:await latestExport(path.join(store.entry(id).folder,'exports'),id,format)});});
+app.post('/api/projects/:id/exports/reveal',async(req,res)=>{const id=z.string().uuid().parse(req.params.id),{filename}=z.object({filename:z.string().min(1).max(255)}).parse(req.body);res.json(await revealExport(path.join(store.entry(id).folder,'exports'),filename));});
 app.get('/api/projects/:id/exports/:filename',(req,res)=>res.download(path.join(store.entry(String(req.params.id)).folder,'exports',path.basename(String(req.params.filename)))));
 app.get('/api/exports/:filename',(_req,res)=>res.status(410).json({error:'Exports now live inside each project folder.'}));
 if(process.argv.includes('--production')){app.use(express.static(path.join(root,'dist')));app.get('/{*path}',(_req,res)=>res.sendFile(path.join(root,'dist/index.html')));}
