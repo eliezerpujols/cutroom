@@ -77,3 +77,5 @@
 
 .effect-basic>summary>svg{color:var(--muted)}
 .effect-basic[open]>summary>svg{transform:rotate(180deg)}
+
+.effect-basic:not([open]){padding-bottom:4px}
