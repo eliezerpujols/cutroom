@@ -70,7 +70,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     const p=current.current,id=ids.length===1?ids[0]:null,text=p.texts?.find(item=>item.id===id),layer=p.captions?.find(item=>item.cues.some(cue=>cue.id===id));
     const hasText=p.texts?.some(item=>ids.includes(item.id)),hasCaptions=p.captions?.some(item=>item.cues.some(cue=>ids.includes(cue.id)));
     setTextSelected(text?.id||null);setCoverEditing(false);setCaptionSelection(layer&&id?{layerId:layer.id,cueId:id}:null);setCaptionStyleOpen(open=>open&&!!hasCaptions);
-    if(hasText||hasCaptions){setLibraryTab(tab=>hasText&&hasCaptions&&(tab==='text'||tab==='transcript')?tab:hasCaptions?'transcript':'text');setMediaOpen(true);}
+    if(hasText||hasCaptions){setLibraryTab(tab=>tab==='effects'?tab:hasText&&hasCaptions&&(tab==='text'||tab==='transcript')?tab:hasCaptions?'transcript':'text');setMediaOpen(true);}
     setSelection(previous=>previous.length===ids.length&&previous.every((value,index)=>value===ids[index])?previous:ids);
   },[current]);
   const setSelected=useCallback((id:string|null)=>selectClips(id?[id]:[]),[selectClips]);
@@ -105,7 +105,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     try{editProject(p=>{const next=typeof change==='function'?change(p):change;return arrangeTimelineTracks(next,changedTimelineClipIds(p,next));},record);}
     catch(e){toast((e as Error).message);}
   },[editProject,toast]);
-  const selectCaption=useCallback((value:CaptionSelection)=>{setTextSelected(null);setCoverEditing(false);setSelection(value?.cueId?[value.cueId]:[]);setCaptionSelection(value);setLibraryTab('transcript');setMediaOpen(true);},[]);
+  const selectCaption=useCallback((value:CaptionSelection)=>{setTextSelected(null);setCoverEditing(false);setSelection(value?.cueId?[value.cueId]:[]);setCaptionSelection(value);setLibraryTab(tab=>tab==='effects'?tab:'transcript');setMediaOpen(true);},[]);
   const captionsAdded=useCallback((id:string)=>{selectCaption({layerId:id});setCaptionStyleOpen(false);toast('Captions added.');},[selectCaption,toast]);
   const captionGeneration=useCaptions(initial.projectId,project,mediaOpen&&!coverEditing&&libraryTab==='transcript'&&transcriptOpen,edit,captionsAdded,initial.editorInstanceId,initial.recoverLegacyDraft);
   const changeCaptionStyle=(patch:Partial<CaptionStyle>,record=true)=>{
@@ -121,7 +121,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const seek=useCallback((f:number)=>{player.current?.pause();if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);seekRequest.current=requestAnimationFrame(()=>{player.current?.seekTo(f);setFrame(f);seekRequest.current=undefined;});},[]);
   useEffect(()=>()=>{if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);if(noticeTimer.current)clearTimeout(noticeTimer.current);},[]);
   useEffect(()=>{const id=new URLSearchParams(location.search).get('text'),item=initialProject.texts?.find(text=>text.id===id);if(item)seek(item.start);},[initialProject,seek]);
-  const selectText=useCallback((id:string|null)=>{player.current?.pause();setTextSelected(id);setSelection(id?[id]:[]);setCaptionSelection(null);setCaptionStyleOpen(false);setCoverEditing(false);setLibraryTab('text');setMediaOpen(true);setTool('select');const item=current.current.texts?.find(text=>text.id===id),at=player.current?.getCurrentFrame()??0;if(item&&(at<item.start||at>=item.start+item.duration))seek(item.start);},[current,seek]);
+  const selectText=useCallback((id:string|null)=>{player.current?.pause();setTextSelected(id);setSelection(id?[id]:[]);setCaptionSelection(null);setCaptionStyleOpen(false);setCoverEditing(false);setLibraryTab(tab=>tab==='effects'?tab:'text');setMediaOpen(true);setTool('select');const item=current.current.texts?.find(text=>text.id===id),at=player.current?.getCurrentFrame()??0;if(item&&(at<item.start||at>=item.start+item.duration))seek(item.start);},[current,seek]);
   const commitCaptionText=(id:string,text:string)=>{
     const cue=current.current.captions?.flatMap(layer=>layer.cues).find(cue=>cue.id===id);if(!cue)return;
     const updated=replaceCueText(cue,text);

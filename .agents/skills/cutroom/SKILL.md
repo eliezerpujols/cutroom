@@ -41,6 +41,9 @@ group has a visible heading using the shared section-title typography (11px,
 550 weight, 18px line height), with smaller regular-weight control labels inside.
 Use InspectorSection for text/caption groups; keep Text, Font, Color, Background,
 Outline and Shadows distinct rather than leaving unlabeled groups under Timing.
+While Effects is active, selecting text, captions, media or a mixed selection
+keeps Effects open and updates its target. Only explicit navigation changes tools;
+other library tabs retain their usual selection-driven navigation.
 For effects and transitions, use square image preview tiles with short names;
 show the effect on hover or keyboard focus and respect reduced motion. Verify the
 rendered result in the editor before presenting it.
