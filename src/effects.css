@@ -74,3 +74,6 @@
 .effect-basic > .effect-grid { margin-top: 12px; }
 
 .effect-text-sample.is-styled{background:#233b32;color:#f2f5ed}
+
+.effect-basic>summary>svg{color:var(--muted)}
+.effect-basic[open]>summary>svg{transform:rotate(180deg)}

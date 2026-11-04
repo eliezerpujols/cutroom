@@ -3,7 +3,7 @@ import {textAnimationOptions,textMotionOptions,textStyleOptions,textAppearanceOp
 import {textTransitionTargets} from './textTransitions';
 import {MotionTimingControls} from './MotionTimingControls';
 import React,{useEffect,useId,useState} from 'react';
-import {RotateCcw,X} from 'lucide-react';
+import {ChevronDown,RotateCcw,X} from 'lucide-react';
 import {Button,IconButton} from './ui/primitives';
 import {commonStyleValue,StyleRange,StyleNumber,StyleColor} from './StyleControls';
 import {defaultEffects,motionOptions,selectedEffectItems,patchSelectionEffects,mapSelectionMotion,transitionPrevious,type Effects,type MotionKind} from './effects';
@@ -76,4 +76,4 @@ export function EffectsPanel({project,assets,ids,edit,checkpoint,hide,transition
 
 function TextUnitChoice({value,change}:{value:'letter'|'word'|undefined;change:(unit:'letter'|'word')=>void}){return <div className="effect-playback"><span>Animate</span><div className="speed-presets" role="group" aria-label="Animate text by">{([['letter','Letters'],['word','Words']] as const).map(([unit,label])=><Button key={unit} variant="ghost" size="sm" aria-pressed={value===unit} onClick={()=>change(unit)}>{label}</Button>)}</div></div>;}
 
-function BasicEffects({collapsible,children}:{collapsible:boolean;children:React.ReactNode}){return collapsible?<details className="inspector-section advanced effect-basic"><summary>Basic</summary>{children}</details>:<>{children}</>;}
+function BasicEffects({collapsible,children}:{collapsible:boolean;children:React.ReactNode}){return collapsible?<details className="inspector-section advanced effect-basic"><summary><span>Basic</span><ChevronDown size={15} aria-hidden="true"/></summary>{children}</details>:<>{children}</>;}
