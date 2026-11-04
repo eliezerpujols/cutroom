@@ -33,3 +33,7 @@ The separation follows [Jitter’s Design / Animate views](https://mobbin.com/sc
 Each effective Between transition has a small junction button, a duration label in seconds, and a striped range covering its actual playback interval on the incoming clip. The range scales with timeline zoom while the button stays easy to target. Clicking it selects the incoming clip, seeks to the join and opens Animation → Between, including when Appearance was previously open. Only adjacent, visible full-frame clips on the same track produce markers; gaps and None produce none. The duration helper is shared with rendering, including clamping to short clips. The range does not intercept clip dragging or trimming.
 
 The junction control follows the [Canva transition reference](https://mobbin.com/screens/f4f0c6ef-911c-47fc-9119-40627b7234bf?utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp). Build and 35/35 tests pass. Browser verification confirmed both existing transitions, reopening Between from Appearance, and 1× → 1.25× zoom changing the range from 14.21px to 17.77px while keeping its button at 23px. This verification changed only editor selection, playhead and zoom, without editing the user's clips. See `docs/qa/effects-2026-11-04/timeline-transition-editor.png` and its timeline detail.
+
+Multi-selection inspectors omit group position fields and instructional paragraphs.
+Move groups directly on the timeline; shared styling, playback and audio controls
+remain available, with selection counts and mixed-value indicators.

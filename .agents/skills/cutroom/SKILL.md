@@ -122,7 +122,9 @@ separate matching tracks, as when dragging on the timeline.
 
 In the UI, dragging empty timeline space selects clips across video and audio
 tracks. Drag any selected clip to move the selection together; Shift-click
-adjusts the selection. The inspector's Selection start moves the whole group.
+adjusts the selection. Group positioning stays on the timeline; multi-selection
+inspectors show shared editing controls without a redundant position field or
+paragraphs explaining selection/dragging.
 For the equivalent MCP edit, apply the same frame delta to every selected clip's
 absolute `move` value in one `edit_project` operations batch. Preserve relative
 spacing and audio sync; do not clamp each clip separately at frame zero.

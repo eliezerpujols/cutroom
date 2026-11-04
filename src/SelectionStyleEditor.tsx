@@ -7,6 +7,6 @@ export function SelectionStyleEditor({project,ids,change,checkpoint}:{project:Pr
   const {texts}=selectedStyles(project,ids);
   const textIds=texts.map(text=>text.id),scopeKey=[...textIds].sort().join('|');
   return <>
-    {!!texts.length&&<TextStyleControls styles={texts} scopeKey={scopeKey} change={(patch,record=true)=>change(textIds,patch,record)} checkpoint={checkpoint}><p className="field-hint">Style the {texts.length} selected text{texts.length===1?'':'s'}. Each keeps its own content and timing.</p></TextStyleControls>}
+    {!!texts.length&&<TextStyleControls styles={texts} scopeKey={scopeKey} change={(patch,record=true)=>change(textIds,patch,record)} checkpoint={checkpoint}/>}
   </>;
 }
