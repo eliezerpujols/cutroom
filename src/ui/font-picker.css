@@ -1,4 +1,4 @@
-.font-picker-trigger.button{display:flex;width:100%;justify-content:space-between;font-weight:400;padding:0 10px;height:34px;border:1px solid var(--border);background:var(--subtle);font-size:11px}
+.font-picker-trigger.button{display:flex;width:100%;justify-content:space-between;font-weight:400;padding:0 10px;height:34px;border:1px solid transparent;background:var(--subtle);font-size:11px}
 .font-picker-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .font-picker-popover{z-index:100;width:264px;max-width:calc(100vw - 24px);max-height:var(--radix-popover-content-available-height);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);overflow:hidden;font-size:11px}
 .font-picker-search{position:relative;padding:10px;border-bottom:1px solid var(--border);flex-shrink:0}
