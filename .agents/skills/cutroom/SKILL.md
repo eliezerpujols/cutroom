@@ -39,11 +39,12 @@ text rows and editor buttons. Keep keyboard focus rings and section dividers;
 text and media inspectors share the same section spacing. Every divided property
 group has a visible heading using the shared section-title typography (11px,
 550 weight, 18px line height), with smaller regular-weight control labels inside.
-Use InspectorSection for text/caption groups; keep Text, Font, Color, Background,
-Outline and Shadows distinct rather than leaving unlabeled groups under Timing.
-Outline uses the same compact StyleSettingsRow as shadows: swatch, settings
-popover and visibility toggle. Color and width live in the popover; support mixed
-selections without replacing other style values.
+Use InspectorSection for text/caption groups; keep Text, Font, Color, Outline and Shadows distinct rather than leaving unlabeled groups under Timing.
+Color groups Text color and Background as compact StyleSettingsRow popovers;
+Background exposes color, padding and roundness inside its popover and a visibility
+toggle on its row. Text color has no visibility toggle. Outline uses the same row
+as shadows, with color and width in its popover. Support mixed selections without
+replacing other style values.
 While Effects is active, selecting text, captions, media or a mixed selection
 keeps Effects open and updates its target. Only explicit navigation changes tools;
 other library tabs retain their usual selection-driven navigation.

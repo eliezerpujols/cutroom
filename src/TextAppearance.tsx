@@ -1,4 +1,5 @@
 import {InspectorSection} from './InspectorSection';
+import {StyleSettingsRow} from './StyleSettingsRow';
 import {OutlineControls} from './OutlineControls';
 import {ShadowControls} from './ShadowControls';
 import {InspectorItemHeader,InspectorActions} from './InspectorItemHeader';
@@ -23,8 +24,12 @@ export function TextStyleControls({styles,scopeKey,change,checkpoint,children}:S
       <div className="cover-format-toolbar" role="group" aria-label="Text formatting"><IconButton label="Bold text" aria-pressed={bold??'mixed'} onClick={()=>change({fontWeight:bold?400:800})}><Bold size={16}/></IconButton><IconButton label="Italic text" aria-pressed={get('italic')??'mixed'} onClick={()=>change({italic:!get('italic')})}><Italic size={16}/></IconButton><span/>{([['left',AlignLeft],['center',AlignCenter],['right',AlignRight]] as const).map(([align,Icon])=><IconButton key={align} label={`Align text ${align}`} aria-pressed={get('align')===undefined?'mixed':get('align')===align} onClick={()=>change({align})}><Icon size={16}/></IconButton>)}{(bold===undefined||get('italic')===undefined||get('align')===undefined)&&<small className="style-mixed-label">Mixed</small>}</div>
       {range('fontSize','Size',16,200)}<div className="text-spacing-controls"><StyleNumber key={scopeKey+'-line'} label="Line height" value={get('lineHeight')} min={80} max={300} scale={100} unit="%" checkpoint={checkpoint} change={lineHeight=>change({lineHeight},false)}/><StyleNumber key={scopeKey+'-letter'} label="Letter spacing" value={get('letterSpacing')} min={-10} max={30} scale={100} unit="%" checkpoint={checkpoint} change={letterSpacing=>change({letterSpacing},false)}/></div>
     </InspectorSection>
-    <InspectorSection title="Color">{color('color','Text color')}</InspectorSection>
-    <InspectorSection title="Background"><StyleToggle label="Text background" value={background} change={enabled=>change({fill:enabled?'box':'none'})}/>{styles.some(text=>text.fill!=='none')&&<>{color('fillColor','Fill color')}{range('padding','Padding',0,60)}{range('radius','Roundness',0,100)}</>}</InspectorSection>
+    <InspectorSection title="Color"><div className="shadow-list">
+      <StyleSettingsRow label="Text color" color={get('color')}>{color('color','Text color')}</StyleSettingsRow>
+      <StyleSettingsRow label="Background" color={get('fillColor')} enabled={background} toggle={()=>change({fill:background===true?'none':'box'})}>
+        {color('fillColor','Background color')}<div className="shadow-fields"><StyleNumber label="Padding" value={get('padding')} min={0} max={60} unit="px" checkpoint={checkpoint} change={padding=>change({padding},false)}/><StyleNumber label="Roundness" value={get('radius')} min={0} max={100} unit="px" checkpoint={checkpoint} change={radius=>change({radius},false)}/></div>
+      </StyleSettingsRow>
+    </div></InspectorSection>
     <OutlineControls key={scopeKey+'-outline'} values={styles} change={change} checkpoint={checkpoint}/>
     <ShadowControls key={scopeKey} values={styles} change={(shadow,record)=>change({shadow},record)} checkpoint={checkpoint}/>
     <details className="inspector-section advanced"><summary><span>Position & size</span><ChevronRight size={15}/></summary><div className="advanced-content">{range('width','Text box width',10,96)}{range('x','Horizontal position',0,100)}{range('y','Vertical position',0,100)}<Button variant="outline" size="sm" onClick={()=>change({x:50})}>Center horizontally</Button><p className="field-hint">Drag the text on the preview to move it.</p></div></details>
