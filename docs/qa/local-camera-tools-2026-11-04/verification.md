@@ -43,3 +43,11 @@ AI tools require macOS and Xcode Command Line Tools. Segmentation includes all
 detected people and can have imperfect edges. Tracking follows a face, not speech.
 PNG sequences need disk space; keep the full project media directory. Loading
 may briefly buffer on slow hardware instead of allowing layers to drift.
+
+## Crop settings tooltip follow-up
+
+Reproduced an immediate Reset crop tooltip when opening Crop settings: Radix
+autofocused the first header button. Shared property popovers now focus their
+container instead. Verified the open popover has no tooltip, Tab still reaches
+Reset with its accessible hint, and Escape closes it and restores the trigger.
+Production build passed. Hover keeps the existing provider delay of 450ms.

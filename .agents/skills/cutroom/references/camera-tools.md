@@ -12,6 +12,8 @@ grid. Arrow keys adjust focused handles; Shift uses larger steps. Done keeps the
 crop, Cancel restores the entry value. Numeric percentages are optional under the
 separate Crop settings icon. Reset crop belongs in that popover's header beside
 Close. Reuse shared Transform and position/size controls for video and images.
+Opening settings focuses the popover container, so Reset does not show a tooltip
+automatically. Keep the normal delayed hover hint and keyboard access to Reset.
 
 ## Local AI workflow
 
