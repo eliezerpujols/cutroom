@@ -12,7 +12,7 @@ const secondsLabel=(frames:number)=>`${(frames/FPS).toFixed(2)} seconds`;
 export function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number;min?:number;max:number;change:(frames:number)=>void}){
   const [text,setText]=useState((frames/FPS).toFixed(2)),editing=useRef(false),canceled=useRef(false);
   useEffect(()=>{if(!editing.current)setText((frames/FPS).toFixed(2));},[frames]);
-  return <span className="control-value"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} value={text}
+  return <span className="control-value text-spacing-input"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} value={text}
     onFocus={()=>{editing.current=true;canceled.current=false;}} onChange={event=>setText(event.target.value)}
     onBlur={()=>{editing.current=false;if(canceled.current){canceled.current=false;setText((frames/FPS).toFixed(2));return;}const value=Number(text);if(Number.isFinite(value)){const next=clamp(Math.round(value*FPS),min,max);if(next!==frames)change(next);setText((next/FPS).toFixed(2));}else setText((frames/FPS).toFixed(2));}}
     onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter')event.currentTarget.blur();if(event.key==='Escape'){canceled.current=true;event.currentTarget.blur();}}}/><span aria-hidden="true">s</span></span>;
