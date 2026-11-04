@@ -4,3 +4,9 @@
 .position-align{display:flex;align-items:flex-end;justify-content:flex-end;gap:4px}
 .position-align .button{height:32px;width:32px;background:var(--subtle)}
 .position-align .button:hover{background:var(--hover)}
+.transform-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.position-align .button[aria-pressed=true]{background:var(--accent);color:var(--accent-text)}
+.local-vision-tools{display:grid;gap:8px}
+.local-vision-tools .button{justify-content:flex-start;height:32px}
+.local-vision-progress{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted)}
+.local-vision-progress>span{flex:1}

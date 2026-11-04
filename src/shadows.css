@@ -22,3 +22,5 @@
 .shadow-fields .input{height:32px;font-size:11px;font-variant-numeric:tabular-nums;padding-right:26px}
 .shadow-fields input[type=number]{appearance:textfield;-moz-appearance:textfield}
 .shadow-fields input[type=number]::-webkit-inner-spin-button,.shadow-fields input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.shadow-popover-heading>span:first-child{flex:1}

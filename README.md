@@ -269,11 +269,19 @@ skills are backed up under `~/.codex/skill-backups/`. Keep the checkout in place
 rerun setup if you move it. No per-project installation or duplicate skill copy
 is needed. `CODEX_HOME` is honored when explicitly configured.
 
-MCP 2.9 includes Studio discovery/insertion/props, `list_fonts`/`prepare_font`,
+MCP 2.11 includes Studio discovery/insertion/props, `list_fonts`/`prepare_font`,
 and `list_effects`/`set_effects` for media, Studio, manual titles and caption cues.
 Batch effect patches preserve independent values and require the current revision.
 All local editing runs without provider credits; downloading a new Google font
-requires network access. AI background removal/speaker tracking remains research.
+requires network access. `set_media_transform` exposes crop, rotation and mirror.
+`start_local_vision`, `local_vision_status`, `cancel_local_vision` and
+`apply_local_vision` provide local person cutout and face-centered camera tracking.
+These two AI operations require macOS and Xcode Command Line Tools; they use Apple
+Vision without uploading footage or spending provider credits. Cutout creates a
+separate transparent layer while retaining the original. It includes all detected
+people; tracking follows a face and does not infer the speaker from audio. See
+[camera tools](.agents/skills/cutroom/references/camera-tools.md) for workflow and
+project portability details.
 
 `check:mcp` uses a fresh stdio connection from outside the checkout. If a running
 chat has cached an older tool list, its skill can use the same MCP immediately:

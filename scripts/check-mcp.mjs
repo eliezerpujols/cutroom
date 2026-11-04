@@ -4,11 +4,11 @@ const client=await connectCutroom();
 const call=async(name,args={})=>{const r=await client.callTool({name,arguments:args});assert.ok(!r.isError,JSON.stringify(r.content));return JSON.parse(r.content[0].text);};
 try{
  const {tools}=await client.listTools();
- for(const name of ['list_studio','set_studio_element','list_fonts','prepare_font','list_effects','set_effects'])assert.ok(tools.some(t=>t.name===name),name);
+ for(const name of ['list_studio','set_studio_element','list_fonts','prepare_font','list_effects','set_effects','set_media_transform','start_local_vision','local_vision_status','cancel_local_vision','apply_local_vision'])assert.ok(tools.some(t=>t.name===name),name);
  const studio=await call('list_studio');assert.ok(studio.templates.some(t=>t.id==='orbit-card'));
  const fonts=await call('list_fonts',{query:'Lora',category:'Serif',limit:10});assert.ok(fonts.fonts.some(f=>f.family==='Lora'));assert.ok(fonts.fonts.every(f=>f.category==='Serif'));
  const fx=await call('list_effects',{target_kind:'caption'});assert.ok(fx.animation.some(f=>f.id==='text-wave'));
- console.log(`Fresh global launcher from outside the repo: ${client.getServerVersion().version}, ${tools.length} tools; Studio, fonts and effects discovery passed.`);
+ console.log(`Fresh global launcher from outside the repo: ${client.getServerVersion().version}, ${tools.length} tools; Studio, fonts, effects and camera tool discovery passed.`);
  if(process.argv.includes('--write-smoke')){
   // Copy only the explicitly named QA fixture, never the user's working project.
   const index=process.argv.indexOf('--fixture-project');const fixture=process.argv[index+1];

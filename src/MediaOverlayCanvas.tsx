@@ -23,9 +23,10 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
       if(!moved){checkpoint();moved=true;}
       let patch:ClipOverlay;
       if(corner){
-        const vx=(next.clientX-rect.left-anchor.x)*sx,vy=(next.clientY-rect.top-anchor.y)*sy;
+        const angle=(clip.transform?.rotation??0)*Math.PI/180,cx=original.x/100*rect.width,cy=original.y/100*rect.height,dx=next.clientX-rect.left-cx,dy=next.clientY-rect.top-cy,px=cx+dx*Math.cos(angle)+dy*Math.sin(angle),py=cy-dx*Math.sin(angle)+dy*Math.cos(angle);
+        const vx=(px-anchor.x)*sx,vy=(py-anchor.y)*sy;
         const w=clamp((vx+vy/ratio)/(1+1/(ratio*ratio)),rect.width*.02,rect.width*2),h=w/ratio;
-        patch={width:w/rect.width*100,x:clamp((anchor.x+sx*w/2)/rect.width*100,0,100),y:clamp((anchor.y+sy*h/2)/rect.height*100,0,100)};
+        const nx=anchor.x+sx*w/2-cx,ny=anchor.y+sy*h/2-cy;patch={width:w/rect.width*100,x:clamp((cx+nx*Math.cos(angle)-ny*Math.sin(angle))/rect.width*100,0,100),y:clamp((cy+nx*Math.sin(angle)+ny*Math.cos(angle))/rect.height*100,0,100)};
       }else{
         const position=snapCanvasPosition(original.x+(next.clientX-startX)/rect.width*100,original.y+(next.clientY-startY)/rect.height*100,original.width/2,overlayHeight(project,asset,original.width)/2,rect.width,rect.height,!next.shiftKey,false);
         setGuides(position.guides);
@@ -42,7 +43,7 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
   }
   return <div ref={root} className="media-overlay-canvas">{clipsInRenderOrder(project).filter(clip=>!clip.hidden&&clip.overlay&&clip.start<=frame&&frame<clip.start+clip.duration).map(clip=>{
     const asset=assets.find(asset=>asset.id===clip.assetId);if(!asset||asset.missing)return null;const value=clip.overlay!,active=selected===clip.id;
-    return <div key={clip.id} className={`media-overlay-box ${active?'selected':''}`} style={{left:`${value.x}%`,top:`${value.y}%`,width:`${value.width}%`,height:`${overlayHeight(project,asset,value.width)}%`}} role="button" tabIndex={0} aria-label={`Move overlay ${clip.name}`} aria-pressed={active} onPointerDown={event=>start(event,clip,asset)} onClick={event=>event.stopPropagation()} onKeyDown={event=>{
+    return <div key={clip.id} className={`media-overlay-box ${active?'selected':''}`} style={{left:`${value.x}%`,top:`${value.y}%`,width:`${value.width}%`,height:`${overlayHeight(project,asset,value.width)}%`,transform:`translate(-50%,-50%) rotate(${clip.transform?.rotation??0}deg)`}} role="button" tabIndex={0} aria-label={`Move overlay ${clip.name}`} aria-pressed={active} onPointerDown={event=>start(event,clip,asset)} onClick={event=>event.stopPropagation()} onKeyDown={event=>{
       if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();select(clip.id);}
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(direction&&!event.metaKey&&!event.ctrlKey&&!event.altKey){event.preventDefault();event.stopPropagation();select(clip.id);const step=event.shiftKey?5:.5;change(clip.id,{x:clamp(value.x+direction[0]*step,0,100),y:clamp(value.y+direction[1]*step,0,100)});}

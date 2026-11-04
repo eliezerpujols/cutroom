@@ -91,6 +91,11 @@ editor instance URL and open a new tab for a new project.
 
 ## Verify and deliver
 
+Studio overlays share the editor's crop, rotation and mirror transforms. For the
+original-video/image-only local cutout and face tracking workflow, see
+[camera tools](../cutroom/references/camera-tools.md); do not submit synthetic
+Studio elements to the native vision worker.
+
 Run the build and relevant tests. Verify actual insertion, prop editing, overlay
 position/size, undo and save/reopen. Render a short local MP4 using the production
 composition and inspect several frames including the animation's start, middle

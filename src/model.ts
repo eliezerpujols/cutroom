@@ -1,13 +1,13 @@
 import {timelineLayers} from './layers';
 export const FPS = 30;
 export type Asset = {
-  id:string; name:string; kind:'video'|'audio'|'image'; duration:number; frames:number;
+  sequence?:{count:number}; id:string; name:string; kind:'video'|'audio'|'image'; duration:number; frames:number;
   width:number; height:number; hasAudio:boolean; missing?:boolean; url:string; extension?:string; thumbnails:string[]; peaks:number[];
 };
 export type Clip = {
   id:string; assetId:string; name:string; trackId:string; kind:'video'|'audio';
   start:number; duration:number; sourceIn:number; rate:number; volume:number; muted:boolean; hidden?:boolean;
-  studio?:import('./studio/registry').StudioInstance; fadeIn:number; fadeOut:number; effects?:import('./effects').Effects; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
+  transform?:import('./transforms').VisualTransform; studio?:import('./studio/registry').StudioInstance; fadeIn:number; fadeOut:number; effects?:import('./effects').Effects; overlay?:import('./overlays').ClipOverlay; adjustments?:import('./visuals').VisualAdjustments;
 };
 export type Track = {id:string; kind:'video'|'audio'; name:string; muted:boolean};
 export type Project = {layerOrder?:string[];version:1; name:string; width:number; height:number; fps:30; clips:Clip[]; tracks:Track[]; captions?:import('./captions').CaptionLayer[]; cover?:import('./visuals').Cover; adjustments?:import('./visuals').VisualAdjustments; texts?:import('./videoText').VideoText[]};

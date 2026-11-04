@@ -53,7 +53,7 @@ with independent visibility and a settings popover, not stacked slider forms.
 
 ## Actual tool coverage
 
-Source verified against MCP 2.9.0. The connected tool list is authoritative for
+Source verified against MCP 2.11.0. The connected tool list is authoritative for
 what this chat can call; a running connection may still expose an older version.
 
 | Capability | MCP support |
@@ -65,7 +65,7 @@ what this chat can call; a running connection may still expose an older version.
 | Google fonts | `list_fonts` searches families and categories with pagination; `prepare_font` caches the family in the project. Style tools accept exact returned family names. |
 | Media/Studio and caption-cue effects | `list_effects`, then `set_effects` with `kind=clip` or `kind=caption`. Caption targets use cue IDs, not layer IDs. |
 | Font category tabs, drag handles, effect previews, activity dots | Editor interactions; not separate MCP actions. |
-| AI background removal / speaker tracking | Research recommendations only; no working integration or tool. |
+| Person cutout / face-centered camera | Local Apple Vision through start/status/cancel/apply tools; see [camera tools](camera-tools.md). Active-speaker detection remains research. |
 
 For an unsupported edit, use the existing editor or inspect the local implementation
 before a revision-protected API update. Do not invent tool names or claim full MCP

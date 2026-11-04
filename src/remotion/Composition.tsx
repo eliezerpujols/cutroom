@@ -10,8 +10,9 @@ import {FPS,clipsInRenderOrder,type Asset,type Project} from '../model';
 import {CaptionOverlay} from './Captions';
 import {VideoTextOverlay} from './VideoText';
 import {CoverOverlay,VisualLayer} from './Visuals';
-export type EditorProps={project:Project;assets:Asset[];fontProjectId?:string;coverMode?:boolean;hiddenTextIds?:string[];hiddenCaptionCueIds?:string[]};
-function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hiddenCaptionCueIds=[]}:EditorProps){
+export type EditorProps={project:Project;assets:Asset[];fontProjectId?:string;coverMode?:boolean;hiddenTextIds?:string[];hiddenCaptionCueIds?:string[];cropClipId?:string};
+function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hiddenCaptionCueIds=[],cropClipId}:EditorProps){
+  if(cropClipId)project={...project,clips:project.clips.map(c=>c.id===cropClipId?{...c,transform:{...c.transform,crop:undefined,faceTrack:undefined}}:c)};
   assets=withStudioAssets(assets);
   const visibleProject=hiddenTextIds.length?{...project,texts:project.texts?.filter(text=>!hiddenTextIds.includes(text.id))}:project;
   const visibleCover=project.cover&&hiddenTextIds.length?{...project.cover,texts:project.cover.texts.filter(text=>!hiddenTextIds.includes(text.id))}:project.cover;

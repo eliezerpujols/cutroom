@@ -1,3 +1,4 @@
+import {registerLocalVision} from './local-vision';
 import {registerFontRoutes,ensureProjectFonts} from './fonts';
 import {registerStudioRoutes} from './studio';
 import {studioAssets} from '../src/studio/registry';
@@ -46,7 +47,7 @@ const app=express();app.disable('x-powered-by');
 app.use((req,res,next)=>{const host=req.headers.host?.split(':')[0];if(!host||!['127.0.0.1','localhost'].includes(host))return res.status(403).json({error:'Local connections only.'});const origin=req.headers.origin;res.setHeader('X-Content-Type-Options','nosniff');if(/^\/api\/projects\/[^/]+\/(fonts|font-files)\//.test(req.path)&&req.method==='GET'&&(!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin))){res.setHeader('Access-Control-Allow-Origin',origin||'*');res.setHeader('Vary','Origin');next();return;}if(origin&&!/^http:\/\/(127\.0\.0\.1|localhost):(5173|4317)$/.test(origin))return res.status(403).json({error:'Unrecognized origin.'});res.setHeader('X-Content-Type-Options','nosniff');next();});
 app.use(express.json({limit:'5mb'}));
 registerFontRoutes(app,store,data);
-app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library','overlays','layer-order'],url:`http://127.0.0.1:${port}`}));
+app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,localVisionBusy:localVision.isBusy(),capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library','overlays','layer-order'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
 type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
@@ -68,6 +69,7 @@ registerLayerRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});r
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
 registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
 await registerSoundRoutes(app,store,media,path.join(defaultProjectsDirectory(),'Sound Library'),(id,revision)=>{publish({projectId:id,revision});const destination=editorDestination(id);return {...destination,editor_url:destination.editor_url+'&view=sounds'};});
+const localVision=registerLocalVision(app,store,media,root,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id);});
 app.get('/api/integrations',(_req,res)=>res.json(integrationSettings()));
 app.post('/api/projects/:id/captions/estimate',async(req,res)=>res.json(await captions.estimate(z.string().uuid().parse(req.params.id),req.body.project)));
 app.post('/api/projects/:id/captions',async(req,res)=>{const language=z.string().regex(/^(auto|[a-z]{2,3})$/).optional().parse(req.body.language),requestId=z.string().uuid().optional().parse(req.body.requestId);res.status(202).json(await captions.start(z.string().uuid().parse(req.params.id),req.body.project,language,requestId));});
@@ -147,7 +149,7 @@ app.post('/api/projects/:id/edits',async(req,res)=>{const id=String(req.params.i
 type Job={id:string;projectId:string;status:'queued'|'rendering'|'rendering-cover'|'finalizing'|'completed'|'failed';progress:number;cover?:CoverCompanion;coverError?:string;format?:'mp4'|'wav'|'mp3'|'png';selection?:{start:number;end:number};url?:string;error?:string;filename?:string;metadata_policy?:string;cleanup_reencoded_media?:boolean};
 const jobs=new Map<string,Job>();let bundlePromise:Promise<string>|undefined,busy=false;
 registerExportCleanupRoute(app,async dryRun=>{
-  if(busy)throw Object.assign(new Error('An export or cleanup is running. Let it finish first.'),{status:409});
+  if(busy||localVision.isBusy())throw Object.assign(new Error('An export or cleanup is running. Let it finish first.'),{status:409});
   busy=true;
   try{
     const projects=await store.list();

@@ -1,6 +1,6 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, use reusable Studio overlays and visual/text effects, and manage local Cutroom projects or clear project exports through its MCP.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, use reusable Studio overlays and visual/text effects, transform media, create local person cutouts and face tracking, and manage local Cutroom projects or clear project exports through its MCP.
 ---
 
 # Cutroom
@@ -14,6 +14,8 @@ For overlays, layer order, cover text, frame selection, filters, or video/image 
 [the visual editing workflow](references/visuals.md).
 For animation, Motion/Styles/Appearance, text effects, dual shadows and current MCP coverage, read
 [effects and typography](references/effects.md).
+For crop handles, rotation, mirrors, local person cutout or face-centered camera
+tracking, read [camera and transform tools](references/camera-tools.md).
 The user can provide a video and target language in one request; complete the
 provider workflow and open its finished result. Existing provider keys are loaded
 from the local ignored environment, never from prompts or tool arguments.
@@ -229,7 +231,7 @@ Do not create a second installation in whichever project is currently open.
 Run `npm run check:global` in the Cutroom checkout to verify registration and both
 links; `npm run setup:global` repairs them and backs up previous skill copies.
 `npm run check:mcp` starts a fresh connection from outside the checkout and checks
-Studio, fonts and effects discovery without editing a project or calling a paid
+Studio, fonts, effects and camera tool discovery without editing a project or calling a paid
 provider. A rebuild of the editor is separate from MCP tool discovery.
 
 If the current chat's tool catalog is stale, continue through the same MCP with

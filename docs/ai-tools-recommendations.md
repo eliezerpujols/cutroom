@@ -1,6 +1,11 @@
 # AI tool recommendations for Cutroom
 
-Research only, 2026-11-04. No AI integration, uploads or provider charges were made. The order below is a product recommendation; performance and quality in Cutroom still need a prototype.
+Initial research, 2026-11-04. The roadmap below records the original recommendation.
+Later the same day, local person cutout and face-centered camera tracking shipped
+using Apple Vision on macOS. See [camera tools](../.agents/skills/cutroom/references/camera-tools.md)
+for their working MCP flow and limits. Voice cleaning, background blur and
+audio-based active-speaker detection remain recommendations. No footage was
+uploaded or provider credits spent for the local implementation.
 
 | Priority | Tool | Proposed first version |
 | --- | --- | --- |

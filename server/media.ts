@@ -16,7 +16,7 @@ function resolveFfmpeg(root:string){
 }
 export function mediaEngine(root:string,store:ProjectStore){
   const ffmpeg=resolveFfmpeg(root);
-  function run(args:string[],acceptFailure=false):Promise<{buffer:Buffer;stderr:string}>{return new Promise((resolve,reject)=>{const child=spawn(ffmpeg,['-hide_banner',...args]);const chunks:Buffer[]=[];let stderr='';child.stdout.on('data',(b:Buffer)=>chunks.push(b));child.stderr.on('data',(b:Buffer)=>stderr+=b.toString());child.on('error',reject);child.on('close',code=>code===0||acceptFailure?resolve({buffer:Buffer.concat(chunks),stderr}):reject(new Error(stderr.slice(-1500))));});}
+  function run(args:string[],acceptFailure=false,signal?:AbortSignal):Promise<{buffer:Buffer;stderr:string}>{return new Promise((resolve,reject)=>{const child=spawn(ffmpeg,['-hide_banner',...args],{signal});const chunks:Buffer[]=[];let stderr='';child.stdout.on('data',(b:Buffer)=>chunks.push(b));child.stderr.on('data',(b:Buffer)=>stderr+=b.toString());child.on('error',reject);child.on('close',code=>code===0||acceptFailure?resolve({buffer:Buffer.concat(chunks),stderr}):reject(new Error(stderr.slice(-1500))));});}
   async function probe(file:string){
     const isImage=/\.(png|jpe?g|webp)$/i.test(file);
     const {stderr}=await run(['-i',file],true),match=stderr.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);if(!match&&!isImage)throw new Error('This file does not contain readable audio, video or an image.');
