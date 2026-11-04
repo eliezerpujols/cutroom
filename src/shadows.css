@@ -11,6 +11,7 @@
 .shadow-visibility.button{width:28px;height:28px;color:var(--muted)}
 .shadow-visibility[aria-pressed=true]{color:var(--primary)}
 .shadow-visibility[aria-pressed=mixed]{background:var(--subtle)}
+.shadow-popover:focus{outline:none}
 .shadow-popover{z-index:100;width:248px;max-width:calc(100vw - 24px);max-height:var(--radix-popover-content-available-height);overflow:auto;background:var(--surface);color:var(--foreground);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);font-size:11px}
 .shadow-popover-heading{display:flex;align-items:center;justify-content:space-between;padding:9px 10px 9px 14px;border-bottom:1px solid var(--border);font-weight:600}
 .shadow-popover-heading .button{width:24px;height:24px}
