@@ -245,7 +245,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       const blob=await response.blob();if(blob.size>50*1024**2)throw new Error('Choose GIPHY media smaller than 50 MB.');
       const form=new FormData();form.append('file',blob,selection.item.id+'.'+rendition.extension);form.append('source',JSON.stringify(giphySource(selection.item,selection.kind)));
       const {asset}=await api<{asset:Asset}>(`/api/projects/${initial.projectId}/giphy/import`,{method:'POST',body:form});
-      setAssets(p=>p.some(a=>a.id===asset.id)?p:[...p,asset]);const next=addGiphyClip(current.current,asset,at,selection.placement,trackId);edit(next.project);setSelected(next.id);setInspectorOpen(true);seek(at);
+      setAssets(p=>p.some(a=>a.id===asset.id)?p:[...p,asset]);const next=addGiphyClip(current.current,asset,at,'overlay',trackId);edit(next.project);setSelected(next.id);setInspectorOpen(true);seek(at);
     }finally{giphyImporting.current=false;setGiphyBusy(false);}
   }
   async function addLibrarySound(soundId:string,at=player.current?.getCurrentFrame()??frame,requestedTrack?:string){

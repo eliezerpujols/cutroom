@@ -124,7 +124,7 @@ export function Timeline(props:Props){
     if(event.dataTransfer.files.length||!isLibraryDrag(event.dataTransfer.types))return;
     event.preventDefault();event.stopPropagation();setLibraryDrop(null);
     const at=libraryDropFrame(event.clientX,event.shiftKey),target=compatibleDropTrack(event,track),soundId=event.dataTransfer.getData(SOUND_DRAG_TYPE);
-    const giphy=event.dataTransfer.getData(GIPHY_DRAG_TYPE);if(giphy){try{const selection=JSON.parse(giphy) as GiphySelection;if(!selection.item?.id||!['gifs','clips','stickers'].includes(selection.kind)||!['clip','overlay'].includes(selection.placement))return;props.addGiphy(selection,at,target);}catch{}return;}
+    const giphy=event.dataTransfer.getData(GIPHY_DRAG_TYPE);if(giphy){try{const selection=JSON.parse(giphy) as GiphySelection;if(!selection.item?.id||!['gifs','clips','stickers'].includes(selection.kind))return;props.addGiphy(selection,at,target);}catch{}return;}
     const studioId=event.dataTransfer.getData(STUDIO_DRAG_TYPE);if(studioId){props.addStudio(studioId,at,target);return;}
     if(soundId){props.addSound(soundId,at,target);return;}
     const assetId=event.dataTransfer.getData(ASSET_DRAG_TYPE);if(assetId){add(assetId,at,target);return;}

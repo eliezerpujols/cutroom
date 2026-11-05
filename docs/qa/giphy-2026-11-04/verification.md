@@ -44,3 +44,14 @@ approval for these operations.
 Private screenshots and rendered frames are ignored by Git. The official GIPHY
 attribution assets under `public/giphy/` are explicitly included with their notice.
 Unrelated Studio work already present in this checkout is excluded from this change.
+
+## Overlay default follow-up
+
+Removed the library's Add as selector. GIFs, Clips and Stickers now use overlay
+placement on click or timeline drop; Full frame remains in the existing Layout
+section. The MCP/HTTP insertion defaults to overlay too, while preserving explicit
+full-frame requests for API compatibility. Updated the global skill and README.
+The four GIPHY tests passed with the default omitted, including HTTP insertion.
+Production build and fresh global MCP discovery passed. Browser verification
+confirmed the selector is absent and Full frame is still present on the selected
+local GIF overlay. Provider-approval requirements remain unchanged.

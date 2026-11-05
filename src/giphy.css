@@ -1,8 +1,6 @@
-.giphy-tabs{display:flex;margin-top:12px;gap:2px;background:var(--subtle);padding:3px;border-radius:var(--control-radius)}
+.giphy-tabs{display:flex;margin:12px 0;gap:2px;background:var(--subtle);padding:3px;border-radius:var(--control-radius)}
 .giphy-tabs .button{flex:1;min-width:0;height:27px;padding:0 3px;font-size:10px;font-weight:400}
 .giphy-tabs [aria-selected=true]{background:var(--surface);box-shadow:0 1px 3px #0001;color:var(--foreground)}
-.giphy-placement{display:flex;align-items:center;justify-content:space-between;margin:12px 0;color:var(--muted);font-size:10px}
-.giphy-placement>div{display:flex;gap:3px}.giphy-placement .button{height:26px;padding:0 9px;font-size:10px;font-weight:400}.giphy-placement [aria-pressed=true]{background:var(--accent);color:var(--primary)}
 .giphy-results{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;padding:2px}
 .giphy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 8px;align-items:start}
 .giphy-item{position:relative;min-width:0}.giphy-item[draggable=true]{cursor:grab}.giphy-item[draggable=true]:active{cursor:grabbing}

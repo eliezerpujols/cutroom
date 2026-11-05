@@ -38,7 +38,7 @@ export function registerGiphyRoutes(app:Express,store:ProjectStore,media:ReturnT
   }finally{await fs.unlink(file.path).catch(()=>{});}
  });
  app.post('/api/projects/:id/giphy/add',async(req,res)=>{
-  const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),assetId:z.string(),start:z.number().int().min(0).max(108000),placement:z.enum(['clip','overlay']),trackId:z.string().optional()}).parse(req.body),d=await store.read(id);
+  const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),assetId:z.string(),start:z.number().int().min(0).max(108000),placement:z.enum(['clip','overlay']).default('overlay'),trackId:z.string().optional()}).parse(req.body),d=await store.read(id);
   if(d.revision!==body.expectedRevision)throw new ProjectConflict();const w=await store.workspace(id),asset=w.assets.find(a=>a.id===body.assetId&&a.giphy);if(!asset)throw new Error('Choose imported GIPHY media from this project.');
   const added=addGiphyClip(d.project,asset,body.start,body.placement,body.trackId);await store.save(id,added.project,body.expectedRevision);const result=await store.workspace(id);res.json({...result,clip_id:added.id,...changed(id,result.revision)});
  });

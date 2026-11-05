@@ -255,7 +255,8 @@ project revision. See the [caption workflow](.agents/skills/cutroom/references/c
 ### GIPHY and animated GIFs
 
 Open **GIPHY** in the toolbar for GIFs, Clips and Stickers. Search or browse
-trending results, then choose **Full frame** or **Overlay**. Stickers default to overlays.
+trending results. All GIPHY items insert as overlays; use **Layout > Full frame**
+to fill the canvas after insertion.
 Authorized content can be added at the playhead or dragged to the timeline;
 the usual position, size, crop, rotation, mirror and effect controls apply.
 GIPHY attribution and creator/source links remain visible in the picker.

@@ -18,7 +18,7 @@ const source={provider:'giphy' as const,id:'example',kind:'stickers' as const,pa
 const asset:Asset={id:'a',name:'Sticker',kind:'video',duration:1,frames:30,width:64,height:64,hasAudio:false,url:'/a',thumbnails:[],peaks:[],sequence:{count:30},giphy:source};
 const project:Project={version:1,name:'QA',width:1080,height:1920,fps:30,tracks:[{id:'v',name:'Video',kind:'video',muted:false}],layerOrder:['track:v'],clips:[{id:'original',assetId:'source',name:'Original',kind:'video',trackId:'v',start:0,duration:300,sourceIn:0,rate:1,volume:1,muted:false,fadeIn:0,fadeOut:0}]};
 test('GIPHY insertion preserves original timings and places overlays above the source with saved layer order',()=>{
- const {project:next,id}=addGiphyClip(project,asset,60,'overlay');const clip=next.clips.find(c=>c.id===id)!;
+ const {project:next,id}=addGiphyClip(project,asset,60);const clip=next.clips.find(c=>c.id===id)!;
  assert.deepEqual(next.clips.find(c=>c.id==='original'),project.clips[0]);assert.equal(clip.start,60);assert.equal(clip.duration,30);assert.ok(clip.overlay);assert.equal(clip.muted,true);
  const layers=timelineLayers(next);assert.ok(layers.findIndex(l=>l.id===clip.trackId)<layers.findIndex(l=>l.id==='v'));
  const full=addGiphyClip(project,{...asset,hasAudio:true},120,'clip').project.clips.at(-1)!;assert.equal(full.overlay,undefined);assert.equal(full.muted,false);
@@ -53,7 +53,7 @@ test('GIPHY import enforces approval server-side and approved local fixtures use
   // generated red video, never downloaded GIPHY content or the live backend.
   process.env.GIPHY_PROJECT_MEDIA_APPROVED='true';
   const imported=await post(`/api/projects/${id}/giphy/import-path`,{filePath:file,source}),result=await imported.json();assert.equal(imported.status,200,JSON.stringify(result));assert.equal(result.asset.giphy.creator,'Example');
-  const body={expectedRevision:0,assetId:result.asset.id,start:15,placement:'overlay'},added=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(added.status,200);assert.equal((await store.read(id)).project.clips[0].start,15);
+  const body={expectedRevision:0,assetId:result.asset.id,start:15},added=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(added.status,200);assert.equal((await store.read(id)).project.clips[0].start,15);assert.ok((await store.read(id)).project.clips[0].overlay);
   const stale=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(stale.status,409);assert.equal((await store.read(id)).project.clips.length,1);
   const status=await(await fetch(base+'/api/giphy/status')).json();assert.equal('apiKey' in status,false);
  }finally{if(previous===undefined)delete process.env.GIPHY_PROJECT_MEDIA_APPROVED;else process.env.GIPHY_PROJECT_MEDIA_APPROVED=previous;await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await fs.rm(dir,{recursive:true,force:true});}

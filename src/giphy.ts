@@ -20,7 +20,7 @@ export function giphyDownload(item:GiphyItem,kind:GiphyKind){
  const extension=kind==='clips'||kind==='gifs'&&url===original?.mp4?'mp4':'gif';
  return {url,extension};
 }
-export function addGiphyClip(project:Project,asset:Asset,start:number,placement:GiphyPlacement,requestedTrack?:string){
+export function addGiphyClip(project:Project,asset:Asset,start:number,placement:GiphyPlacement='overlay',requestedTrack?:string){
  if(project.clips.length>=300)throw new Error('This project has reached its clip limit.');
  const target=project.tracks.find(t=>t.id===requestedTrack&&t.kind==='video')||project.tracks.find(t=>t.kind==='video');
  let next=project,trackId=target?.id;

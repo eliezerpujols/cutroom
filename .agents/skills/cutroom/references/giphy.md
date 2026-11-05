@@ -2,8 +2,9 @@
 
 The GIPHY toolbar panel has GIFs, Clips and Stickers tabs, exact-query search,
 pagination, animated previews, creator/source links and official Powered by GIPHY
-branding. GIFs/Clips default to full-frame clips; Stickers default to overlays.
-Choose Full frame or Overlay before insertion. Approved imports use the
+branding. All content inserts as overlays by default, by click or timeline drag.
+Use Layout > Full frame on the inserted clip to fill the canvas. Do not add a
+placement selector to the library panel. Approved imports use the
 same timeline drag target and grip pattern as Media and Sounds. Selecting an
 item adds it at the playhead; dragging sets its timeline start and target lane.
 Overlays retain preview movement, resize, rotation, crop and mirror controls.
@@ -44,6 +45,7 @@ disabled; report that limitation rather than claiming export is enabled.
   Never add a server-side GIPHY search/download proxy to make this tool work.
 - `add_giphy_media`: inserts an imported `asset_id` as `clip` or `overlay`, with
   `start` in frames, optional `track_id`, and the current `expected_revision`.
+  Omitted `placement` defaults to `overlay`.
 
 The browser panel downloads only the selected authorized rendition (up to 50MB),
 then uploads it to the local editor. Sticker GIFs keep alpha; Clips use their
