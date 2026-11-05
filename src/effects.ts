@@ -38,9 +38,9 @@ export function effectStyle(input:Effects|undefined,frame:number,duration:number
 export function maskStyle(input?:Effects):CSSProperties{return input?.mask==='circle'?{clipPath:'ellipse(50% 50% at 50% 50%)'}:input?.mask==='rounded'?{clipPath:'inset(0 round 8%)'}:{};}
 export function patchSelectionEffects(project:Project,ids:readonly string[],patch:Partial<Effects>):Project{
   const selected=new Set(ids),update=<T extends {effects?:Effects}>(item:T):T=>({...item,effects:{...defaultEffects,...item.effects,...patch}});
-  return {...project,clips:project.clips.map(clip=>selected.has(clip.id)&&clip.kind==='video'?update(clip):clip),texts:project.texts?.map(text=>selected.has(text.id)?update(text):text),captions:project.captions?.map(layer=>({...layer,cues:layer.cues.map(cue=>selected.has(cue.id)?update(cue):cue)}))};
+  return {...project,...(project.cover?{cover:{...project.cover,texts:project.cover.texts.map(text=>selected.has(text.id)?update(text):text)}}:{}),clips:project.clips.map(clip=>selected.has(clip.id)&&clip.kind==='video'?update(clip):clip),texts:project.texts?.map(text=>selected.has(text.id)?update(text):text),captions:project.captions?.map(layer=>({...layer,cues:layer.cues.map(cue=>selected.has(cue.id)?update(cue):cue)}))};
 }
-export function selectedEffectItems(project:Project,ids:readonly string[]){const selected=new Set(ids);return [...project.clips.filter(clip=>clip.kind==='video'),...(project.texts??[]),...(project.captions??[]).flatMap(layer=>layer.cues)].filter(item=>selected.has(item.id));}
+export function selectedEffectItems(project:Project,ids:readonly string[]){const selected=new Set(ids);return [...project.clips.filter(clip=>clip.kind==='video'),...(project.texts??[]),...(project.cover?.texts??[]),...(project.captions??[]).flatMap(layer=>layer.cues)].filter(item=>selected.has(item.id));}
 export function transitionPrevious(project:Project,clip:Clip):Clip|undefined{
   if(clip.kind!=='video'||clip.overlay||clip.hidden||!clip.effects||clip.effects.transition==='none')return;
   return project.clips.find(previous=>previous.id!==clip.id&&previous.kind==='video'&&!previous.overlay&&!previous.hidden&&previous.trackId===clip.trackId&&previous.start+previous.duration===clip.start);

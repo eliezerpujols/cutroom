@@ -54,6 +54,6 @@ export function GiphyPanel({hide,add,busy}:{hide:()=>void;add:(selection:GiphySe
     {more&&!loading&&!error&&<Button variant="ghost" size="sm" className="full-width" onClick={()=>void load(offset)}>Load more</Button>}
    </>}
   </div>
-  <div className="giphy-footer"><a href="https://giphy.com/" target="_blank" rel="noopener noreferrer" aria-label="Powered by GIPHY"><img className="giphy-brand-dark" src="/giphy/powered-by-giphy.png" alt="Powered by GIPHY"/><img className="giphy-brand-light" src="/giphy/powered-by-giphy-light.png" alt="Powered by GIPHY"/></a></div>
+  <div className="giphy-footer"><a href="https://giphy.com/" target="_blank" rel="noopener noreferrer" aria-label="Powered by GIPHY"><img className="giphy-brand-dark" src="/giphy/powered-by-giphy.png" alt="Powered by GIPHY"/><span className="giphy-brand-light"><img className="giphy-brand-ink" src="/giphy/powered-by-giphy.png" alt="Powered by GIPHY"/><img className="giphy-brand-color" src="/giphy/powered-by-giphy.png" alt="" aria-hidden="true"/></span></a></div>
  </section>;
 }

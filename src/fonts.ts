@@ -8,6 +8,8 @@ export const isBundledFont=(family:string)=>fontFamilies.some(font=>font===famil
 const knownFonts=new Set<string>([...fontFamilies,...googleFonts.map(font=>font.family)]);
 export const isKnownFont=(family:string)=>knownFonts.has(family);
 export function projectFontFamilies(project:Project){return [...new Set([
+  ...(project.cover?.scene?.texts??[]).map(text=>text.fontFamily),
+  ...(project.cover?.scene?.captions??[]).flatMap(layer=>[layer.style.fontFamily,...layer.cues.map(cue=>cue.style?.fontFamily).filter((font):font is string=>!!font)]),
   ...(project.texts??[]).map(text=>text.fontFamily),...(project.cover?.texts??[]).map(text=>text.fontFamily),
   ...(project.captions??[]).flatMap(layer=>[layer.style.fontFamily,...layer.cues.map(cue=>cue.style?.fontFamily).filter((font):font is string=>!!font)])
 ])].sort();}

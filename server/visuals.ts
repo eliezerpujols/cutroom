@@ -1,3 +1,4 @@
+import {moveCoverFrame,coverSceneProject} from '../src/coverScene';
 import type {Express} from 'express';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -15,10 +16,12 @@ export function registerVisualRoutes(app:Express,store:ProjectStore,changed:(id:
     await store.save(id,project,body.expectedRevision);const workspace=await store.workspace(id);res.json({...workspace,...changed(id,workspace.revision,'adjustments')});
   });
   app.post('/api/projects/:id/cover',async(req,res)=>{
-    const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),frame:z.number().int().min(0).max(108000).optional(),showCaptions:z.boolean().optional(),texts:z.array(coverTextSchema.partial().extend({text:z.string().max(500)})).max(12).optional()}).parse(req.body),document=await store.read(id),cover={...defaultCover,...document.project.cover};
-    if(body.frame!==undefined){if(body.frame>=endFrame(document.project))throw new Error('Choose a cover frame inside this timeline.');cover.frame=body.frame;}
+    const id=z.string().uuid().parse(req.params.id),body=z.object({expectedRevision:z.number().int().min(0),frame:z.number().int().min(0).max(108000).optional(),showCaptions:z.boolean().optional(),resetScene:z.boolean().optional(),texts:z.array(coverTextSchema.partial().extend({text:z.string().max(500)})).max(12).optional()}).parse(req.body),document=await store.read(id),cover={...defaultCover,...document.project.cover};
+    if(body.frame!==undefined){if(body.frame>=endFrame(coverSceneProject(document.project)))throw new Error('Choose a cover frame inside this timeline.');cover.frame=body.frame;}
     if(body.showCaptions!==undefined)cover.showCaptions=body.showCaptions;
     if(body.texts)cover.texts=body.texts.map(text=>({...defaultCoverText,...text,id:text.id||randomUUID()}));
-    await store.save(id,{...document.project,cover},body.expectedRevision);const workspace=await store.workspace(id);res.json({...workspace,...changed(id,workspace.revision,'cover')});
+    if(body.resetScene){delete cover.scene;cover.frame=Math.min(cover.frame,endFrame(document.project)-1);}
+    const next=moveCoverFrame({...document.project,cover},cover.frame);
+    await store.save(id,next,body.expectedRevision);const workspace=await store.workspace(id);res.json({...workspace,...changed(id,workspace.revision,'cover')});
   });
 }

@@ -45,7 +45,15 @@ export function pasteEditorClipboard(project:Project,clipboard:EditorClipboard,c
     const text={...defaultVideoText,...source,id:uid(),start};
     return {project:{...project,texts:[text,...(project.texts||[])]},selection:{kind:'text',id:text.id}};
   }
-  if(coverMode)throw new Error('Close the cover panel to paste timeline clips.');
+  if(coverMode){
+    const stillClip=(clip:Clip)=>({...clip,sourceIn:clip.sourceIn+Math.max(0,Math.min(clip.duration-1,frame-clip.start))*clip.rate,start:frame,duration:1});
+    const stillText=(text:VideoText)=>({...text,start:frame,duration:1});
+    const stillLayer=(layer:CaptionLayer)=>({...layer,cues:layer.cues.map(cue=>({...cue,start:frame,duration:1,words:cue.words.map(word=>({...word,start:0,end:1}))}))});
+    const prepared=clipboard.kind==='media'?{...clipboard,clips:clipboard.clips.map(stillClip)}:
+      clipboard.kind==='caption'?{...clipboard,layer:stillLayer(clipboard.layer)}:
+      {...clipboard,clips:clipboard.clips.map(stillClip),texts:clipboard.texts.map(stillText),layers:clipboard.layers.map(stillLayer)};
+    return pasteEditorClipboard(project,prepared,false,frame,false);
+  }
   if(clipboard.kind==='timeline'){
     const all=[...clipboard.clips,...clipboard.texts,...clipboard.layers.flatMap(layer=>layer.cues)];
     if(!all.length)throw new Error('Select a timeline item to copy.');

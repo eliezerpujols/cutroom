@@ -1,3 +1,4 @@
+import {coverSceneProject} from '../coverScene';
 import {ProjectFonts} from './ProjectFonts';
 import {isBundledFont,projectFontFamilies} from '../fonts';
 import React from 'react';
@@ -12,6 +13,7 @@ import {VideoTextOverlay} from './VideoText';
 import {CoverOverlay,VisualLayer} from './Visuals';
 export type EditorProps={project:Project;assets:Asset[];fontProjectId?:string;coverMode?:boolean;hiddenTextIds?:string[];hiddenCaptionCueIds?:string[];cropClipId?:string};
 function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hiddenCaptionCueIds=[],cropClipId}:EditorProps){
+  if(coverMode)project=coverSceneProject(project);
   if(cropClipId)project={...project,clips:project.clips.map(c=>c.id===cropClipId?{...c,transform:{...c.transform,crop:undefined,faceTrack:undefined}}:c)};
   assets=withStudioAssets(assets);
   const visibleProject=hiddenTextIds.length?{...project,texts:project.texts?.filter(text=>!hiddenTextIds.includes(text.id))}:project;

@@ -3,18 +3,20 @@ import {ArrowLeft,ArrowRight} from 'lucide-react';
 import {Button,Input,Slider} from './ui/primitives';
 import {FPS,clamp,endFrame,fadeGainAt,maxDuration,setClipRate,time,uid,type Asset,type Clip,type Project} from './model';
 import {placeTimelineClip} from './videoTracks';
+import {commonStyleValue} from './StyleControls';
 
 type Change=(values:Partial<Clip>,record?:boolean)=>void;
 type Controls={clip:Clip;change:Change;checkpoint:()=>void};
 const adjustmentKeys=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown']);
-const secondsLabel=(frames:number)=>`${(frames/FPS).toFixed(2)} seconds`;
+const secondsLabel=(frames:number|undefined)=>frames===undefined?'Mixed':`${(frames/FPS).toFixed(2)} seconds`;
 
-export function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number;min?:number;max:number;change:(frames:number)=>void}){
-  const [text,setText]=useState((frames/FPS).toFixed(2)),editing=useRef(false),canceled=useRef(false);
-  useEffect(()=>{if(!editing.current)setText((frames/FPS).toFixed(2));},[frames]);
-  return <span className="control-value text-spacing-input"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} value={text}
+export function TimeValue({label,frames,min=0,max,change}:{label:string;frames:number|undefined;min?:number;max:number;change:(frames:number)=>void}){
+  const formatted=frames===undefined?'':(frames/FPS).toFixed(2);
+  const [text,setText]=useState(formatted),editing=useRef(false),canceled=useRef(false);
+  useEffect(()=>{if(!editing.current)setText(formatted);},[formatted]);
+  return <span className="control-value text-spacing-input"><Input className="control-value-input" type="number" inputMode="decimal" step={1/FPS} min={min/FPS} max={max/FPS} aria-label={label} placeholder="Mixed" value={text}
     onFocus={()=>{editing.current=true;canceled.current=false;}} onChange={event=>setText(event.target.value)}
-    onBlur={()=>{editing.current=false;if(canceled.current){canceled.current=false;setText((frames/FPS).toFixed(2));return;}const value=Number(text);if(Number.isFinite(value)){const next=clamp(Math.round(value*FPS),min,max);if(next!==frames)change(next);setText((next/FPS).toFixed(2));}else setText((frames/FPS).toFixed(2));}}
+    onBlur={()=>{editing.current=false;if(canceled.current){canceled.current=false;setText(formatted);return;}if(frames===undefined&&!text.trim())return;const value=Number(text);if(Number.isFinite(value)){const next=clamp(Math.round(value*FPS),min,max);if(next!==frames)change(next);setText((next/FPS).toFixed(2));}else setText(formatted);}}
     onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter')event.currentTarget.blur();if(event.key==='Escape'){canceled.current=true;event.currentTarget.blur();}}}/><span aria-hidden="true">s</span></span>;
 }
 
@@ -49,13 +51,19 @@ export function TimingControls({project,clip,asset,edit,checkpoint}:TimingProps)
   })}<div className="timing-end"><span>Ends at</span><output>{((clip.start+clip.duration)/FPS).toFixed(2)} s</output></div></div>;
 }
 
-export function AudioFadeControls({clip,change,checkpoint}:Controls){
-  const maximum=Math.max(clip.duration,clip.fadeIn,clip.fadeOut);
+export function AudioFadeControls({clips,change,checkpoint}:{
+  clips:Clip[];change:Change;checkpoint:()=>void;
+}){
+  const maximum=Math.max(
+    Math.min(...clips.map(clip=>clip.duration)),
+    ...clips.flatMap(clip=>[clip.fadeIn,clip.fadeOut]),
+  );
   return <div className="audio-fade-controls">{(['fadeIn','fadeOut'] as const).map(field=>{
     const label=field==='fadeIn'?'Fade in':'Fade out';
+    const value=commonStyleValue(clips,field);
     return <div className="clip-adjustment" key={field}>
-      <div className="adjustment-heading"><span>{label}</span><TimeValue label={`${label} duration in seconds`} frames={clip[field]} max={maximum} change={value=>change({[field]:value})}/></div>
-      <Slider label={`${label} duration`} valueText={secondsLabel(clip[field])} min={0} max={maximum} step={1} value={[clip[field]]} onPointerDown={checkpoint} onKeyDown={event=>{if(adjustmentKeys.has(event.key))checkpoint();}} onValueChange={([value])=>change({[field]:Math.round(value)},false)}/>
+      <div className="adjustment-heading"><span>{label}</span><TimeValue label={`${label} duration in seconds`} frames={value} max={maximum} change={next=>change({[field]:next})}/></div>
+      <Slider label={`${label} duration`} valueText={secondsLabel(value)} min={0} max={maximum} step={1} value={[value??0]} onPointerDown={checkpoint} onKeyDown={event=>{if(adjustmentKeys.has(event.key))checkpoint();}} onValueChange={([next])=>change({[field]:Math.round(next)},false)}/>
     </div>;
   })}</div>;
 }

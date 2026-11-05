@@ -22,11 +22,11 @@ function EffectTabs<T extends string>({options,value,change,applied,id,label,cla
 }
 
 
-export function EffectsPanel({project,assets,ids,edit,checkpoint,hide,transitionRequest=0}:{transitionRequest?:number;project:Project;assets:Asset[];ids:string[];edit:(change:(project:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;hide:()=>void}){
-  const [category,setCategory]=useState<EffectCategory>('animation'),[tab,setTab]=useState<EffectTab>('enter'),panelId=useId(),categoryId=useId();
+export function EffectsPanel({project,assets,ids,edit,checkpoint,hide,transitionRequest=0,still=false}:{still?:boolean;transitionRequest?:number;project:Project;assets:Asset[];ids:string[];edit:(change:(project:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;hide:()=>void}){
+  const [category,setCategory]=useState<EffectCategory>(still?'styles':'animation'),[tab,setTab]=useState<EffectTab>('enter'),panelId=useId(),categoryId=useId();
   useEffect(()=>{if(transitionRequest){setCategory('animation');setTab('transition');}},[transitionRequest]);
   const items=selectedEffectItems(project,ids),values=items.map(item=>({...defaultEffects,...textEffectDefaults,...item.effects})),scope=[...ids].sort().join('|');
-  const textIds=new Set([...(project.texts??[]).map(text=>text.id),...(project.captions??[]).flatMap(layer=>layer.cues.map(cue=>cue.id))]),allText=items.length>0&&items.every(item=>textIds.has(item.id));
+  const textIds=new Set([...(project.texts??[]).map(text=>text.id),...(project.cover?.texts??[]).map(text=>text.id),...(project.captions??[]).flatMap(layer=>layer.cues.map(cue=>cue.id))]),allText=items.length>0&&items.every(item=>textIds.has(item.id));
   const clips=project.clips.filter(clip=>ids.includes(clip.id)&&clip.kind==='video');
   const transitions=clips.filter(clip=>transitionPrevious(project,{...clip,effects:{...defaultEffects,...clip.effects,transition:'fade'}}));
   const applicableTransitions=allText?textTransitionTargets(project,ids):transitions;
@@ -46,7 +46,7 @@ export function EffectsPanel({project,assets,ids,edit,checkpoint,hide,transition
   const basicAnimations=options.filter(([kind])=>!allText||tab==='transition'||kind!=='none');
   return <section className="adjustments-panel effects-panel" aria-label="Effects">
     <div className="panel-heading"><h2>Effects</h2><div className="effect-heading-actions"><IconButton label={`Reset selected ${category}`} disabled={!items.length||!categoryApplied[category]} onClick={reset}><RotateCcw size={14}/></IconButton><IconButton label="Hide effects" onClick={hide}><X size={16}/></IconButton></div></div>
-    <EffectTabs options={categories} value={category} change={setCategory} applied={categoryApplied} id={categoryId} label="Effect category" className="effect-category-tabs"/>
+    <EffectTabs options={still?categories.filter(([key])=>key==='styles'||key==='appearance'):categories} value={category} change={setCategory} applied={categoryApplied} id={categoryId} label="Effect category" className="effect-category-tabs"/>
     <div id={`${categoryId}-panel`} role="tabpanel" aria-labelledby={`${categoryId}-${category}`}>
     {category==='animation'?<>
     <EffectTabs options={tabs} value={tab} change={setTab} applied={applied} id={panelId} label="Effect timing" className="effect-tabs"/>

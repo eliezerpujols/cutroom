@@ -1,11 +1,13 @@
 import {useCallback,useRef,useState} from 'react';
 import type {Project} from './model';
+import {syncCoverAppearance} from './coverScene';
 export function useEditor(initial:Project){
   const [project,setProject]=useState(initial),[historyVersion,setHistoryVersion]=useState(0);
   const current=useRef(initial),past=useRef<Project[]>([]),future=useRef<Project[]>([]);
   const checkpoint=useCallback(()=>{past.current=[...past.current.slice(-99),current.current];future.current=[];setHistoryVersion(v=>v+1);},[]);
   const edit=useCallback((change:Project|((p:Project)=>Project),record=true)=>{
-    const next=typeof change==='function'?change(current.current):change;
+    const changed=typeof change==='function'?change(current.current):change;
+    const next=changed===current.current?changed:syncCoverAppearance(current.current,changed);
     if(next===current.current)return;
     if(record)checkpoint();current.current=next;setProject(next);
   },[checkpoint]);

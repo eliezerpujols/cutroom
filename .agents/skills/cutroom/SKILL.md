@@ -11,7 +11,7 @@ For the reusable sound library and audio placement, read [sound effects](referen
 For GIPHY GIFs, Clips, Stickers and local animation import/export, read [the GIPHY workflow](references/giphy.md).
 For authored titles and text during a video, read [manual video text](references/text.md).
 For automatic transcription or caption styling, read [the captions workflow](references/captions.md).
-For overlays, layer order, cover text, frame selection, filters, or video/image color corrections, read
+For cover-only media/Studio/caption editing, active-frame visibility, overlays, layer order, cover text, frame selection, filters, or video/image color corrections, read
 [the visual editing workflow](references/visuals.md).
 For animation, Motion/Styles/Appearance, text effects, dual shadows and current MCP coverage, read
 [effects and typography](references/effects.md).

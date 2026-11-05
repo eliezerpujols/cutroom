@@ -1,3 +1,5 @@
+import {registerCoverElementRoutes} from './coverElements';
+import {coverSceneProject} from '../src/coverScene';
 import {registerGiphyRoutes} from './giphy';
 import {registerLocalVision} from './local-vision';
 import {registerFontRoutes,ensureProjectFonts} from './fonts';
@@ -67,6 +69,7 @@ function publish(event:Record<string,unknown>){
 }
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
 registerStudioRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});const d=editorDestination(id);return {...d,editor_url:d.editor_url+'&view=studio'};});
+registerCoverElementRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id,'cover');});
 registerLayerRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id);});
 registerVisualRoutes(app,store,(id,revision,view)=>{publish({projectId:id,revision});return editorDestination(id,view);});
 registerTextRoutes(app,store,(id,revision,textId)=>{publish({projectId:id,revision});const destination=editorDestination(id,'text');return {...destination,editor_url:destination.editor_url+(textId?'&text='+textId:'')};});
@@ -191,8 +194,8 @@ app.post('/api/export',reserveExport,async(req,res)=>{
 // Cover rendering shares the export queue and bundle, but never changes video timing.
 app.post('/api/projects/:id/cover/export',reserveExport,async(req,res)=>{
   const pid=z.string().uuid().parse(req.params.id),body=z.object({project:projectSchema.optional()}).parse(req.body),document=await store.read(pid),workspace=await store.workspace(pid),project=validateProject(body.project||document.project,document.assets),at=coverFrame(project);
-  if(!project.clips.some(c=>c.kind==='video'&&c.start<=at&&at<c.start+c.duration))throw new Error('Choose a frame containing a video or image for the cover.');
-  if(workspace.assets.some(a=>a.missing&&project.clips.some(c=>c.assetId===a.id&&c.kind==='video'&&c.start<=at&&at<c.start+c.duration)))throw new Error('Relink the missing cover media before exporting.');
+  if(!coverSceneProject(project).clips.some(c=>c.kind==='video'&&c.start<=at&&at<c.start+c.duration))throw new Error('Choose a frame containing a video or image for the cover.');
+  if(workspace.assets.some(a=>a.missing&&coverSceneProject(project).clips.some(c=>c.assetId===a.id&&c.kind==='video'&&c.start<=at&&at<c.start+c.duration)))throw new Error('Relink the missing cover media before exporting.');
   const id=randomUUID(),job:Job={id,projectId:pid,status:'queued',progress:0,format:'png'};jobs.set(id,job);busy=true;res.status(202).json(job);
   void(async()=>{let output:string|undefined;try{
     await ensureProjectFonts(path.join(data,'fonts'),workspace.folder,project);const inputProps={project,fontProjectId:pid,assets:workspace.assets.map(a=>({...a,url:`http://127.0.0.1:${port}${a.url}`})),coverMode:true};await ensureBrowser();bundlePromise??=bundle({entryPoint:path.join(root,'src/remotion/index.tsx')}).catch(e=>{bundlePromise=undefined;throw e;});const serveUrl=await bundlePromise,composition=await selectComposition({serveUrl,id:'Cutroom',inputProps});job.status='rendering';job.progress=.25;

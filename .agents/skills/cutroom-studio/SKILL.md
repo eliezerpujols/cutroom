@@ -57,6 +57,14 @@ its current revision, and `set_studio_element` to add or update a clip. Timing i
 frames at 30 fps. `set_clip_overlay` handles x/y/width; `edit_project` handles
 move, trim, split and remove. The UI offers the same operations with undo.
 
+For a cover-only Studio overlay, use `set_cover_element` with `kind: "studio"`,
+the registered `template`, and optional `props`. Read `list_cover_elements`
+for current cover element IDs and revision. `source_frame` selects a still pose.
+Keep the Cover mode active when using the Studio library; its additions and
+edits are saved in `cover.scene`. Normal `set_studio_element` edits the video
+timeline. See the main skill's cover workflow for hiding inherited elements,
+cover-specific captions and effects, and resetting the scene.
+
 For a new Orbit card, pass `template: "orbit-card"` and omit `clip_id`.
 The default duration is 120 frames (4 seconds), with centered x/y and width 75%.
 Its editable props are `title`, `subtitle`, `tag`, `background`, `color`, `accent`

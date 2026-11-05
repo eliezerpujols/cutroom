@@ -6,6 +6,7 @@ import {documentSchema,storedAssetSchema,validateProject,ProjectConflict,type Pr
 import type {Project,Asset} from '../src/model';
 import {absoluteDirectory} from './paths';
 import {arrangeTimelineTracks,changedTimelineClipIds} from '../src/videoTracks';
+import {syncCoverAppearance} from '../src/coverScene';
 
 type Entry={id:string;folder:string;name:string};
 type Registry={version:1;activeProjectId:string;legacyProjectId:string;entries:Entry[]};
@@ -111,7 +112,7 @@ export class ProjectStore{
     if(previous&&path.resolve(previous.folder)!==folder&&await exists(previous.folder))throw new Error('This project ID is already open from another folder. Use Save a copy to duplicate it.');
     await this.lock('registry',async()=>{this.registry.entries=this.registry.entries.filter(e=>e.id!==doc.id);this.registry.entries.push({id:doc.id,folder,name:doc.project.name});await atomicJson(this.registryFile,this.registry);});return doc.id;
   }
-  async save(id:string,input:unknown,expectedRevision?:number){return this.lock(id,async()=>{const d=await this.read(id);if(expectedRevision!==undefined&&d.revision!==expectedRevision)throw new ProjectConflict();const parsed=validateProject(input,d.assets);const project=validateProject(arrangeTimelineTracks(parsed,changedTimelineClipIds(d.project,parsed)),d.assets);
+  async save(id:string,input:unknown,expectedRevision?:number){return this.lock(id,async()=>{const d=await this.read(id);if(expectedRevision!==undefined&&d.revision!==expectedRevision)throw new ProjectConflict();const parsed=syncCoverAppearance(d.project,validateProject(input,d.assets));const project=validateProject(arrangeTimelineTracks(parsed,changedTimelineClipIds(d.project,parsed)),d.assets);
     const folder=this.entry(id).folder;await ensureProjectFonts(path.join(this.data,'fonts'),folder,project);await atomicJson(path.join(folder,'history',String(d.revision).padStart(6,'0')+'.json'),d.project);
     const next={...d,project,revision:d.revision+1,updatedAt:new Date().toISOString()};await atomicJson(path.join(folder,'project.cutroom'),next);return next;
   });}

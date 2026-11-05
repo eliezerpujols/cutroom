@@ -28,6 +28,50 @@ one title, read and include all blocks, retaining their IDs. New blocks need
 only `text`; IDs and default styling are generated. Use `texts: []` to remove
 all titles. Up to 12 blocks are supported, with 500 characters each.
 
+### Cover elements and isolated editing
+
+Cover has an independent composition after its first element edit, saved as
+`cover.scene`. Legacy projects without this field inherit the current timeline.
+Later timeline appearance changes (including Studio colors and caption highlights)
+also update matching cover values that were not customized there. Explicit cover
+overrides remain independent, field by field. Layout, visibility, source windows,
+timing, additions and removals remain cover-specific. This applies to UI edits,
+MCP/API saves, preview and PNG export; undo/redo restores the synchronized snapshot.
+The scene uses the same clip, text, caption, layer and effect schemas as the
+video. Read `get_project` for complete scene data and the current revision.
+
+- `list_cover_elements(project_id)` returns the saved frame, revision, whether
+  the cover is customized, and every media/Studio/text/caption element present
+  at that frame, including hidden elements and their visibility targets.
+- `set_cover_element` is revision-protected and only edits this cover. Add with
+  `kind: "studio"` plus `template` and optional `props`, `kind: "media"` plus
+  an imported `asset_id` (image, GIF, sticker or video), or `kind: "text"` plus
+  `text`. It returns the new `elementId` and Cover editor URL.
+- Update an existing `element_id` from the frame list. `visible` hides/shows it,
+  `remove` removes it from the cover, `props` edits Studio fields, `style`
+  edits text, and `caption_style` edits a caption cue. `text` can replace a
+  title or caption. `effects`, `overlay`, `transform`, `adjustments` and
+  `source_frame` control the selected visual element. Source frames also select
+  the still pose of an animated GIF or Studio element.
+- Use the normal media/GIPHY import workflow first, then pass the resulting
+  asset ID to `set_cover_element`. Normal timeline insertion tools edit the
+  video, so use this cover-specific tool for cover additions.
+- `set_cover(reset_scene: true)` explicitly restores the current timeline
+  composition while preserving legacy cover titles. Omitting this flag retains
+  the customized scene. Changing the cover frame moves added cover-only media
+  and text to that frame while inherited timeline items retain their timing.
+- The UI lists **In this cover** with selection and eye controls. Its Add menu
+  opens Text, Studio, GIPHY or Media while retaining Cover mode, and the Cover
+  back button returns to the frame list. Existing inspectors and direct canvas
+  controls edit the cover scene. Caption editing uses local style/content
+  controls; it does not request another transcription. Effects in Cover exposes
+  Styles and Appearance for the still.
+- Preview, timeline cover tile, explicit PNG export and MP4 companion PNG use
+  the saved cover scene. Normal MP4 frames use the video timeline. Save,
+  reopen, undo/redo and fonts include cover-only elements. Test feature changes
+  in an isolated fixture, including both render paths, revision conflicts and
+  preservation of the video's clips, captions, text and timings.
+
 Defaults: Inter, extra bold (800), black on a white rounded card, centered near
 the top. Each block can set:
 

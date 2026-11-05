@@ -14,6 +14,10 @@
 .giphy-footer{display:flex;flex-direction:column;align-items:flex-start;gap:9px;border-top:1px solid var(--border);padding-top:10px;margin-top:10px;color:var(--muted);font-size:9px;line-height:1.5}.giphy-footer img{display:block;width:120px;height:auto;max-height:28px;object-fit:contain}
 .giphy-connection{display:grid;gap:6px;margin-top:12px;color:var(--muted);font-size:10px;line-height:1.5}.giphy-connection a{display:flex;align-items:center;gap:4px;color:var(--foreground)}
 
+.giphy-footer .giphy-brand-light{display:block;position:relative;width:120px}
+.giphy-brand-ink{filter:brightness(0)}
+/* Preserve the original icon colors over the dark lettering in light mode. */
+.giphy-footer .giphy-brand-color{position:absolute;inset:0;clip-path:inset(0 44% 0 44%)}
 .giphy-footer .giphy-brand-dark{display:none}
 [data-theme=dark] .giphy-footer .giphy-brand-dark{display:block}
 [data-theme=dark] .giphy-footer .giphy-brand-light{display:none}

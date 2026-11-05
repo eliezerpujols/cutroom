@@ -1,3 +1,6 @@
+import {AnimatedText} from './AnimatedText';
+import {EffectLayer} from './Effects';
+import {defaultEffects} from '../effects';
 import {ShadowText} from './Effects';
 import React,{useId} from 'react';
 import {AbsoluteFill} from 'remotion';
@@ -17,4 +20,11 @@ export function CoverTextContent({text,children}:{text:CoverText;children?:React
   const content=<ShadowText shadow={text.shadow}>{children??text.text}</ShadowText>;
   return <div style={{...typography,padding:text.fill==='box'?text.padding:0,background:text.fill==='box'?text.fillColor:undefined,borderRadius:text.fill==='box'?text.radius:0}}>{text.fill==='lines'?<span style={{background:text.fillColor,padding:`${text.padding*.2}px ${text.padding}px`,borderRadius:text.radius,boxDecorationBreak:'clone',WebkitBoxDecorationBreak:'clone'}}>{content}</span>:content}</div>;
 }
-export function CoverOverlay({cover}:{cover:Cover}){return <AbsoluteFill style={{pointerEvents:'none',overflow:'hidden'}}>{cover.texts.filter(text=>!text.hidden).map(text=><div key={text.id} style={coverTextPosition(text)}><CoverTextContent text={text}/></div>)}</AbsoluteFill>;}
+export function CoverOverlay({cover}:{cover:Cover}){
+  return <AbsoluteFill style={{pointerEvents:'none',overflow:'hidden'}}>{cover.texts.filter(text=>!text.hidden).map(text=>{
+    const effects=text.effects?{...defaultEffects,...text.effects,enter:'none' as const,exit:'none' as const,transition:'none' as const}:undefined;
+    return <div key={text.id} style={coverTextPosition(text)}><EffectLayer effects={effects} frame={0} duration={1}>
+      <CoverTextContent text={text}><AnimatedText text={text.text} effects={effects} frame={0} duration={1}/></CoverTextContent>
+    </EffectLayer></div>;
+  })}</AbsoluteFill>;
+}

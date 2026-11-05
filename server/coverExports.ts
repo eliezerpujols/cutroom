@@ -1,3 +1,4 @@
+import {coverSceneProject} from '../src/coverScene';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {renderStill,selectComposition} from '@remotion/renderer';
@@ -11,7 +12,7 @@ export function companionProject(project:Project):Project{
   const first=project.clips.filter(clip=>clip.kind==='video').sort((a,b)=>a.start-b.start)[0];
   const result=project.cover?project:{...project,cover:{...defaultCover,frame:first?.start||0,texts:[]}};
   const frame=coverFrame(result);
-  if(first&&!project.clips.some(clip=>clip.kind==='video'&&clip.start<=frame&&frame<clip.start+clip.duration))throw new Error('The cover frame is in a timeline gap. Choose a frame with video or an image before exporting.');
+  if(first&&!coverSceneProject(project).clips.some(clip=>clip.kind==='video'&&clip.start<=frame&&frame<clip.start+clip.duration))throw new Error('The cover frame is in a timeline gap. Choose a frame with video or an image before exporting.');
   return result;
 }
 export async function renderCompanion({project,assets,composition,serveUrl,exportsDir,filename,projectId}:{project:Project;assets:Asset[];composition:VideoConfig;serveUrl:string;exportsDir:string;filename:string;projectId:string}):Promise<CoverCompanion>{
