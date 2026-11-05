@@ -6,7 +6,7 @@ import {ASSET_DRAG_TYPE,ASSET_KIND_PREFIX} from './libraryDrag';
 import './sounds.css';
 import './media.css';
 
-const acceptedMedia='video/*,audio/*,image/png,image/jpeg,image/webp,.flac';
+const acceptedMedia='video/*,audio/*,image/png,image/jpeg,image/webp,image/gif,.flac';
 type Props={
   assets:Asset[];importing:boolean;fileInput:React.RefObject<HTMLInputElement|null>;
   importFiles:(files:File[])=>Promise<void>;add:(id:string)=>void;

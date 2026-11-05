@@ -252,6 +252,30 @@ existing job; do not submit another paid request just to check progress. Caption
 requests similarly use saved request IDs and separate application to the current
 project revision. See the [caption workflow](.agents/skills/cutroom/references/captions.md).
 
+### GIPHY and animated GIFs
+
+Open **GIPHY** in the toolbar for GIFs, Clips and Stickers. Search or browse
+trending results, then choose **Full frame** or **Overlay**. Stickers default to overlays.
+Authorized content can be added at the playhead or dragged to the timeline;
+the usual position, size, crop, rotation, mirror and effect controls apply.
+GIPHY attribution and creator/source links remain visible in the picker.
+
+Configure a GIPHY Web/JS SDK application and keep `GIPHY_API_KEY` in the local
+ignored `.env`. The browser searches GIPHY directly; Cutroom does not proxy API
+or preview requests. Beta keys are documented as limited to 100 calls/hour.
+Clips may need separate provider approval and show a clear access error until enabled.
+
+GIPHY's published practices restrict storing media copies. Until GIPHY explicitly
+permits project storage, conversion and video export, the integration supports
+browsing and leaves import disabled. Only after receiving that permission, set
+`GIPHY_PROJECT_MEDIA_APPROVED=true` and restart the idle backend. Creating an API
+key or accepting the standard SDK agreement does not establish that approval.
+
+Your own local GIF files can be imported through **Media** immediately. Cutroom
+converts them locally into a deterministic 30fps RGBA sequence, preserving animation
+and transparent sticker backgrounds in preview/export. Keep the complete media
+directory when copying a project. See [GIPHY workflow](.agents/skills/cutroom/references/giphy.md).
+
 ## Connect an AI assistant with MCP
 
 Build the app first, then register it globally for Codex on macOS:
@@ -269,7 +293,7 @@ skills are backed up under `~/.codex/skill-backups/`. Keep the checkout in place
 rerun setup if you move it. No per-project installation or duplicate skill copy
 is needed. `CODEX_HOME` is honored when explicitly configured.
 
-MCP 2.11 includes Studio discovery/insertion/props, `list_fonts`/`prepare_font`,
+MCP 2.12 includes Studio discovery/insertion/props, `list_fonts`/`prepare_font`,
 and `list_effects`/`set_effects` for media, Studio, manual titles and caption cues.
 Batch effect patches preserve independent values and require the current revision.
 All local editing runs without provider credits; downloading a new Google font

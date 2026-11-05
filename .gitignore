@@ -38,3 +38,7 @@ docs/project-dialog-comparison.html
 
 # Local comparison boards embed private project screenshots.
 docs/qa/**/comparison.html
+
+# Official provider attribution assets (not project media).
+!public/giphy/powered-by-giphy.png
+!public/giphy/powered-by-giphy-light.png

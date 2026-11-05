@@ -1,6 +1,6 @@
 ---
 name: cutroom
-description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, use reusable Studio overlays and visual/text effects, transform media, create local person cutouts and face tracking, and manage local Cutroom projects or clear project exports through its MCP.
+description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use sound effects, add timed text, generate and style captions, design covers, position video/image overlays, reorder layers, adjust video/image color, browse GIPHY GIFs and stickers, use reusable Studio overlays and visual/text effects, transform media, create local person cutouts and face tracking, and manage local Cutroom projects or clear project exports through its MCP.
 ---
 
 # Cutroom
@@ -8,6 +8,8 @@ description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use 
 Use the `cutroom` MCP to prepare the video and open its project in the local editor.
 For translation, dubbing or lip sync, read [the dubbing workflow](references/dubbing.md).
 For the reusable sound library and audio placement, read [sound effects](references/sounds.md).
+For GIPHY GIFs, Clips, Stickers, local animation import and their provider access
+requirements, read [the GIPHY workflow](references/giphy.md).
 For authored titles and text during a video, read [manual video text](references/text.md).
 For automatic transcription or caption styling, read [the captions workflow](references/captions.md).
 For overlays, layer order, cover text, frame selection, filters, or video/image color corrections, read
@@ -231,7 +233,7 @@ Do not create a second installation in whichever project is currently open.
 Run `npm run check:global` in the Cutroom checkout to verify registration and both
 links; `npm run setup:global` repairs them and backs up previous skill copies.
 `npm run check:mcp` starts a fresh connection from outside the checkout and checks
-Studio, fonts, effects and camera tool discovery without editing a project or calling a paid
+Studio, fonts, effects, camera and GIPHY tool discovery without editing a project or calling a paid
 provider. A rebuild of the editor is separate from MCP tool discovery.
 
 If the current chat's tool catalog is stale, continue through the same MCP with

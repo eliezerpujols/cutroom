@@ -5,7 +5,7 @@ import {existsSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import type {ProjectStore} from './projects';
 import type {StoredAsset} from './schema';
-export const allowedMedia=/\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg|mp3|wav|flac|m4a|aac|ogg|opus|png|jpg|jpeg|webp)$/i;
+export const allowedMedia=/\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg|mp3|wav|flac|m4a|aac|ogg|opus|png|jpg|jpeg|webp|gif)$/i;
 function resolveFfmpeg(root:string){
   if(process.env.FFMPEG_PATH)return process.env.FFMPEG_PATH;
   try{execFileSync('ffmpeg',['-version'],{stdio:'ignore'});return 'ffmpeg';}catch{}
@@ -29,7 +29,7 @@ export function mediaEngine(root:string,store:ProjectStore){
     const info=await probe(file),{duration,hasAudio}=info,folder=store.entry(projectId).folder;
     const asset:StoredAsset={id,name,...info,file:path.relative(folder,file),thumbnails:[],peaks:[]};
     if(info.kind==='image')asset.thumbnails=[asset.file];
-    if(info.kind==='video'){const dir=path.join(folder,'thumbs',id);await fs.mkdir(dir,{recursive:true});await run(['-y','-i',file,'-vf',`fps=${Math.min(16/duration,2)},scale=120:-2`,'-frames:v','16','-q:v','5',path.join(dir,'%02d.jpg')]);asset.thumbnails=(await fs.readdir(dir)).sort().map(n=>`thumbs/${id}/${n}`);}
+    if(info.kind==='video'){const dir=path.join(folder,'thumbs',id);await fs.mkdir(dir,{recursive:true});await run(['-y','-i',file,'-vf',`${duration<.5?'':`fps=${Math.min(16/duration,2)},`}scale=120:-2`,'-frames:v',duration<.5?'1':'16','-pix_fmt','yuvj420p','-q:v','5',path.join(dir,'%02d.jpg')]);asset.thumbnails=(await fs.readdir(dir)).sort().map(n=>`thumbs/${id}/${n}`);}
     if(hasAudio){const analysisDuration=Math.min(duration,1800),{buffer}=await run(['-v','error','-i',file,'-t',String(analysisDuration),'-vn','-ac','1','-ar','8000','-f','f32le','pipe:1']);const count=Math.floor(buffer.length/4),bins=Math.min(2048,Math.ceil(duration*100));
       for(let i=0;i<bins;i++){let peak=0;const from=Math.floor(i*duration/analysisDuration*count/bins),to=Math.min(count,Math.floor((i+1)*duration/analysisDuration*count/bins));for(let j=from;j<to;j++)peak=Math.max(peak,Math.abs(buffer.readFloatLE(j*4)));asset.peaks.push(Math.min(1,peak));}}
     return asset;
@@ -38,9 +38,22 @@ export function mediaEngine(root:string,store:ProjectStore){
     if(!allowedMedia.test(source))throw new Error('Choose a video, audio or image file.');const stat=await fs.stat(source);if(!stat.isFile()||stat.size>2*1024**3)throw new Error('Choose a media file smaller than 2 GB.');
     if(replaceId){const d=await store.read(projectId);if(!d.assets.some(a=>a.id===replaceId))throw new Error('Media entry not found in this project.');}
     const id=replaceId||randomUUID(),folder=store.entry(projectId).folder,destination=path.join(folder,'media',id+'-'+randomUUID().slice(0,8)+path.extname(source).toLowerCase());await fs.mkdir(path.dirname(destination),{recursive:true});await fs.copyFile(source,destination);
-    try{const asset=await analyze(projectId,destination,name,id);if(replaceId){const d=await store.read(projectId);if(!d.assets.some(a=>a.id===replaceId))throw new Error('Missing media entry not found.');const required=Math.max(0,...d.project.clips.filter(c=>c.assetId===replaceId).map(c=>c.sourceIn+c.duration*c.rate));if(asset.kind!=='image'&&asset.frames+1<required)throw new Error('This replacement is shorter than the footage used in the timeline.');}
+    try{const asset=/\.gif$/i.test(destination)?await importAnimation(projectId,destination,name,id):await analyze(projectId,destination,name,id);if(replaceId){const d=await store.read(projectId);if(!d.assets.some(a=>a.id===replaceId))throw new Error('Missing media entry not found.');const required=Math.max(0,...d.project.clips.filter(c=>c.assetId===replaceId).map(c=>c.sourceIn+c.duration*c.rate));if(asset.kind!=='image'&&asset.frames+1<required)throw new Error('This replacement is shorter than the footage used in the timeline.');}
       await store.addAsset(projectId,asset);return asset;
     }catch(error){await fs.unlink(destination).catch(()=>{});throw error;}
+  }
+  async function importAnimation(projectId:string,source:string,name:string,id:string):Promise<StoredAsset>{
+    const projectFolder=store.entry(projectId).folder,folder=path.join(projectFolder,'media',id+'-'+randomUUID().slice(0,8));await fs.mkdir(folder,{recursive:true});
+    try{
+      const {stderr}=await run(['-i',source],true),match=stderr.match(/Duration: (\d+):(\d+):(\d+\.\d+)/),duration=match?Number(match[1])*3600+Number(match[2])*60+Number(match[3]):0;
+      if(duration>120)throw new Error('Choose a GIF shorter than two minutes.');
+      await fs.copyFile(source,path.join(folder,'source.gif'));
+      await run(['-y','-ignore_loop','1','-i',source,'-an','-vf',"fps=30,scale='min(1920,iw)':-2,format=rgba",'-frames:v','3600',path.join(folder,'%06d.png')]);
+      const files=(await fs.readdir(folder)).filter(f=>/^\d{6}\.png$/.test(f)).sort();if(!files.length)throw new Error('This GIF has no readable frames.');
+      const first=path.join(folder,files[0]),info=await probe(first),preview=path.join(folder,'preview.webm');
+      await run(['-y','-framerate','30','-i',path.join(folder,'%06d.png'),'-an','-c:v','libvpx-vp9','-pix_fmt','yuva420p','-auto-alt-ref','0','-crf','28','-b:v','0',preview]);
+      await fs.unlink(source);return {id,name,kind:'video',duration:files.length/30,frames:files.length,width:info.width,height:info.height,hasAudio:false,file:path.relative(projectFolder,preview),thumbnails:[path.relative(projectFolder,first)],peaks:[],sequence:{count:files.length}};
+    }catch(error){await fs.rm(folder,{recursive:true,force:true});throw error;}
   }
   async function extract(projectId:string,assetId:string){const d=await store.read(projectId),a=d.assets.find(a=>a.id===assetId);if(!a?.hasAudio)throw new Error('This file does not contain audio.');const source=await store.assetPath(projectId,a.file),id=randomUUID(),output=path.join(store.entry(projectId).folder,'media',id+'.wav');await run(['-y','-v','error','-i',source,'-vn','-c:a','pcm_s16le',output]);const result=await analyze(projectId,output,a.name.replace(/\.[^.]+$/,'')+' · extracted audio',id);await store.addAsset(projectId,result);return result;}
   return {importFile,extract,probe,run};

@@ -1,3 +1,5 @@
+import {GIPHY_DRAG_TYPE} from './giphy';
+import type {GiphySelection} from './GiphyPanel';
 import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard,Blend} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
@@ -17,7 +19,7 @@ import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta,timelineItems} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={addStudio:(id:string,at:number,trackId?:string)=>void;openTransition:(clipId:string)=>void;beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={addGiphy:(selection:GiphySelection,at:number,trackId?:string)=>void;addStudio:(id:string,at:number,trackId?:string)=>void;openTransition:(clipId:string)=>void;beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -109,7 +111,7 @@ export function Timeline(props:Props){
     const target=project.tracks.find(item=>item.id===track),types=event.dataTransfer.types;
     if(types.includes(TEXT_PRESET_DRAG_TYPE)||movingLibraryItem(types))return undefined;
     if(types.includes(SOUND_DRAG_TYPE)||types.includes(ASSET_KIND_PREFIX+'audio'))return target?.kind==='audio'?target.id:undefined;
-    if(types.includes(STUDIO_DRAG_TYPE)||types.includes(ASSET_KIND_PREFIX+'video')||types.includes(ASSET_KIND_PREFIX+'image'))return target?.kind==='video'?target.id:undefined;
+    if(types.includes(GIPHY_DRAG_TYPE)||types.includes(STUDIO_DRAG_TYPE)||types.includes(ASSET_KIND_PREFIX+'video')||types.includes(ASSET_KIND_PREFIX+'image'))return target?.kind==='video'?target.id:undefined;
     return target?.id;
   }
   function libraryDragOver(event:React.DragEvent,track?:string){
@@ -122,6 +124,7 @@ export function Timeline(props:Props){
     if(event.dataTransfer.files.length||!isLibraryDrag(event.dataTransfer.types))return;
     event.preventDefault();event.stopPropagation();setLibraryDrop(null);
     const at=libraryDropFrame(event.clientX,event.shiftKey),target=compatibleDropTrack(event,track),soundId=event.dataTransfer.getData(SOUND_DRAG_TYPE);
+    const giphy=event.dataTransfer.getData(GIPHY_DRAG_TYPE);if(giphy){try{const selection=JSON.parse(giphy) as GiphySelection;if(!selection.item?.id||!['gifs','clips','stickers'].includes(selection.kind)||!['clip','overlay'].includes(selection.placement))return;props.addGiphy(selection,at,target);}catch{}return;}
     const studioId=event.dataTransfer.getData(STUDIO_DRAG_TYPE);if(studioId){props.addStudio(studioId,at,target);return;}
     if(soundId){props.addSound(soundId,at,target);return;}
     const assetId=event.dataTransfer.getData(ASSET_DRAG_TYPE);if(assetId){add(assetId,at,target);return;}

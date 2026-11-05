@@ -1,7 +1,7 @@
 import {timelineLayers} from './layers';
 export const FPS = 30;
 export type Asset = {
-  sequence?:{count:number}; id:string; name:string; kind:'video'|'audio'|'image'; duration:number; frames:number;
+  giphy?:import('./giphy').GiphySource; sequence?:{count:number}; id:string; name:string; kind:'video'|'audio'|'image'; duration:number; frames:number;
   width:number; height:number; hasAudio:boolean; missing?:boolean; url:string; extension?:string; thumbnails:string[]; peaks:number[];
 };
 export type Clip = {
