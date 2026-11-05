@@ -7,7 +7,7 @@ import {giphyDownload,giphyHttps,giphyKinds,GIPHY_DRAG_TYPE,type GiphyItem,type 
 import {ASSET_KIND_PREFIX,startLibraryDrag} from './libraryDrag';
 import './giphy.css';
 
-type Config={configured:boolean;apiKey:string|null;projectMediaApproved:boolean};
+type Config={configured:boolean;apiKey:string|null;localImportEnabled:boolean};
 export type GiphySelection={item:GiphyItem;kind:GiphyKind};
 export function GiphyPanel({hide,add,busy}:{hide:()=>void;add:(selection:GiphySelection)=>Promise<void>;busy:boolean}){
  const id=useId(),[kind,setKind]=useState<GiphyKind>('gifs'),[query,setQuery]=useState(''),[config,setConfig]=useState<Config|null>(null),[items,setItems]=useState<GiphyItem[]>([]),[offset,setOffset]=useState(0),[more,setMore]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0),[settings,setSettings]=useState(false),[adding,setAdding]=useState<string|null>(null);
@@ -30,13 +30,13 @@ export function GiphyPanel({hide,add,busy}:{hide:()=>void;add:(selection:GiphySe
   }catch(e){if(!mounted.current||token!==request.current)return;const status=(e as {status?:number}).status;setError(status===429?'GIPHY’s hourly limit has been reached. Try again later.':kind==='clips'&&(status===401||status===403)?'Clips access is awaiting GIPHY approval.':status===401||status===403?'Check the GIPHY key in local settings.':'GIPHY could not load. Try again.');}
   finally{if(mounted.current&&token===request.current)setLoading(false);}
  }
- async function insert(item:GiphyItem){if(busy||adding||!config?.projectMediaApproved)return;setAdding(String(item.id));setError('');try{await add({item,kind});}catch(e){if(mounted.current)setError((e as Error).message);}finally{if(mounted.current)setAdding(null);}}
- const canAdd=config?.projectMediaApproved&&!busy&&!adding;
+ async function insert(item:GiphyItem){if(busy||adding||!config?.localImportEnabled)return;setAdding(String(item.id));setError('');try{await add({item,kind});}catch(e){if(mounted.current)setError((e as Error).message);}finally{if(mounted.current)setAdding(null);}}
+ const canAdd=config?.localImportEnabled&&!busy&&!adding;
  return <section className="sounds-panel giphy-panel" aria-label="GIPHY library">
   <div className="panel-heading"><h2>GIPHY</h2><div className="sounds-heading-actions"><IconButton label="GIPHY connection" onClick={()=>setSettings(v=>!v)}><Settings2 size={14}/></IconButton><IconButton label="Hide GIPHY panel" onClick={hide}><X size={15}/></IconButton></div></div>
   <label className="sound-search"><Search size={14}/><Input aria-label="Search GIPHY" placeholder="Search GIPHY" maxLength={50} value={query} onChange={e=>setQuery(e.target.value)}/></label>
   <div className="giphy-tabs" role="tablist" aria-label="GIPHY content type">{giphyKinds.map(([key,label],index)=><Button key={key} id={`${id}-${key}`} variant="ghost" size="sm" role="tab" aria-selected={kind===key} aria-controls={`${id}-results`} tabIndex={kind===key?0:-1} onClick={()=>setKind(key)} onKeyDown={e=>{const next=e.key==='ArrowRight'?(index+1)%3:e.key==='ArrowLeft'?(index+2)%3:e.key==='Home'?0:e.key==='End'?2:null;if(next!==null){e.preventDefault();const key=giphyKinds[next][0];setKind(key);document.getElementById(`${id}-${key}`)?.focus();}}}>{label}</Button>)}</div>
-  {settings&&<div className="giphy-connection"><span>{config?.configured?'Connected':'API key not configured'}</span><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener noreferrer">Developer dashboard <ExternalLink size={11}/></a>{config?.configured&&!config.projectMediaApproved&&<span>Adding to videos is awaiting GIPHY approval.</span>}</div>}
+  {settings&&<div className="giphy-connection"><span>{config?.configured?'Connected':'API key not configured'}</span><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener noreferrer">Developer dashboard <ExternalLink size={11}/></a></div>}
   {error&&<div className="sound-error" role="alert"><span>{error}</span>{!loading&&<Button variant="ghost" size="sm" onClick={()=>setRetry(v=>v+1)}>Retry</Button>}</div>}
   <div className="giphy-results" id={`${id}-results`} role="tabpanel" aria-labelledby={`${id}-${kind}`} aria-busy={loading}>
    {!config?<div className="sound-empty" role="status"><LoaderCircle className="spin" size={20}/>Connecting…</div>:!config.configured?<div className="sound-empty"><span>Connect a GIPHY key to browse.</span><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener noreferrer">Open GIPHY Developers</a></div>:<>
@@ -54,6 +54,6 @@ export function GiphyPanel({hide,add,busy}:{hide:()=>void;add:(selection:GiphySe
     {more&&!loading&&!error&&<Button variant="ghost" size="sm" className="full-width" onClick={()=>void load(offset)}>Load more</Button>}
    </>}
   </div>
-  <div className="giphy-footer">{config?.configured&&!config.projectMediaApproved&&<span>Browse only · video use pending approval</span>}<a href="https://giphy.com/" target="_blank" rel="noopener noreferrer" aria-label="Powered by GIPHY"><img className="giphy-brand-dark" src="/giphy/powered-by-giphy.png" alt="Powered by GIPHY"/><img className="giphy-brand-light" src="/giphy/powered-by-giphy-light.png" alt="Powered by GIPHY"/></a></div>
+  <div className="giphy-footer"><a href="https://giphy.com/" target="_blank" rel="noopener noreferrer" aria-label="Powered by GIPHY"><img className="giphy-brand-dark" src="/giphy/powered-by-giphy.png" alt="Powered by GIPHY"/><img className="giphy-brand-light" src="/giphy/powered-by-giphy-light.png" alt="Powered by GIPHY"/></a></div>
  </section>;
 }

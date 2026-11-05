@@ -29,7 +29,7 @@ Colors, fields, buttons and typography reuse Cutroom's current controls.
   links validated; fresh MCP 2.12.0 discovered 49 tools including giphy_status,
   open_giphy, import_giphy and add_giphy_media. Skill validation passed.
 
-## Provider dependency
+## Initial provider gate (superseded below)
 
 GIPHY's documented practices prohibit storing media copies; local project storage,
 conversion and export need explicit permission. `GIPHY_PROJECT_MEDIA_APPROVED`
@@ -55,3 +55,32 @@ The four GIPHY tests passed with the default omitted, including HTTP insertion.
 Production build and fresh global MCP discovery passed. Browser verification
 confirmed the selector is absent and Full frame is still present on the selected
 local GIF overlay. Provider-approval requirements remain unchanged.
+
+## Local insertion enabled — explicit user request
+
+Removed the application-managed approval gate from the picker, browser insert
+handler, multipart import route and MCP local-file import route. Status now reports
+`localImportEnabled: true`; it does not claim provider approval. Clips still
+report actual upstream access failures. No provider credentials or agreements
+were changed. Fresh MCP 2.12.1 exposes the updated descriptions globally; both
+installed skills remain repository symlinks.
+
+Verified in a separate project, GIPHY local playback test
+(`f7649fa6-1d6d-435b-b0a5-4a7345f40463`), preserving other edits:
+
+- Clicked the actual Blue Wave GIF by Evan Hilton result. The browser downloaded
+  its MP4 directly, imported it locally and placed a centered 45% overlay.
+- Used Layout > Full frame to make the wave a background.
+- Dragged the actual Happy Rainbow Sticker using its grip onto the video track.
+  It became a separate upper overlay starting at frame 15. Its GIF converted to
+  12 RGBA frames and retained transparency and source attribution.
+- Played the timeline in the editor and inspected the overlay at frame 17.
+- Exported the full 194-frame timeline to MP4 and its matching cover. The output
+  is 1080 × 1920, 30fps, 6.47 seconds. Decoded frames at 0.6 and 0.8 seconds show
+  the changing sticker over the visible wave, confirming animation and alpha.
+- Both sources are relative files inside the project's media directory; rendering
+  uses those local sources, with no remote GIPHY dependency for export.
+- Four focused GIPHY tests and the TypeScript/Vite production build passed.
+  Global setup and fresh MCP discovery checks passed. The skill validator passed.
+
+Screenshots and decoded export frames remain ignored local QA artifacts.

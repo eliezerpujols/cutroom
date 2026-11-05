@@ -257,7 +257,7 @@ project revision. See the [caption workflow](.agents/skills/cutroom/references/c
 Open **GIPHY** in the toolbar for GIFs, Clips and Stickers. Search or browse
 trending results. All GIPHY items insert as overlays; use **Layout > Full frame**
 to fill the canvas after insertion.
-Authorized content can be added at the playhead or dragged to the timeline;
+Content can be added at the playhead or dragged to the timeline;
 the usual position, size, crop, rotation, mirror and effect controls apply.
 GIPHY attribution and creator/source links remain visible in the picker.
 
@@ -266,11 +266,12 @@ ignored `.env`. The browser searches GIPHY directly; Cutroom does not proxy API
 or preview requests. Beta keys are documented as limited to 100 calls/hour.
 Clips may need separate provider approval and show a clear access error until enabled.
 
-GIPHY's published practices restrict storing media copies. Until GIPHY explicitly
-permits project storage, conversion and video export, the integration supports
-browsing and leaves import disabled. Only after receiving that permission, set
-`GIPHY_PROJECT_MEDIA_APPROVED=true` and restart the idle backend. Creating an API
-key or accepting the standard SDK agreement does not establish that approval.
+Selecting or dragging an item downloads only that item's original rendition
+in the browser and imports it into the local project. Preview, transforms and
+export run locally. The selected source stays with the project for reopening and
+offline export; search and new downloads require internet. No approval environment
+flag is required by Cutroom. API access (including Clips) remains controlled by
+GIPHY's actual response.
 
 Your own local GIF files can be imported through **Media** immediately. Cutroom
 converts them locally into a deterministic 30fps RGBA sequence, preserving animation

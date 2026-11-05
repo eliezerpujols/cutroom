@@ -41,20 +41,15 @@ test('local animated GIFs keep frame timing, alpha and attribution through proje
   assert.equal(buffer[3],0);assert.ok(Array.from({length:buffer.length/4},(_,i)=>buffer[i*4+3]).some(a=>a===255));
  }finally{await fs.rm(dir,{recursive:true,force:true});}
 });
-test('GIPHY import enforces approval server-side and approved local fixtures use revision-safe insertion',async()=>{
- const previous=process.env.GIPHY_PROJECT_MEDIA_APPROVED,dir=await fs.mkdtemp(path.join(os.tmpdir(),'cutroom-giphy-routes-')),data=path.join(dir,'data'),store=new ProjectStore(data,path.join(dir,'projects'));await store.initialize();await fs.mkdir(path.join(data,'uploads'));
+test('GIPHY local import works without an approval flag and uses revision-safe insertion',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cutroom-giphy-routes-')),data=path.join(dir,'data'),store=new ProjectStore(data,path.join(dir,'projects'));await store.initialize();await fs.mkdir(path.join(data,'uploads'));
  const media=mediaEngine(process.cwd(),store),file=path.join(dir,'own.mp4');await media.run(['-y','-f','lavfi','-i','color=c=red:s=64x64:r=30:d=0.2','-an','-pix_fmt','yuv420p',file]);
  const app=express();app.use(express.json());registerGiphyRoutes(app,store,media,data,()=>({}));app.use((error:Error,_req:express.Request,res:express.Response,_next:express.NextFunction)=>res.status(error instanceof ProjectConflict?409:400).json({error:error.message}));
  const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const address=server.address() as {port:number},base=`http://127.0.0.1:${address.port}`,id=store.activeId();const post=(url:string,body:unknown)=>fetch(base+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  try{
-  delete process.env.GIPHY_PROJECT_MEDIA_APPROVED;
-  const denied=await post(`/api/projects/${id}/giphy/import-path`,{filePath:file,source});assert.equal(denied.status,403);assert.equal((await store.read(id)).assets.length,0);
-  // Permission is simulated only in this isolated fixture process; this is our
-  // generated red video, never downloaded GIPHY content or the live backend.
-  process.env.GIPHY_PROJECT_MEDIA_APPROVED='true';
   const imported=await post(`/api/projects/${id}/giphy/import-path`,{filePath:file,source}),result=await imported.json();assert.equal(imported.status,200,JSON.stringify(result));assert.equal(result.asset.giphy.creator,'Example');
   const body={expectedRevision:0,assetId:result.asset.id,start:15},added=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(added.status,200);assert.equal((await store.read(id)).project.clips[0].start,15);assert.ok((await store.read(id)).project.clips[0].overlay);
   const stale=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(stale.status,409);assert.equal((await store.read(id)).project.clips.length,1);
-  const status=await(await fetch(base+'/api/giphy/status')).json();assert.equal('apiKey' in status,false);
- }finally{if(previous===undefined)delete process.env.GIPHY_PROJECT_MEDIA_APPROVED;else process.env.GIPHY_PROJECT_MEDIA_APPROVED=previous;await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await fs.rm(dir,{recursive:true,force:true});}
+  const status=await(await fetch(base+'/api/giphy/status')).json();assert.equal('apiKey' in status,false);assert.equal(status.localImportEnabled,true);assert.equal('projectMediaApproved' in status,false);
+ }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await fs.rm(dir,{recursive:true,force:true});}
 });

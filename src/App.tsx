@@ -239,7 +239,6 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     if(giphyImporting.current)throw new Error('Wait for the current GIPHY item to finish.');
     giphyImporting.current=true;setGiphyBusy(true);player.current?.pause();
     try{
-      const status=await api<{projectMediaApproved:boolean}>('/api/giphy/status');if(!status.projectMediaApproved)throw new Error('Adding GIPHY content to videos is awaiting approval.');
       const rendition=giphyDownload(selection.item,selection.kind),response=await fetch(rendition.url,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(60000)});
       if(!response.ok)throw new Error('GIPHY media could not be downloaded.');if(Number(response.headers.get('content-length'))>50*1024**2)throw new Error('Choose GIPHY media smaller than 50 MB.');
       const blob=await response.blob();if(blob.size>50*1024**2)throw new Error('Choose GIPHY media smaller than 50 MB.');

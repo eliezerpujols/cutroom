@@ -4,7 +4,7 @@ The GIPHY toolbar panel has GIFs, Clips and Stickers tabs, exact-query search,
 pagination, animated previews, creator/source links and official Powered by GIPHY
 branding. All content inserts as overlays by default, by click or timeline drag.
 Use Layout > Full frame on the inserted clip to fill the canvas. Do not add a
-placement selector to the library panel. Approved imports use the
+placement selector to the library panel. Imports use the
 same timeline drag target and grip pattern as Media and Sounds. Selecting an
 item adds it at the playhead; dragging sets its timeline start and target lane.
 Overlays retain preview movement, resize, rotation, crop and mirror controls.
@@ -26,28 +26,29 @@ SDK's own short-lived memory handling is separate from a project media cache.
 Clips access may return 401/403 until GIPHY approves the application. Ordinary
 GIF access does not establish Clips access. The panel displays the actual denial.
 
-GIPHY's published integration practices prohibit storing media copies. A local
-video editor needs specific permission to download selected content into project
-folders, convert it and export edits. This is not granted merely by creating a
-key or accepting the standard SDK agreement. Keep `GIPHY_PROJECT_MEDIA_APPROVED`
-unset/false until GIPHY actually approves this use, then set it to `true` in the
-ignored `.env` and restart the backend when idle. Do not substitute user consent
-for permission from GIPHY. Until then, browsing works and timeline imports remain
-disabled; report that limitation rather than claiming export is enabled.
+The user has explicitly requested local import and export. Cutroom does not
+require an application-managed approval flag: `giphy_status` reports
+`localImportEnabled`, not a claim of provider permission. Do not reinstate the old
+`GIPHY_PROJECT_MEDIA_APPROVED` gate or misrepresent local enablement as GIPHY
+approval. The browser downloads only a selected item directly from its returned
+URL, then imports it into the local project. That source is retained with the
+project for reliable reopening and offline export. Search and new downloads
+require internet; editing and export run locally. Preserve real API failures,
+including restricted Clips access.
 
-## MCP 2.12
+## MCP 2.12.1
 
-- `giphy_status`: redacted key/configuration and project-media permission status.
+- `giphy_status`: redacted key/configuration and local import capability.
 - `open_giphy`: returns a new editor instance for the requested project with
   `view=giphy`. Open that URL in a new tab; preserve other editor tabs.
 - `import_giphy`: accepts an absolute path to media already downloaded directly
-  by the browser, plus `source` attribution. It enforces the permission flag.
+  by the browser, plus `source` attribution. Processing runs locally.
   Never add a server-side GIPHY search/download proxy to make this tool work.
 - `add_giphy_media`: inserts an imported `asset_id` as `clip` or `overlay`, with
   `start` in frames, optional `track_id`, and the current `expected_revision`.
   Omitted `placement` defaults to `overlay`.
 
-The browser panel downloads only the selected authorized rendition (up to 50MB),
+The browser panel downloads only the selected rendition (up to 50MB),
 then uploads it to the local editor. Sticker GIFs keep alpha; Clips use their
 video rendition with sound. The source record includes provider, ID, type,
 original GIPHY page and available creator attribution. Keep this metadata.
