@@ -1,12 +1,11 @@
 import {GIPHY_DRAG_TYPE} from './giphy';
 import type {GiphySelection} from './GiphyPanel';
 import React,{useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard,Blend} from 'lucide-react';
+import {Film,Volume2,VolumeX,AudioLines,Plus,Minus,MousePointer2,Scissors,BetweenHorizontalStart,Keyboard,Blend,LockKeyhole} from 'lucide-react';
 import {Button,IconButton,Slider,Tip} from './ui/primitives';
 import {FadeEnvelope} from './ClipAdjustments';
 import {CaptionTimeline} from './CaptionTimeline';
 import {VideoTextTimeline} from './VideoTextTimeline';
-import {CoverTile} from './CoverEditor';
 import {useLayerReorder} from './useLayerReorder';
 import {SOUND_DRAG_TYPE} from './sounds';
 import {STUDIO_DRAG_TYPE,ASSET_DRAG_TYPE,ASSET_KIND_PREFIX,TEXT_PRESET_DRAG_TYPE,TEXT_DRAG_TYPE,CAPTION_DRAG_TYPE,isLibraryDrag,movingLibraryItem,isTextPreset} from './libraryDrag';
@@ -19,7 +18,7 @@ import {placeTimelineClip} from './videoTracks';
 import {moveSelection,snapSelectionDelta,timelineItems} from './timelineSelection';
 import {FPS,clamp,endFrame,time,uid,trimClip,slipClip,splitTarget,snapFrame,fadeGainAt,type Asset,type Clip,type Project,type Tool} from './model';
 
-type Props={addGiphy:(selection:GiphySelection,at:number,trackId?:string)=>void;addStudio:(id:string,at:number,trackId?:string)=>void;openTransition:(clipId:string)=>void;beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;openCover:()=>void;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
+type Props={addGiphy:(selection:GiphySelection,at:number,trackId?:string)=>void;addStudio:(id:string,at:number,trackId?:string)=>void;openTransition:(clipId:string)=>void;beforeReorder?:()=>void;addSound:(id:string,at:number,trackId?:string)=>void;textSelected:string|null;selectText:(id:string|null)=>void;coverEditing:boolean;sourceProject:Project;project:Project;assets:Asset[];captionSelection:CaptionSelection;selectCaption:(selection:CaptionSelection)=>void;selectedIds:string[];select:(ids:string[])=>void;frame:number;seek:(f:number)=>void;tool:Tool;setTool:(t:Tool)=>void;edit:(fn:(p:Project)=>Project,record?:boolean)=>void;checkpoint:()=>void;split:()=>void;add:(id:string,at:number,trackId?:string)=>void;height:number|null;resize:(height:number|null)=>void;showShortcuts:()=>void;};
 type SelectionBox={left:number;top:number;width:number;height:number};
 const MIN_HEIGHT=180,MIN_ZOOM=.5,MAX_ZOOM=5;
 export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;clip:Clip}){
@@ -32,7 +31,8 @@ export const Waveform=React.memo(function Waveform({asset,clip}:{asset:Asset;cli
   })}</svg>;
 });
 export function Timeline(props:Props){
-  const {project,assets,selectedIds,select,frame,seek,tool,setTool,edit,checkpoint,split,add}=props;
+  const {assets,selectedIds,select,frame,seek,tool,setTool,edit,checkpoint,split,add}=props;
+  const project=props.coverEditing?props.sourceProject:props.project;
   const selected=selectedIds.length===1?selectedIds[0]:null;
   const selectedSet=new Set(selectedIds);
   const transitions=timelineTransitions(project);
@@ -47,7 +47,7 @@ export function Timeline(props:Props){
   const [selectionBox,setSelectionBox]=useState<SelectionBox|null>(null),[dragScale,setDragScale]=useState<number|null>(null);
   const [zoom,setZoom]=useState(1),[available,setAvailable]=useState(800);
   const snapping=true;
-  const length=endFrame(project);const extent=Math.max(length,FPS*8);
+  const length=Math.max(endFrame(project),props.coverEditing?frame+1:0);const extent=Math.max(length,FPS*8);
   const base=Math.max(.45,(available-48)/extent);const ppf=dragScale??base*zoom;const width=Math.max(available,extent*ppf+24);
   const zoomValue=useRef(zoom),renderedScale=useRef(ppf),zoomAnchor=useRef<{frame:number;offset:number}|null>(null);
   zoomValue.current=zoom;renderedScale.current=ppf;
@@ -79,7 +79,7 @@ export function Timeline(props:Props){
     element.addEventListener('wheel',wheel,{passive:false});
     return()=>element.removeEventListener('wheel',wheel);
   },[changeZoom]);
-  useEffect(()=>()=>gestureCleanup.current?.(),[]);
+  useEffect(()=>()=>gestureCleanup.current?.(),[props.coverEditing]);
   useEffect(()=>{if(!viewport.current)return;const obs=new ResizeObserver(([e])=>setAvailable(Math.max(200,e.contentRect.width-132)));obs.observe(viewport.current);return()=>obs.disconnect();},[]);
   function heightLimits(){
     const shell=timeline.current!.closest<HTMLElement>('.app-shell')!;
@@ -115,12 +115,14 @@ export function Timeline(props:Props){
     return target?.id;
   }
   function libraryDragOver(event:React.DragEvent,track?:string){
+    if(props.coverEditing)return;
     if(!isLibraryDrag(event.dataTransfer.types))return;
     event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=movingLibraryItem(event.dataTransfer.types)?'move':'copy';
     const next={frame:libraryDropFrame(event.clientX,event.shiftKey),track:compatibleDropTrack(event,track)};
     setLibraryDrop(previous=>previous?.frame===next.frame&&previous.track===next.track?previous:next);
   }
   function dropMedia(event:React.DragEvent,track?:string){
+    if(props.coverEditing)return;
     if(event.dataTransfer.files.length||!isLibraryDrag(event.dataTransfer.types))return;
     event.preventDefault();event.stopPropagation();setLibraryDrop(null);
     const at=libraryDropFrame(event.clientX,event.shiftKey),target=compatibleDropTrack(event,track),soundId=event.dataTransfer.getData(SOUND_DRAG_TYPE);
@@ -139,8 +141,19 @@ export function Timeline(props:Props){
       if(cue.start!==at)edit(p=>({...p,captions:p.captions?.map(item=>item.id===layer.id?{...item,cues:item.cues.map(current=>current.id===cue.id?{...current,start:at}:current).sort((a,b)=>a.start-b.start)}:item)}));props.selectCaption({layerId:layer.id,cueId:cue.id});
     }
   }
-  function scrub(e:React.PointerEvent){if(e.button!==0)return;e.preventDefault();if(props.coverEditing)checkpoint();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
-    const move=(ev:PointerEvent)=>seek(pointerFrame(ev.clientX));const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});}
+  function scrub(e:React.PointerEvent<HTMLDivElement>){
+    if(e.button!==0||!e.isPrimary||props.coverEditing&&e.clientX<board.current!.getBoundingClientRect().left+132)return;
+    e.preventDefault();e.stopPropagation();e.currentTarget.focus({preventScroll:true});gestureCleanup.current?.();
+    if(props.coverEditing)checkpoint();seek(pointerFrame(e.clientX));e.currentTarget.setPointerCapture(e.pointerId);
+    const move=(ev:PointerEvent)=>{if(ev.pointerId===e.pointerId)seek(pointerFrame(ev.clientX));};
+    const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',finish);gestureCleanup.current=null;};
+    gestureCleanup.current=finish;window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish,{once:true});window.addEventListener('pointercancel',finish,{once:true});window.addEventListener('blur',finish,{once:true});
+  }
+  function frameKey(e:React.KeyboardEvent){
+    const next=e.key==='ArrowRight'?frame+(e.shiftKey?FPS:1):e.key==='ArrowLeft'?frame-(e.shiftKey?FPS:1):e.key==='Home'?0:e.key==='End'?length-1:null;
+    if(next===null||e.metaKey||e.ctrlKey||e.altKey)return;
+    e.preventDefault();e.stopPropagation();if(props.coverEditing)checkpoint();seek(clamp(next,0,length-1));
+  }
 
   function startResize(e:React.PointerEvent<HTMLDivElement>){
     if(e.button!==0||!e.isPrimary)return;
@@ -176,6 +189,7 @@ export function Timeline(props:Props){
   }
 
   function selectArea(e:React.PointerEvent){
+    if(props.coverEditing)return;
     if(e.button!==0||!e.isPrimary||(e.target as HTMLElement).closest('.timeline-clip,.track-label,.ruler-row'))return;
     e.preventDefault();e.stopPropagation();gestureCleanup.current?.();
     board.current!.focus({preventScroll:true});setTool('select');setDragScale(null);setResizing(false);
@@ -349,23 +363,26 @@ export function Timeline(props:Props){
       nudgeItem(c.id,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1));
     }
   }
-  return <section className="timeline" ref={timeline} aria-label="Editing timeline">
+  return <section className={`timeline ${props.coverEditing?'cover-timeline':''}`} ref={timeline} aria-label={props.coverEditing?'Cover frame timeline':'Editing timeline'}>
     <div className="timeline-resizer" role="separator" aria-label="Timeline height" aria-orientation="horizontal" aria-controls="timeline-tracks" aria-valuemin={MIN_HEIGHT} aria-valuemax={timelineSize.max} aria-valuenow={timelineSize.height} aria-valuetext={`${timelineSize.height} pixels`} tabIndex={0} data-resizing={resizing||undefined} title="Drag to resize the timeline. Double-click to reset." onPointerDown={startResize} onKeyDown={resizeKey} onDoubleClick={()=>props.resize(null)}><span/></div>
-    <div className="timeline-toolbar"><div className="tool-group" role="toolbar" aria-label="Timeline tools">
+    <div className="timeline-toolbar">{props.coverEditing?<div className="cover-timeline-scope"><span className="cover-source-lock"><LockKeyhole size={12}/>Video timing locked</span></div>:<div className="tool-group" role="toolbar" aria-label="Timeline tools">
     <Tip label="Move clips · V. Drag empty space to select several clips, then drag a selected clip to move them together. Drag clip edges to trim."><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='select'?'active':'')} aria-label="Move clips · V" aria-pressed={tool==='select'} onClick={()=>setTool('select')}><MousePointer2 size={16}/><span>Move</span></Button></Tip>
     <Tip label={splitHint}><span className="tool-tip-anchor"><Button variant="outline" size="sm" className="timeline-tool split-action" aria-label="Split at playhead · S" disabled={!canSplit} onClick={split}><Scissors size={16}/><span>Split</span></Button></span></Tip>
     <Tip label={slipHint}><span className="tool-tip-anchor"><Button variant="ghost" size="sm" className={'timeline-tool '+(tool==='slip'?'active':'')} aria-label="Slip source content · Y" aria-pressed={tool==='slip'} disabled={!canSlip} onClick={()=>setTool('slip')}><BetweenHorizontalStart size={16}/><span>Slip</span></Button></span></Tip>
 
-  </div>
+  </div>}
   <div className="zoom-tools"><IconButton label="Zoom out" onClick={()=>changeZoom(zoomValue.current-.25)}><Minus size={15}/></IconButton><Slider label="Timeline zoom" min={MIN_ZOOM} max={MAX_ZOOM} step={.1} value={[zoom]} onValueChange={([value])=>changeZoom(value)}/><IconButton label="Zoom in" onClick={()=>changeZoom(zoomValue.current+.25)}><Plus size={15}/></IconButton></div></div>
-  <div className="timeline-scroll" id="timeline-tracks" ref={viewport} onDragEnter={event=>libraryDragOver(event)} onDragOver={event=>libraryDragOver(event)} onDrop={event=>dropMedia(event)} onDragLeave={event=>{if(event.relatedTarget instanceof Node&&event.currentTarget.contains(event.relatedTarget))return;const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom)setLibraryDrop(null);}}><div className="timeline-board" ref={board} role="group" aria-label="Timeline clips" tabIndex={0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
+  <div className="timeline-scroll" id="timeline-tracks" ref={viewport} onDragEnter={event=>libraryDragOver(event)} onDragOver={event=>libraryDragOver(event)} onDrop={event=>dropMedia(event)} onDragLeave={event=>{if(event.relatedTarget instanceof Node&&event.currentTarget.contains(event.relatedTarget))return;const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom)setLibraryDrop(null);}}><div className="timeline-board" ref={board} role="group" aria-label={props.coverEditing?'Source video reference':'Timeline clips'} tabIndex={props.coverEditing?-1:0} style={{width:width+132}} onPointerDown={selectArea} onKeyDown={e=>{
+    if(props.coverEditing)return;
     if(e.key==='Escape'){gestureCleanup.current?.();setSelectionBox(null);setDragScale(null);}
     if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&selectedIds.length&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!(e.target as HTMLElement).closest('.ruler,.timeline-clip,.track-label')){e.preventDefault();e.stopPropagation();edit(p=>moveSelection(p,selectedIds,(e.key==='ArrowRight'?1:-1)*(e.shiftKey?FPS:1)));}
   }}>
-    <div className="ruler-row cover-ruler-row"><div className="ruler-label cover-ruler-label"><CoverTile project={project} assets={assets} active={props.coverEditing} open={props.openCover}/><span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label="Scrub timeline" role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={e=>{if(props.coverEditing&&['ArrowLeft','ArrowRight'].includes(e.key))checkpoint();if(e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+1,0,length-1));}if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,frame-1));}}}>
-      <div className="ruler-playhead" aria-hidden="true" style={{left:frame*ppf}}><span>{time(frame,true)}</span><i/></div>
+    <div className="ruler-row"><div className="ruler-label"><span>30 fps</span></div><div className="ruler" style={{width}} onPointerDown={scrub} aria-label={props.coverEditing?'Choose cover frame on timeline':'Scrub timeline'} role="slider" tabIndex={0} aria-valuemin={0} aria-valuemax={Math.max(0,length-1)} aria-valuenow={frame} onKeyDown={frameKey}>
+      <div className="ruler-playhead" aria-hidden="true" style={{left:frame*ppf}}><span>{props.coverEditing?'Cover ':''}{time(frame,true)}</span><i/></div>
       {Array.from({length:Math.ceil(width/ppf/rulerStep)},(_,i)=>i*rulerStep).map(t=><div className="ruler-tick" key={t} style={{left:t*ppf}}><span>{time(t)}</span></div>)}
     </div></div>
+    <div className={props.coverEditing?'cover-source-tracks':undefined} onPointerDown={props.coverEditing?scrub:undefined} onKeyDown={props.coverEditing?frameKey:undefined} role={props.coverEditing?'slider':undefined} tabIndex={props.coverEditing?0:undefined} aria-label={props.coverEditing?'Choose cover frame from source tracks':undefined} aria-valuemin={props.coverEditing?0:undefined} aria-valuemax={props.coverEditing?Math.max(0,length-1):undefined} aria-valuenow={props.coverEditing?frame:undefined} aria-valuetext={props.coverEditing?time(frame,true):undefined}>
+    <div inert={props.coverEditing||undefined}>
     {reorder.layers.map(layer=>{
       if(layer.kind==='text')return <React.Fragment key={layer.key}><VideoTextTimeline texts={[layer.text]} snapTexts={project.texts||[]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} rowNumber={layer.number} selectedIds={selectedIds} dragItem={dragItem} nudge={nudgeItem} toggle={toggleItem} select={props.selectText} ppf={ppf} width={width} snapping={snapping} points={[0,frame,...project.clips.flatMap(c=>[c.start,c.start+c.duration])]} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
       if(layer.kind==='caption')return <React.Fragment key={layer.key}><CaptionTimeline layers={[layer.layer]} dragHandle={reorder.handle(layer)} rowAttributes={reorder.attributes(layer.key)} selectedIds={selectedIds} dragItem={dragItem} nudge={nudgeItem} toggle={toggleItem} select={props.selectCaption} ppf={ppf} width={width} edit={edit} checkpoint={checkpoint} freeze={setDragScale} registerGesture={registerCaptionGesture}/></React.Fragment>;
@@ -390,8 +407,9 @@ export function Timeline(props:Props){
         </div>;
       })}</div>
     </div>;})}
+    </div></div>
     {libraryDrop&&<div className="library-drop-line" style={{left:132+libraryDrop.frame*ppf}}><span>{time(libraryDrop.frame,true)}</span></div>}
     <div className="playhead" aria-hidden="true" style={{left:132+frame*ppf,height:'calc(100% - 4px)'}}/>
     {selectionBox&&<div className="timeline-selection-box" aria-hidden="true" style={selectionBox}/>}
-  </div></div><div className="timeline-footer"><div className="timeline-status"><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{selectedIds.length>1?`${selectedIds.length} selected · `:''}{timelineItems(project).length} items <span className="muted">·</span> {time(length,true)} total</span></div></section>;
+  </div></div><div className="timeline-footer"><div className="timeline-status"><IconButton label="Keyboard shortcuts" onClick={props.showShortcuts}><Keyboard size={14}/></IconButton></div><span role="status" aria-live="polite">{props.coverEditing?'Source reference · ':selectedIds.length>1?`${selectedIds.length} selected · `:''}{timelineItems(project).length} items <span className="muted">·</span> {time(length,true)} total</span></div></section>;
 }

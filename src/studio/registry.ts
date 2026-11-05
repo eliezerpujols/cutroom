@@ -11,6 +11,7 @@ const creatorTemplates=[
   id,name,width:400,height:312,duration:64,
   fields:[
     {key:'accent',type:'color',label:'Accent',default:accent},
+    {key:'language',type:'text',label:'Language (es / en)',default:'es'},
     ...(id==='price-editor'?[{key:'amount',type:'text' as const,label:'Price',default:'$25'}]:[]),
   ] satisfies StudioField[],
 }));

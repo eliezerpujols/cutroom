@@ -59,7 +59,7 @@ rebuild an existing `dist/` automatically.
    that optional operation uses ElevenLabs.
 6. **Style the result.** Use **Adjust** for edit-wide light/color controls, or
    a selected visual clip's **Adjustments** section for that clip only.
-7. **Design a cover.** Click the square **Cover** tile at the timeline's start.
+7. **Design a cover.** Choose **Cover** in the header’s Video / Cover switch.
    Pick a frame, add text, change its colors/background/outline, and drag it into
    place. Choose whether captions appear on the cover.
 8. **Export.** Choose MP4 for video, or WAV/MP3 for audio. A new MP4 export also

@@ -73,6 +73,11 @@ to 160 characters. Get current defaults and bounds from `list_studio`, not from
 a previous project's values. Example props: `{"title":"Eli","subtitle":"Creator",
 "turnSeconds":2.4}`. Turn time is seconds; clip start/duration remain frames.
 
+Lesson player, Social post and Price editor accept `language: "en"` for English
+artwork and button labels; omitted language retains Spanish (`es`). Price editor
+keeps its independent `amount` field. Spoken question uses its editable lead,
+word and ending strings directly in the requested language.
+
 To customize an existing card, pass its actual `clip_id`, current revision and
 only changed props. Omitted props remain unchanged. `template` is for insertion;
 it does not replace an existing instance's template. Read the returned `clipId`

@@ -1,4 +1,16 @@
 .cover-panel,.adjustments-panel{min-width:0;min-height:0;overflow-y:auto;padding:16px 15px 18px;border-right:1px solid var(--border);background:var(--surface)}
+.editor-mode-switch.speed-presets{flex-shrink:0;align-items:center;gap:3px;margin:0 auto;padding:3px;background:var(--subtle);border-radius:var(--control-radius)}
+.editor-mode-switch.speed-presets .button{flex:none;min-width:72px;height:28px;font-size:11px;padding:0 16px}
+.app-header .header-actions{margin-left:0}
+.cover-source-lock{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)}
+.cover-timeline-scope{display:flex;align-items:center;gap:16px;min-width:0;font-size:11px;color:var(--muted)}
+.cover-timeline .timeline-toolbar{height:32px}
+.cover-source-tracks{cursor:crosshair;touch-action:none}
+.cover-source-tracks>[inert]{opacity:.55;pointer-events:none;user-select:none}
+.cover-source-tracks .timeline-clip.selected{outline:none}
+.cover-source-tracks .clip-edge,.cover-source-tracks .audio-fade-handle,.cover-source-tracks .layer-grip{visibility:hidden}
+@media(max-width:1000px){.editor-mode-switch.speed-presets .button{min-width:55px;padding:0 10px}.app-header{gap:12px}.project-identity{flex:1}.project-identity .input{width:100%}}
+@media(max-width:560px){.editor-mode-switch.speed-presets{margin-left:auto;margin-right:0}.editor-mode-switch.speed-presets .button{min-width:44px;padding:0 7px;height:26px;font-size:10px}.app-header{gap:6px}.app-header>.button-icon{display:none}.app-header .project-identity .input{max-width:110px}.cover-timeline-scope{gap:8px;font-size:9px}.cover-source-lock{font-size:9px}}
 .media-hidden .cover-panel,.media-hidden .adjustments-panel{display:none}
 .cover-picker h3,.cover-text-list h3,.visual-adjustments h3{font-size:11px;font-weight:600}
 .cover-picker .adjustment-heading{gap:8px}
@@ -17,9 +29,6 @@
 .cover-add-text{display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;color:var(--muted);border:1px dashed var(--border);border-radius:8px;width:100%;min-height:64px;margin-top:10px;font-size:12px}
 .cover-add-text:hover,.cover-text-item:hover{background:var(--hover)}
 .cover-captions{margin:20px 0;padding-top:18px;border-top:1px solid var(--border);font-size:11px}
-.cover-export{padding-top:18px;border-top:1px solid var(--border)}
-.cover-export .field-hint{margin-top:10px;text-align:center}
-.cover-download{display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;margin-top:13px;text-decoration:underline;text-underline-offset:3px}
 .cover-title-input{min-height:90px;resize:vertical;padding:10px;line-height:1.5;font-size:13px}
 .cover-style-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:14px}
 .cover-style-presets button{display:flex;flex-direction:column;align-items:center;gap:9px;border:1px solid transparent;border-radius:var(--control-radius);background:var(--background);padding:12px 4px 9px;min-width:0}
@@ -158,3 +167,5 @@
 .library-sidebar:has(.cover-library-scope)>.library-tools{grid-row:1 / 3}
 .cover-library-scope{grid-column:2;grid-row:1;padding:8px 15px 0;background:var(--surface)}
 .library-sidebar:has(.cover-library-scope)>:last-child{grid-column:2;grid-row:2}
+
+.cover-library-scope>.button{margin-left:-12px}

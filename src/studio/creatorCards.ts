@@ -4,6 +4,7 @@ export const creatorCardArt: Record<string, string> = {
   'price-editor':'/studio/price-editor.svg',
 };
 
-export function cardArtUrl(id: string) {
-  return creatorCardArt[id];
+export function cardArtUrl(id: string,language='es') {
+  const file=creatorCardArt[id];
+  return language.toLowerCase().startsWith('en')?file?.replace('.svg','-en.svg'):file;
 }

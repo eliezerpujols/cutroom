@@ -18,8 +18,9 @@ frame. With no configured cover, the first visual frame is used without text.
 A cover render failure preserves the video and returns `coverError`; report this
 partial result rather than claiming both files were generated. `cover` includes
 the PNG filename, URL and frame when successful. Audio-only exports omit it.
-The PNG uses the project aspect ratio and dimensions. The square timeline tile
-is a cover shortcut, not a square crop setting. Choose a frame with visual media;
+The PNG uses the project aspect ratio and dimensions. The header's Video / Cover
+switch selects the editing scope; it does not change the aspect ratio. Choose a
+frame with visual media;
 gaps cannot be exported as a cover. If edits shorten the timeline, its saved
 frame is clamped to the last available frame when displayed/exported.
 
@@ -66,7 +67,7 @@ video. Read `get_project` for complete scene data and the current revision.
   controls edit the cover scene. Caption editing uses local style/content
   controls; it does not request another transcription. Effects in Cover exposes
   Styles and Appearance for the still.
-- Preview, timeline cover tile, explicit PNG export and MP4 companion PNG use
+- Preview, explicit PNG export and MP4 companion PNG use
   the saved cover scene. Normal MP4 frames use the video timeline. Save,
   reopen, undo/redo and fonts include cover-only elements. Test feature changes
   in an isolated fixture, including both render paths, revision conflicts and
@@ -86,9 +87,18 @@ the top. Each block can set:
 | `x`, `y`, `width` | Center position in 0–100% of the canvas; box width 10–96%. |
 | `align` | `left`, `center`, or `right` inside the text box. |
 
-The UI's square **Cover** tile shows the selected frame with its styled text,
-optional captions and adjustments, fitting the full composition inside the tile.
-It opens the frame filmstrip and full-size preview.
+The header's **Video / Cover** switch enters and exits Cover mode. The inspector
+prefixes the selected element with Cover and the top export button exports the
+cover PNG. The existing export dialog shows progress, errors and the saved PNG,
+with Download PNG and Show in Finder. The left panel has no export/download block. There is no duplicate cover tile in the timeline.
+In Cover mode the timeline shows the original video as a dimmed, read-only source
+reference. Scrubbing its ruler or tracks (or using arrow keys, Home and End) chooses
+the cover frame; dragging cannot move/trim clips, reorder layers or edit fades.
+The source reference accepts no library drops. Select and edit cover elements in
+**In this cover** or directly on the canvas. Switch to Video for timeline edits.
+This mode and its labels are editor UI; existing cover-specific MCP operations
+continue to save the independent cover composition.
+
 Select a title to style it on the right; drag it in the canvas or use arrow keys
 to position it. Frame changes and text gestures use undo. The caption toggle
 affects only the still; the video keeps its own caption layers.
