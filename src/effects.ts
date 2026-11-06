@@ -35,7 +35,13 @@ export function effectStyle(input:Effects|undefined,frame:number,duration:number
   const outgoing=exit>0&&frame>duration-1-exit?motionStyle(effects.exit,(duration-1-frame)/exit,true):{};
   return {...incoming,...outgoing,filter:[effects.blur?`blur(${effects.blur}px)`:'',incoming.filter,outgoing.filter].filter(Boolean).join(' ')||undefined};
 }
-export function maskStyle(input?:Effects):CSSProperties{return input?.mask==='circle'?{clipPath:'ellipse(50% 50% at 50% 50%)'}:input?.mask==='rounded'?{clipPath:'inset(0 round 8%)'}:{};}
+export function maskStyle(input?:Effects,bounds?:{width:number;height:number}):CSSProperties{
+  if(input?.mask==='circle')return {clipPath:'circle(closest-side at 50% 50%)'};
+  // Percent radii resolve against each axis separately, producing elliptical
+  // corners on rectangles. Media supplies its actual viewport; tiles are square.
+  if(input?.mask==='rounded')return {clipPath:`inset(0 round ${bounds?`${Math.min(bounds.width,bounds.height)*.08}px`:'8%'})`};
+  return {};
+}
 export function patchSelectionEffects(project:Project,ids:readonly string[],patch:Partial<Effects>):Project{
   const selected=new Set(ids),update=<T extends {effects?:Effects}>(item:T):T=>({...item,effects:{...defaultEffects,...item.effects,...patch}});
   return {...project,...(project.cover?{cover:{...project.cover,texts:project.cover.texts.map(text=>selected.has(text.id)?update(text):text)}}:{}),clips:project.clips.map(clip=>selected.has(clip.id)&&clip.kind==='video'?update(clip):clip),texts:project.texts?.map(text=>selected.has(text.id)?update(text):text),captions:project.captions?.map(layer=>({...layer,cues:layer.cues.map(cue=>selected.has(cue.id)?update(cue):cue)}))};

@@ -2,9 +2,9 @@ import {resolveShadow} from '../shadows';
 import React,{useId} from 'react';
 import {ContinuousLayer} from './ContinuousLayer';
 import {effectStyle,maskStyle,type Effects,type TextShadow} from '../effects';
-export function EffectLayer({effects,frame,duration,children,fill=false}:{effects?:Effects;frame:number;duration:number;children:React.ReactNode;fill?:boolean}){
+export function EffectLayer({effects,frame,duration,children,fill=false,maskBounds}:{effects?:Effects;frame:number;duration:number;children:React.ReactNode;fill?:boolean;maskBounds?:{width:number;height:number}}){
   const layout:React.CSSProperties=fill?{position:'absolute',inset:0}:{};
-  return <div style={{...layout,...effectStyle(effects,frame,duration)}}><div style={{...layout,...maskStyle(effects)}}><ContinuousLayer effects={effects} frame={frame} duration={duration} fill={fill}>{children}</ContinuousLayer></div></div>;
+  return <div style={{...layout,...effectStyle(effects,frame,duration)}}><div style={{...layout,...maskStyle(effects,maskBounds)}}><ContinuousLayer effects={effects} frame={frame} duration={duration} fill={fill}>{children}</ContinuousLayer></div></div>;
 }
 export function ShadowText({shadow,children}:{shadow?:Partial<TextShadow>;children:React.ReactNode}){
   const id='shadow-'+useId().replace(/[^a-zA-Z0-9_-]/g,''),drop=resolveShadow(shadow,'drop'),inner=resolveShadow(shadow,'inner');

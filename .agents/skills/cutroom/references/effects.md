@@ -11,6 +11,10 @@ to a selected item). For Studio authoring and insertion, read
 Effects separates Animation, Motion, Styles and Appearance. Animation contains
 In, Out and Between. Persistent blur/masks belong in Appearance, outside those
 animation tabs. Blue dots indicate applied settings on the current selection.
+Circle is a centered, inscribed circle based on the shorter viewport side, not
+an ellipse. Rounded uses a uniform corner radius of 8% of the shorter side.
+Both masks preserve the media aspect ratio and share preview, cover and MP4
+rendering; overlay masks use the overlay viewport dimensions.
 Between transitions use an eligible preceding item; the timeline badge and
 shaded span show the transition and duration. A setting alone does not guarantee
 an eligible neighbor. Videos need touching edges on the same track; text has
