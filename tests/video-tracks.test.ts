@@ -57,3 +57,28 @@ test('audio overlaps get separate tracks and a full track list never overwrites 
   const full=project([clip('base',0)]);for(let i=2;i<12;i++){const id='track-'+i;full.tracks.unshift({id,name:'Video '+i,kind:'video',muted:false});full.clips.push(clip('clip-'+i,0,100,id));}
   assert.throws(()=>placeTimelineClip(full,clip('incoming',10)),/12 tracks/);assert.equal(full.clips.length,11);
 });
+
+test('media and audio placement reuse a free lower lane at the track limit',()=>{
+  for(const kind of ['video','audio'] as const){
+    const tracks=Array.from({length:12},(_,i)=>({id:`${kind}-${i}`,name:`${kind} ${i}`,kind,muted:false}));
+    const clips=tracks.map((t,i)=>({...clip(`existing-${i}`,i===8?100:0,100,t.id),kind}));
+    const full:Project={...project([]),tracks,clips};
+    const incoming={...clip('incoming',20,30,tracks[0].id),kind};
+    const next=placeTimelineClip(full,incoming);
+    assert.equal(next.tracks.length,12);assert.equal(next.clips.at(-1)?.trackId,tracks[8].id);
+    assert.deepEqual(next.clips.slice(0,-1),full.clips);assertSeparate(next);
+    const arranged=arrangeTimelineTracks({...full,clips:[...clips,incoming]},[incoming.id]);
+    assert.equal(arranged.clips.at(-1)?.trackId,tracks[8].id);assertSeparate(arranged);
+    const moved=placeTimelineClip(full,{...clips[0],start:110});
+    assert.equal(moved.clips[0].trackId,tracks[0].id);assert.equal(moved.tracks.length,12);
+  }
+});
+
+test('fallback placement preserves track mute state and explicit new-track requests',()=>{
+  const tracks=Array.from({length:12},(_,i)=>({id:`v${i}`,name:`Video ${i}`,kind:'video' as const,muted:i===8}));
+  const full:Project={...project([]),tracks,clips:tracks.map((t,i)=>clip(`existing-${i}`,i===8?100:0,100,t.id))};
+  const incoming=clip('incoming',20,30,tracks[0].id);
+  assert.throws(()=>placeTimelineClip(full,incoming),/12 tracks/);
+  assert.throws(()=>placeTimelineClip(full,{...incoming,start:200},{forceNewTrack:true}),/12 tracks/);
+  assert.equal(full.clips.length,12);
+});

@@ -23,6 +23,34 @@ test('GIPHY insertion preserves original timings and places overlays above the s
  const layers=timelineLayers(next);assert.ok(layers.findIndex(l=>l.id===clip.trackId)<layers.findIndex(l=>l.id==='v'));
  const full=addGiphyClip(project,{...asset,hasAudio:true},120,'clip').project.clips.at(-1)!;assert.equal(full.overlay,undefined);assert.equal(full.muted,false);
 });
+test('GIFs, clips and stickers honor explicit existing-track drops at the limit',()=>{
+ const tracks=Array.from({length:12},(_,i)=>({id:`v${i}`,name:`Video ${i}`,kind:'video' as const,muted:false}));
+ const full:Project={...project,tracks,layerOrder:tracks.map(t=>`track:${t.id}`),clips:tracks.map((t,i)=>({...project.clips[0],id:`original-${i}`,trackId:t.id}))};
+ for(const kind of ['gifs','clips','stickers'] as const){
+  const imported={...asset,giphy:{...source,kind},hasAudio:kind==='clips'};
+  const {project:next,id}=addGiphyClip(full,imported,300,'overlay','v7');
+  const added=next.clips.find(c=>c.id===id)!;
+  assert.equal(next.tracks.length,12);assert.equal(added.trackId,'v7');assert.equal(added.start,300);
+  assert.ok(added.overlay);assert.equal(added.muted,!imported.hasAudio);
+  assert.deepEqual(next.clips.filter(c=>c.id!==id),full.clips);
+  assert.deepEqual(next.layerOrder,full.layerOrder);
+ }
+ assert.throws(()=>addGiphyClip(full,asset,60,'overlay','v7'),/12 tracks/);
+});
+test('GIPHY insertion finds lower-lane gaps without allocating a thirteenth track',()=>{
+ const tracks=Array.from({length:12},(_,i)=>({id:`v${i}`,name:`Video ${i}`,kind:'video' as const,muted:false}));
+ const full:Project={...project,tracks,layerOrder:tracks.map(t=>`track:${t.id}`),clips:tracks.map((t,i)=>({...project.clips[0],id:`original-${i}`,trackId:t.id,duration:i===9?30:300}))};
+ for(const requested of ['v0',undefined]){
+  const {project:next,id}=addGiphyClip(full,asset,60,'overlay',requested);
+  assert.equal(next.tracks.length,12);assert.equal(next.clips.find(c=>c.id===id)?.trackId,'v9');
+  assert.deepEqual(next.clips.filter(c=>c.id!==id),full.clips);
+ }
+ const audioOnly:Project={...full,clips:[],tracks:tracks.map(t=>({...t,kind:'audio'}))};
+ assert.throws(()=>addGiphyClip(audioOnly,asset,0),/12 tracks/);
+ const empty:Project={...project,clips:[]};
+ const added=addGiphyClip(empty,asset,0,'overlay','v').project;
+ assert.equal(added.tracks.length,1);assert.equal(added.clips[0].trackId,'v');
+});
 test('GIPHY metadata and renditions preserve source attribution and reject unsafe URLs',()=>{
  assert.deepEqual(giphySourceSchema.parse(source),source);assert.equal(giphyHttps('https://media0.giphy.com/media/id/giphy.gif?cid=keep&rid=keep',true),true);
  for(const url of ['http://media.giphy.com/a.gif','https://media.giphy.com.evil.test/a.gif','https://u:p@media.giphy.com/a.gif','javascript:alert(1)'])assert.equal(giphyHttps(url,true),false);

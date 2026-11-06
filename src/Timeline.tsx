@@ -297,23 +297,28 @@ export function Timeline(props:Props){
     const points=[0,frame,...project.clips.filter(v=>!group.includes(v.id)).flatMap(v=>[v.start,v.start+v.duration])];
     let lastDelta=0;
     const apply=(change:(p:Project)=>Project)=>{if(!started){if(additive)select(group);checkpoint();started=true;setDragScale(ppf);}edit(change,false);};
-    const move=(ev:PointerEvent)=>{
+    const preview=(change:(p:Project)=>Project,commit:boolean)=>{
+      // A blocked intermediate position must not leave a limit-error toast
+      // after the pointer reaches a valid gap. Report only a rejected drop.
+      try{const next=change(project);apply(()=>next);}catch{if(commit)apply(change);}
+    };
+    const move=(ev:PointerEvent,commit=false)=>{
       if(ev.pointerId!==e.pointerId)return;
       if(!started&&Math.abs(ev.clientX-x)<2&&Math.abs(ev.clientY-y)<4)return;
       dragged=true;
       let delta=Math.round((ev.clientX-x+viewport.current!.scrollLeft-scrollLeft)/ppf);let next:Clip;let forceNewTrack=false;
       if(group.length>1){
         delta=snapping&&!ev.shiftKey?snapSelectionDelta(moving,delta,points,7/ppf):Math.max(-Math.min(...moving.map(clip=>clip.start)),delta);
-        if(delta===lastDelta)return;lastDelta=delta;
-        apply(()=>moveSelection(project,group,delta,dragTrackIds));return;
+        if(delta===lastDelta&&!commit)return;lastDelta=delta;
+        preview(()=>moveSelection(project,group,delta,dragTrackIds),commit);return;
       }
       if(edge){if(snapping&&!ev.shiftKey){const target=(edge==='left'?c.start:c.start+c.duration)+delta;delta+=snapFrame(target,points,7/ppf)-target;}next=trimClip(c,delta,edge,a);}
       else if(tool==='slip')next=slipClip(c,delta,a);
       else {let start=Math.max(0,c.start+delta);if(snapping&&!ev.shiftKey){const l=snapFrame(start,points,7/ppf),r=snapFrame(start+c.duration,points,7/ppf)-c.duration;start=Math.abs(l-start)<=Math.abs(r-start)?l:r;}const target=rows.find(row=>ev.clientY>=row.rect.top&&ev.clientY<row.rect.bottom);forceNewTrack=!!rows[0]&&ev.clientY<rows[0].rect.top-6;next={...c,start:Math.max(0,start),trackId:forceNewTrack?rows[0].id:target?.id||c.trackId};}
-      apply(p=>placeTimelineClip(p,next,{newTrackId:dragTrackId,cleanupTrackId:dragTrackId,forceNewTrack}));
+      preview(p=>placeTimelineClip(p,next,{newTrackId:dragTrackId,cleanupTrackId:dragTrackId,forceNewTrack}),commit);
     };
     const cleanup=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',blur);gestureCleanup.current=null;};
-    const finish=(event:PointerEvent)=>{if(event.pointerId!==e.pointerId)return;if(event.type==='pointerup'){if(dragged){move(event);if(additive&&!started)select(group);}else if(!edge)select(additive?(selectedSet.has(c.id)?selectedIds.filter(id=>id!==c.id):[...selectedIds,c.id]):[c.id]);}cleanup();setDragScale(null);};
+    const finish=(event:PointerEvent)=>{if(event.pointerId!==e.pointerId)return;if(event.type==='pointerup'){if(dragged){move(event,true);if(additive&&!started)select(group);}else if(!edge)select(additive?(selectedSet.has(c.id)?selectedIds.filter(id=>id!==c.id):[...selectedIds,c.id]):[c.id]);}cleanup();setDragScale(null);};
     const blur=()=>{cleanup();setDragScale(null);};
     gestureCleanup.current=cleanup;
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);window.addEventListener('blur',blur);

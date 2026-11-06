@@ -27,7 +27,10 @@ export function placeTimelineClip(project:Project,clip:Clip,options:Placement={}
   else if(options.forceNewTrack||occupied(target.id)){
     const index=tracks.findIndex(t=>t.id===target!.id);
     const freeAbove=options.forceNewTrack?undefined:tracks.slice(0,index).reverse().find(t=>t.kind===clip.kind&&t.muted===target!.muted&&!occupied(t.id));
-    target=freeAbove||createTrack(target);
+    // At the limit, a compatible gap below is still usable. Keep preferring
+    // upper lanes (and new upper lanes when possible) for normal compositing.
+    const freeBelow=!options.forceNewTrack&&tracks.length>=MAX_TRACKS?tracks.slice(index+1).find(t=>t.kind===clip.kind&&t.muted===target!.muted&&!occupied(t.id)):undefined;
+    target=freeAbove||freeBelow||createTrack(target);
   }
   const placed=target.id===clip.trackId?clip:{...clip,trackId:target.id};
   const clips=project.clips.some(c=>c.id===clip.id)?project.clips.map(c=>c.id===clip.id?placed:c):[...project.clips,placed];

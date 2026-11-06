@@ -4,7 +4,7 @@ import {moveLayer,timelineLayers} from './layers';
 import {removeRedundantVideoTracks} from './trackVisibility';
 export type ClipOverlay={x:number;y:number;width:number};
 export function overlayHeight(project:Pick<Project,'width'|'height'>,asset:Pick<Asset,'width'|'height'>,width:number){return width*(project.width/project.height)/(asset.width>0&&asset.height>0?asset.width/asset.height:project.width/project.height);}
-function fittedOverlayWidth(project:Project,asset?:Pick<Asset,'width'|'height'>){
+export function fittedOverlayWidth(project:Project,asset?:Pick<Asset,'width'|'height'>){
   return asset&&asset.width>0&&asset.height>0?Math.max(2,Math.min(45,45*project.height/project.width*asset.width/asset.height)):45;
 }
 export function makeOverlay(project:Project,id:string,patch:Partial<ClipOverlay>={},asset?:Pick<Asset,'width'|'height'>):Project{

@@ -7,6 +7,10 @@ Use Layout > Full frame on the inserted clip to fill the canvas. Do not add a
 placement selector to the library panel. Imports use the
 same timeline drag target and grip pattern as Media and Sounds. Selecting an
 item adds it at the playhead; dragging sets its timeline start and target lane.
+An explicit drop into a free interval reuses that video lane, including at the
+12-track limit. If that interval overlaps, normal media placement finds a free
+compatible lane; at the limit it also checks lower lanes. Existing clips are
+never overwritten, and insertion fails when no compatible interval is free.
 Overlays retain preview movement, resize, rotation, crop and mirror controls.
 
 ## Connection and access

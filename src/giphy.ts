@@ -1,7 +1,7 @@
 import type {IGif} from '@giphy/js-types';
 import {uid,type Asset,type Clip,type Project} from './model';
-import {placeTimelineClip} from './videoTracks';
-import {makeOverlay} from './overlays';
+import {MAX_TRACKS,placeTimelineClip} from './videoTracks';
+import {fittedOverlayWidth,makeOverlay} from './overlays';
 
 export type GiphyKind='gifs'|'clips'|'stickers';
 export type GiphyPlacement='clip'|'overlay';
@@ -22,11 +22,11 @@ export function giphyDownload(item:GiphyItem,kind:GiphyKind){
 }
 export function addGiphyClip(project:Project,asset:Asset,start:number,placement:GiphyPlacement='overlay',requestedTrack?:string){
  if(project.clips.length>=300)throw new Error('This project has reached its clip limit.');
- const target=project.tracks.find(t=>t.id===requestedTrack&&t.kind==='video')||project.tracks.find(t=>t.kind==='video');
- let next=project,trackId=target?.id;
- if(!trackId){trackId=uid();next={...project,tracks:[{id:trackId,name:'Video',kind:'video',muted:false},...project.tracks]};}
- const clip:Clip={id:uid(),assetId:asset.id,name:asset.name,kind:'video',trackId,start:Math.max(0,Math.round(start)),duration:asset.frames,sourceIn:0,rate:1,volume:1,muted:!asset.hasAudio,fadeIn:0,fadeOut:0};
- next=placeTimelineClip(next,clip,{forceNewTrack:placement==='overlay'});
+ const requested=project.tracks.find(t=>t.id===requestedTrack&&t.kind==='video'),target=requested||project.tracks.find(t=>t.kind==='video');
+ const clip:Clip={id:uid(),assetId:asset.id,name:asset.name,kind:'video',trackId:target?.id??'',start:Math.max(0,Math.round(start)),duration:asset.frames,sourceIn:0,rate:1,volume:1,muted:!asset.hasAudio,fadeIn:0,fadeOut:0,...(placement==='overlay'?{overlay:{x:50,y:50,width:fittedOverlayWidth(project,asset)}}:{})};
+ // An explicit drop reuses its lane when the interval is free. Initialize the
+ // overlay before placement so makeOverlay does not allocate a second lane.
+ let next=placeTimelineClip(project,clip,{forceNewTrack:placement==='overlay'&&!requested&&project.tracks.length<MAX_TRACKS});
  if(placement==='overlay')next=makeOverlay(next,clip.id,{},asset);
  return {project:next,id:clip.id};
 }
