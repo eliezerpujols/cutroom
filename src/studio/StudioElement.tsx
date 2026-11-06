@@ -1,3 +1,7 @@
+import {ProductFlowDemo} from './ProductFlowDemo';
+import {CommunicationBeat} from './CommunicationBeat';
+import {CommunitySelection} from './CommunitySelection';
+import {CreatorProgramScreen} from './CreatorProgramScreen';
 import React from 'react';
 import {HeartPop} from './HeartPop';
 import {CreatorCard} from './CreatorCard';
@@ -6,6 +10,10 @@ import {ProductTile} from './ProductTile';
 import {SpokenQuestion} from './SpokenQuestion';
 import {orbitPose,studioDefaults,type StudioInstance} from './registry';
 export function StudioElement({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
+  if(instance.template==='product-flow-demo-es')return <ProductFlowDemo instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
+  if(instance.template==='communication-beat')return <CommunicationBeat instance={instance} frame={frame}/>;
+  if(instance.template==='community-selection')return <CommunitySelection instance={instance} frame={frame}/>;
+  if(instance.template==='creator-program-screen')return <CreatorProgramScreen instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(instance.template==='heart-pop')return <HeartPop instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(creatorCardArt[instance.template])return <CreatorCard instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(instance.template==='product-tile')return <ProductTile instance={instance} frame={frame}/>;

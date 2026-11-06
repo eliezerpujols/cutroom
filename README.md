@@ -436,3 +436,13 @@ The saved layout is used by preview, video export and cover export. See
 [overlay and layer controls](docs/overlays-and-layers.md) for MCP parameters.
 
 Searchable Google Fonts, offline font storage and catalog updates: [font guide](docs/google-fonts.md).
+
+### Componentes Studio de comunidad y producto
+
+`community-selection` (1080×1920, 180 fr) muestra perfiles, dibuja X en los descartados y mantiene el grupo cercano. Usuarios, Permanecen, X desde, Descartar desde y tres colores se editan en el inspector compartido. No añade texto ni barra de progreso. `creator-program-screen` (568×1004, 90 fr) usa capturas de los componentes reales actuales en español con datos ficticios de demostración; Pantalla (inicio/editor/oferta), Entrada, Giro de entrada, Toque y color son editables. Las capturas se guardan en `public/studio/creator-program/`; no representan transacciones reales. Ambos clips usan tiempo local determinista, respetan trim/split, overlay y Effects, y funcionan en la biblioteca, el timeline y exportación. No se altera el contrato de propiedades ni se añaden inspectores específicos.
+
+### Demo continuo en español y recursos de conversación
+
+`product-flow-demo-es` recrea la composición editable del demo inglés de Reel 4: conserva sus seis fotos y su secuencia de selección, subida, precio, título, descripción y enlace. Las capturas españolas se hicieron sobre la misma aplicación de demostración aislada; el selector de fotos y el progreso se animan con Remotion como en el original. No usa el clip español de Lu ni realiza una publicación real. Tiene un campo de ritmo (0,5–2×), 438 frames a velocidad normal y mantiene la última pose si el clip se extiende. El contenido se escala con los controles normales del overlay y puede ponerse detrás de un recorte nativo. Capturas y fotos: `public/studio/product-flow-es/`.
+
+`communication-beat` ofrece aviso, silencio, pregunta, confianza y videos, sin texto de voz adicional. Su tipo y dos colores son editables; duración, entradas/salidas y ubicación usan los controles compartidos. El frame local conserva las fases al recortar o dividir.

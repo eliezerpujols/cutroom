@@ -44,12 +44,42 @@ export const studioTemplates=[{id:'orbit-card',name:'Orbit card',width:800,heigh
 },{
   id:'heart-pop', name:'Heart pop', width:480, height:480, duration:143,
   fields:[{key:'color',label:'Heart color',type:'color',default:'#F6AACB'}] satisfies StudioField[]
+},{
+ id:'community-selection',name:'Comunidad · descarte',width:1080,height:1920,duration:180,
+ fields:[
+  {key:'total',label:'Usuarios',type:'number',default:18,min:4,max:24,step:1},
+  {key:'keep',label:'Permanecen',type:'number',default:4,min:2,max:6,step:1},
+  {key:'crossAt',label:'X desde',type:'number',default:35,min:0,max:300,step:1,unit:'fr'},
+  {key:'removeAt',label:'Descartar desde',type:'number',default:64,min:0,max:450,step:1,unit:'fr'},
+  {key:'accent',label:'Comunidad',type:'color',default:'#BBFFFF'},
+  {key:'ink',label:'Perfiles',type:'color',default:'#102A43'},
+  {key:'crossColor',label:'X',type:'color',default:'#FF8585'},
+ ] satisfies StudioField[]
+},{
+ id:'creator-program-screen',name:'Creator Program · pantalla',width:568,height:1004,duration:90,
+ fields:[
+  {key:'screen',label:'Pantalla (inicio / editor / oferta)',type:'text',default:'inicio'},
+  {key:'revealFrames',label:'Entrada',type:'number',default:12,min:0,max:90,step:1,unit:'fr'},
+  {key:'tilt',label:'Giro de entrada',type:'number',default:-12,min:-25,max:25,step:1,unit:'°'},
+  {key:'tapAt',label:'Toque (-1 desactivado)',type:'number',default:-1,min:-1,max:900,step:1,unit:'fr'},
+  {key:'accent',label:'Toque',type:'color',default:'#008FFE'},
+ ] satisfies StudioField[]
+},{
+ id:'product-flow-demo-es',name:'Demo continuo · español',width:1080,height:1920,duration:438,
+ fields:[{key:'speed',label:'Ritmo del demo',type:'number',default:1,min:.5,max:2,step:.05,unit:'×'}] satisfies StudioField[]
+},{
+ id:'communication-beat',name:'Conversación · recursos',width:800,height:560,duration:84,
+ fields:[
+  {key:'kind',label:'Recurso (aviso / silencio / pregunta / confianza / videos)',type:'text',default:'pregunta'},
+  {key:'accent',label:'Trazo',type:'color',default:'#BBFFFF'},
+  {key:'ink',label:'Fondo de figura',type:'color',default:'#102A43'},
+ ] satisfies StudioField[]
 },...creatorTemplates];
 export function studioDefaults(id:string){const template=studioTemplates.find(t=>t.id===id);if(!template)throw new Error('Unknown Studio element.');return Object.fromEntries(template.fields.map(f=>[f.key,f.default]));}
 const thumbnail='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="800" height="480" rx="64" fill="#203e35"/><circle cx="670" cy="100" r="40" fill="#d3e8b5"/><text x="65" y="285" font-family="sans-serif" font-size="70" fill="#f4f5ec">Orbit card</text><path d="M65 340h300" stroke="#d3e8b5" stroke-width="12"/></svg>');
 const questionThumbnail='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480"><text x="30" y="100" fill="#fff1d4" font-family="serif" font-style="italic" font-size="76">¿Quién iría a</text><text x="25" y="295" font-family="sans-serif" font-weight="900" font-size="204" fill="#ffdf83">PAGAR</text><path d="M35 320 Q330 298 760 310" fill="none" stroke="#ffdf83" stroke-width="6"/><text x="755" y="395" text-anchor="end" font-style="italic" font-size="68" fill="#fff1d4">por esto?</text></svg>');
 const tileThumbnail='/studio/product-tile.svg';
-export const studioAssets:Asset[]=studioTemplates.map(t=>{const preview=t.id==='heart-pop'?'/studio/heart-pop.png':creatorCardArt[t.id]?cardArtUrl(t.id):t.id==='product-tile'?tileThumbnail:t.id==='spoken-question'?questionThumbnail:thumbnail;return {id:`studio-${t.id}`,name:t.name,kind:'image',duration:3600,frames:108000,width:t.width,height:t.height,hasAudio:false,url:preview,thumbnails:[preview],peaks:[]};});
+export const studioAssets:Asset[]=studioTemplates.map(t=>{const preview=t.id==='product-flow-demo-es'?'/studio/product-flow-es/screens/home.png':t.id==='communication-beat'?'/studio/communication-beat.svg':t.id==='community-selection'?'/studio/community-selection.svg':t.id==='creator-program-screen'?'/studio/creator-program/inicio-es.jpg':t.id==='heart-pop'?'/studio/heart-pop.png':creatorCardArt[t.id]?cardArtUrl(t.id):t.id==='product-tile'?tileThumbnail:t.id==='spoken-question'?questionThumbnail:thumbnail;return {id:`studio-${t.id}`,name:t.name,kind:'image',duration:3600,frames:108000,width:t.width,height:t.height,hasAudio:false,url:preview,thumbnails:[preview],peaks:[]};});
 export const withStudioAssets=(assets:Asset[])=>[...assets.filter(a=>!studioAssets.some(s=>s.id===a.id)),...studioAssets];
 export function addStudioElement(project:Project,templateId:string,start:number,id:string,trackId?:string):Project{
   const t=studioTemplates.find(t=>t.id===templateId);if(!t)throw new Error('Unknown Studio element.');

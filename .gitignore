@@ -42,3 +42,12 @@ docs/qa/**/comparison.html
 # Official provider attribution assets (not project media).
 !public/giphy/powered-by-giphy.png
 !public/giphy/powered-by-giphy-light.png
+
+# Bundled Creator Program Studio artwork: Spanish UI with fictional demo data.
+!public/studio/creator-program/inicio-es.jpg
+!public/studio/creator-program/editor-es.jpg
+!public/studio/creator-program/oferta-es.jpg
+
+# Spanish recreation of the existing authorized product demo.
+!public/studio/product-flow-es/**/*.png
+!public/studio/product-flow-es/*.png

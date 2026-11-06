@@ -10,6 +10,8 @@ user asks for a new animated card, badge, counter, lower third or similar reusab
 Remotion element, or asks to place one of those templates in an edit. Ordinary
 color/motion effects belong in Effects, not in the Studio template registry.
 
+For depth, tracking, product demonstrations and editorial techniques adapted into native editable clips, read [editorial techniques](references/editorial-techniques.md).
+
 ## Find the implementation
 
 The current checkout is `/Users/eli/Documents/Marketing/video resources/cutroom`.
