@@ -40,6 +40,13 @@ scatter and spread), text motion, text styles and appearance. Read
 Do not promise every conceivable animation. Between uses its own transition
 catalog rather than every text entrance preset.
 
+Text, cover titles and captions expose Font Size as an editable px field beside
+the slider. The field accepts finite sizes of at least 16 px without an upper
+limit. The slider expands its range between gestures while keeping its scale
+stable during a pointer drag. This uses shared `StyleRange` with `editable` and
+`unbounded`; other bounded controls keep their existing limits. Typed edits,
+mixed selections, keyboard access and one-gesture undo reuse `StyleNumber`.
+
 ## Independent text shadows
 
 Text, captions and cover titles can have drop and inner shadows simultaneously:

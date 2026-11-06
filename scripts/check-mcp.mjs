@@ -7,6 +7,10 @@ try{
  for(const name of ['list_cover_elements','set_cover_element','set_cover','list_studio','set_studio_element','list_fonts','prepare_font','list_effects','set_effects','set_media_transform','start_local_vision','local_vision_status','cancel_local_vision','apply_local_vision','giphy_status','open_giphy','import_giphy','add_giphy_media'])assert.ok(tools.some(t=>t.name===name),name);
  const overlayWidth=tools.find(t=>t.name==='set_clip_overlay')?.inputSchema.properties.placement.properties.width;
  assert.equal(overlayWidth?.minimum,2);assert.equal(overlayWidth?.maximum,undefined);
+ const textSize=tools.find(t=>t.name==='add_text')?.inputSchema.properties.style.properties.fontSize;
+ const captionSize=tools.find(t=>t.name==='edit_captions')?.inputSchema.properties.operations.items.properties.style.properties.fontSize;
+ const coverSize=tools.find(t=>t.name==='set_cover')?.inputSchema.properties.texts.items.properties.fontSize;
+ for(const size of [textSize,captionSize,coverSize]){assert.equal(size?.minimum,16);assert.equal(size?.maximum,undefined);}
  const studio=await call('list_studio');assert.ok(studio.templates.some(t=>t.id==='orbit-card'));
  const fonts=await call('list_fonts',{query:'Lora',category:'Serif',limit:10});assert.ok(fonts.fonts.some(f=>f.family==='Lora'));assert.ok(fonts.fonts.every(f=>f.category==='Serif'));
  const fx=await call('list_effects',{target_kind:'caption'});assert.ok(fx.animation.some(f=>f.id==='text-wave'));

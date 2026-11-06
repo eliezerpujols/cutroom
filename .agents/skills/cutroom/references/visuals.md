@@ -81,7 +81,7 @@ the top. Each block can set:
 | `fill` | `box`: one rounded card; `lines`: separate highlighted lines; `none`: text only. |
 | `fillColor`, `color` | Six-digit hex background and text colors. Yellow highlight reference: `#ffe501` with `#111111` text. |
 | `fontFamily` | Bundled `Inter Variable`, `DM Sans Variable`, `Manrope Variable`, `Peacock`, or an exact Google catalog family. |
-| `fontSize`, `fontWeight`, `italic` | 16–200 composition pixels, 400–900, boolean. Manrope italic is synthesized. |
+| `fontSize`, `fontWeight`, `italic` | At least 16 composition pixels with no upper limit, 400–900, boolean. Manrope italic is synthesized. |
 | `stroke`, `strokeColor`, `strokeWidth` | Optional outline, hex color, 0–12 composition pixels. |
 | `padding`, `radius` | Background padding 0–60 and corner radius 0–100 composition pixels. |
 | `x`, `y`, `width` | Center position in 0–100% of the canvas; box width 10–96%. |

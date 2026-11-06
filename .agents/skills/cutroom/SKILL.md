@@ -60,6 +60,10 @@ visual styles or use long stacks of position sliders and helper text. Preserve
 each target's width limits and mixed values; preview dragging remains available.
 Media/GIF/Studio width has no upper limit (minimum 2%). The shared layout control
 uses `maxWidth={null}` for media; text/captions keep their existing limits.
+Font Size uses `StyleRange` with `editable` and `unbounded` for text, cover titles
+and captions: a clickable px number field without an upper limit, plus a slider
+whose range expands between gestures and stays fixed while dragging. Keep the
+existing mixed-selection, keyboard and single-gesture undo behavior.
 Caption-wide animations belong in Effects. Caption Display contains grouping and
 Highlight words; its popover holds color and None/Fade/Pop highlighted-word animation
 (`highlightMotion`). It animates only the active spoken word when highlighting is
