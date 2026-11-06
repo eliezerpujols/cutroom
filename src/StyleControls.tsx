@@ -21,13 +21,13 @@ export function StyleRange({label,value,min,max,step=1,unit,change,checkpoint,ed
   const mixed=value===undefined;
   return <div className={`clip-adjustment ${mixed?'style-range-mixed':''}`}><div className="adjustment-heading">{editable?<StyleNumber label={label} value={value} min={min} max={max} step={step} unit={unit} checkpoint={checkpoint} change={change}/>:<><span>{label}</span><output>{mixed?'Mixed':`${Number(value.toFixed(2))}${unit}`}</output></>}</div><Slider label={label} min={min} max={max} step={step} value={[value??(min+max)/2]} valueText={mixed?'Mixed':`${value}${unit}`} onPointerDown={checkpoint} onKeyDown={event=>{if(rangeKeys.has(event.key))checkpoint();}} onValueChange={([next])=>change(next)}/></div>;
 }
-export function StyleNumber({label,value,min,max,step=1,scale=1,unit,change,checkpoint}:{label:string;value:number|undefined;min:number;max:number;step?:number;scale?:number;unit:string;change:(value:number)=>void;checkpoint:()=>void}){
+export function StyleNumber({label,value,min,max,step=1,scale=1,unit,change,checkpoint}:{label:string;value:number|undefined;min:number;max?:number;step?:number;scale?:number;unit:string;change:(value:number)=>void;checkpoint:()=>void}){
   const [draft,setDraft]=useState<string|null>(null),changed=useRef(false);
   const format=(n:number)=>String(Number((n*scale).toFixed(3)));
   const apply=(n:number)=>{if(!changed.current){checkpoint();changed.current=true;}change(n/scale);};
   return <label className="field"><span>{label}</span><span className="text-spacing-input"><Input type="number" inputMode="decimal" aria-label={label} placeholder="Mixed" min={min} max={max} step={step} value={draft??(value===undefined?'':format(value))}
     onFocus={()=>{changed.current=false;setDraft(value===undefined?'':format(value));}}
-    onChange={event=>{const raw=event.target.value,n=event.target.valueAsNumber;setDraft(raw);if(raw!==''&&Number.isFinite(n)&&n>=min&&n<=max)apply(n);}}
-    onBlur={()=>{if(draft!==null&&draft.trim()!==''&&Number.isFinite(Number(draft))){const n=Math.max(min,Math.min(max,Number(draft)));if(changed.current||value===undefined||n!==Number(format(value)))apply(n);}setDraft(null);}}
+    onChange={event=>{const raw=event.target.value,n=event.target.valueAsNumber;setDraft(raw);if(raw!==''&&Number.isFinite(n)&&n>=min&&(max===undefined||n<=max))apply(n);}}
+    onBlur={()=>{if(draft!==null&&draft.trim()!==''&&Number.isFinite(Number(draft))){const n=Math.max(min,Math.min(max??Infinity,Number(draft)));if(changed.current||value===undefined||n!==Number(format(value)))apply(n);}setDraft(null);}}
     onKeyDown={event=>{if(event.key==='Enter')event.currentTarget.blur();}}/><span aria-hidden="true">{unit}</span></span></label>;
 }

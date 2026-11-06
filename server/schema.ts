@@ -16,7 +16,7 @@ export const adjustmentsSchema=z.object({preset:z.enum(['none','clean','warm','c
 export const coverTextSchema=z.object({effects:effectsSchema.optional(),shadow:shadowSchema.partial().optional(),id:safeId,hidden:z.boolean().optional(),text:z.string().max(500),fontFamily:z.string().refine(isKnownFont,'Choose a font from the font library.'),fontSize:finite.min(16).max(200),lineHeight:finite.min(.8).max(3).optional(),letterSpacing:finite.min(-.1).max(.3).optional(),fontWeight:finite.int().min(400).max(900),italic:z.boolean(),color,stroke:z.boolean(),strokeColor:color,strokeWidth:finite.min(0).max(12),fill:z.enum(['none','box','lines']),fillColor:color,padding:finite.min(0).max(60),radius:finite.min(0).max(100),x:finite.min(0).max(100),y:finite.min(0).max(100),width:finite.min(10).max(96),align:z.enum(['left','center','right'])});
 export const videoTextSchema=coverTextSchema.extend({effects:effectsSchema.optional(),start:finite.int().min(0).max(108000),duration:finite.int().min(1).max(108000),muted:z.boolean()});
 export const textPatchSchema=videoTextSchema.omit({id:true}).partial();
-export const clipOverlaySchema=z.object({x:finite.min(0).max(100),y:finite.min(0).max(100),width:finite.min(2).max(200)});
+export const clipOverlaySchema=z.object({x:finite.min(0).max(100),y:finite.min(0).max(100),width:finite.min(2)});
 export const studioSchema=z.object({template:z.string(),props:z.record(z.string(),z.union([z.string().max(160),finite]))}).superRefine((value,ctx)=>{
   const template=studioTemplates.find(t=>t.id===value.template);
   if(!template){ctx.addIssue({code:'custom',message:'Unknown Studio element.'});return;}

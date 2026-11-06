@@ -58,6 +58,8 @@ caption styles and media/Studio overlays: compact percentage X/Y/Width fields an
 separate horizontal/vertical centering buttons. Do not bury positioning after
 visual styles or use long stacks of position sliders and helper text. Preserve
 each target's width limits and mixed values; preview dragging remains available.
+Media/GIF/Studio width has no upper limit (minimum 2%). The shared layout control
+uses `maxWidth={null}` for media; text/captions keep their existing limits.
 Caption-wide animations belong in Effects. Caption Display contains grouping and
 Highlight words; its popover holds color and None/Fade/Pop highlighted-word animation
 (`highlightMotion`). It animates only the active spoken word when highlighting is

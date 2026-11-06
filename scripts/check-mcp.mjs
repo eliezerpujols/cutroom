@@ -5,6 +5,8 @@ const call=async(name,args={})=>{const r=await client.callTool({name,arguments:a
 try{
  const {tools}=await client.listTools();
  for(const name of ['list_cover_elements','set_cover_element','set_cover','list_studio','set_studio_element','list_fonts','prepare_font','list_effects','set_effects','set_media_transform','start_local_vision','local_vision_status','cancel_local_vision','apply_local_vision','giphy_status','open_giphy','import_giphy','add_giphy_media'])assert.ok(tools.some(t=>t.name===name),name);
+ const overlayWidth=tools.find(t=>t.name==='set_clip_overlay')?.inputSchema.properties.placement.properties.width;
+ assert.equal(overlayWidth?.minimum,2);assert.equal(overlayWidth?.maximum,undefined);
  const studio=await call('list_studio');assert.ok(studio.templates.some(t=>t.id==='orbit-card'));
  const fonts=await call('list_fonts',{query:'Lora',category:'Serif',limit:10});assert.ok(fonts.fonts.some(f=>f.family==='Lora'));assert.ok(fonts.fonts.every(f=>f.category==='Serif'));
  const fx=await call('list_effects',{target_kind:'caption'});assert.ok(fx.animation.some(f=>f.id==='text-wave'));

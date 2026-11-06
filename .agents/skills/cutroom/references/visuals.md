@@ -153,7 +153,15 @@ If it is alone, its row, track ID and original name stay the same. Empty video
 rows are omitted when a non-overlay main clip exists. Timing, source and sound
 are preserved. Later calls update
 placement without creating another track. Placement x/y are center percentages
-(0–100); width is percent of composition width (2–200) with aspect ratio preserved.
+(0–100); width is percent of composition width, minimum 2% with no upper limit,
+and preserves aspect ratio. The Width field, pointer resize and arrow-key resize
+all allow values above 200%. Width remains finite when saved through UI or MCP.
+Text and caption widths retain their existing limits.
+The shared `PositionSizeControls.maxWidth` accepts `null` for an unbounded field;
+its omitted value still defaults to 96 for text/captions. `StyleNumber.max` is
+optional and preserves bounded callers' validation, focus, mixed state and undo
+behavior. Media resize handles expose an unbounded spinbutton with arrow-key
+steps and Home for the 2% minimum; there is no End maximum.
 Use enabled=false for full-frame layout on the current track. The UI exposes
 Make overlay in the selected clip inspector and drag/resize handles in the paused
 preview. Pink canvas guides mark center and edge snaps while moving overlays.
