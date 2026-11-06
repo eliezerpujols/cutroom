@@ -84,7 +84,7 @@ export const withStudioAssets=(assets:Asset[])=>[...assets.filter(a=>!studioAsse
 export function addStudioElement(project:Project,templateId:string,start:number,id:string,trackId?:string):Project{
   const t=studioTemplates.find(t=>t.id===templateId);if(!t)throw new Error('Unknown Studio element.');
   const clip:Clip={id,assetId:`studio-${t.id}`,name:t.name,trackId:project.tracks.find(t=>t.id===trackId&&t.kind==='video')?.id??project.tracks.find(t=>t.kind==='video')?.id??'',kind:'video',start:Math.max(0,Math.round(start)),duration:t.duration,sourceIn:0,rate:1,volume:0,muted:false,fadeIn:0,fadeOut:0,overlay:{x:50,y:50,width:75},studio:{template:t.id,props:studioDefaults(t.id)}};
-  return placeTimelineClip(project,clip);
+  return placeTimelineClip(project,clip,{keepTrack:project.tracks.some(t=>t.id===trackId&&t.kind==='video')});
 }
 // Frame is local to the element. Trims and splits preserve the original phase.
 export function orbitPose(frame:number,seconds:number){const p=Math.max(0,Math.min(1,frame/(Math.max(.6,seconds)*30))),ease=p*p*(3-2*p);return {rotateY:360*ease,rotateX:Math.sin(p*Math.PI*2)*12,lift:-Math.sin(p*Math.PI)*18};}

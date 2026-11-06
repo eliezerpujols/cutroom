@@ -3,7 +3,7 @@ import {uid,type Clip,type Project,type Track} from './model';
 export const MAX_TRACKS=12;
 export const clipsOverlap=(a:Clip,b:Clip)=>a.start<b.start+b.duration&&b.start<a.start+a.duration;
 
-type Placement={newTrackId?:string;cleanupTrackId?:string;forceNewTrack?:boolean};
+type Placement={newTrackId?:string;cleanupTrackId?:string;forceNewTrack?:boolean;keepTrack?:boolean};
 
 // Track order is top to bottom. A clip gets its own visible lane when necessary.
 export function placeTimelineClip(project:Project,clip:Clip,options:Placement={}):Project{
@@ -13,6 +13,17 @@ export function placeTimelineClip(project:Project,clip:Clip,options:Placement={}
     tracks=tracks.filter(t=>t.id!==options.cleanupTrackId);
   }
   let target=tracks.find(t=>t.id===clip.trackId&&t.kind===clip.kind)||tracks.find(t=>t.kind===clip.kind);
+  if(options.keepTrack&&target){
+    const lane=others.filter(c=>c.trackId===target!.id);
+    // Explicit library drops keep the lane the user pointed at. A blocked
+    // interval snaps to the nearest gap; ties prefer the later interval.
+    const start=[clip.start,0,...lane.flatMap(c=>[c.start-clip.duration,c.start+c.duration])]
+      .filter(start=>start>=0&&start<=108000)
+      .sort((a,b)=>Math.abs(a-clip.start)-Math.abs(b-clip.start)||b-a)
+      .find(start=>!lane.some(c=>clipsOverlap(c,{...clip,start})));
+    if(start===undefined)throw new Error('Move the clip to a free space on this track.');
+    clip={...clip,start,trackId:target.id};
+  }
   const occupied=(id:string)=>others.some(c=>c.trackId===id&&clipsOverlap(c,clip));
   const createTrack=(above?:Track)=>{
     if(tracks.length>=MAX_TRACKS)throw new Error(`This project already has 12 tracks. Move the clip to a free space or an existing ${clip.kind} track.`);

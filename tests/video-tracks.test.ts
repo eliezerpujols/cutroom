@@ -82,3 +82,17 @@ test('fallback placement preserves track mute state and explicit new-track reque
   assert.throws(()=>placeTimelineClip(full,{...incoming,start:200},{forceNewTrack:true}),/12 tracks/);
   assert.equal(full.clips.length,12);
 });
+
+test('explicit drops keep their lane and choose the closest free interval on either side',()=>{
+ const p=project([clip('existing',100,100)]);
+ for(const [wanted,expected] of [[90,70],[110,70],[130,70],[140,200],[170,200],[210,210]]){
+  const incoming=clip('incoming',wanted,30);
+  const next=placeTimelineClip(p,incoming,{keepTrack:true});
+  assert.equal(next.tracks.length,2);assert.equal(next.clips[1].trackId,'video');
+  assert.equal(next.clips[1].start,expected);assert.deepEqual(next.clips[0],p.clips[0]);assertSeparate(next);
+ }
+ const full=project([clip('existing',0,108000)]);
+ const next=placeTimelineClip(full,clip('incoming',107999,30),{keepTrack:true});
+ assert.equal(next.clips[1].start,108000);assert.equal(next.clips[1].trackId,'video');
+ assert.throws(()=>placeTimelineClip({...full,clips:[clip('existing',0,108001)]},clip('incoming',0,30),{keepTrack:true}),/free space on this track/);
+});

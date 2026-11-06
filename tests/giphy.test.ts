@@ -35,14 +35,18 @@ test('GIFs, clips and stickers honor explicit existing-track drops at the limit'
   assert.deepEqual(next.clips.filter(c=>c.id!==id),full.clips);
   assert.deepEqual(next.layerOrder,full.layerOrder);
  }
- assert.throws(()=>addGiphyClip(full,asset,60,'overlay','v7'),/12 tracks/);
+ const snapped=addGiphyClip(full,asset,60,'overlay','v7');
+ assert.equal(snapped.project.clips.find(c=>c.id===snapped.id)?.trackId,'v7');
+ assert.equal(snapped.project.clips.find(c=>c.id===snapped.id)?.start,300);
+ assert.throws(()=>addGiphyClip(full,asset,60),/12 tracks/);
 });
-test('GIPHY insertion finds lower-lane gaps without allocating a thirteenth track',()=>{
+test('implicit GIPHY insertion finds lower gaps while explicit drops keep their lane',()=>{
  const tracks=Array.from({length:12},(_,i)=>({id:`v${i}`,name:`Video ${i}`,kind:'video' as const,muted:false}));
  const full:Project={...project,tracks,layerOrder:tracks.map(t=>`track:${t.id}`),clips:tracks.map((t,i)=>({...project.clips[0],id:`original-${i}`,trackId:t.id,duration:i===9?30:300}))};
  for(const requested of ['v0',undefined]){
   const {project:next,id}=addGiphyClip(full,asset,60,'overlay',requested);
-  assert.equal(next.tracks.length,12);assert.equal(next.clips.find(c=>c.id===id)?.trackId,'v9');
+  assert.equal(next.tracks.length,12);assert.equal(next.clips.find(c=>c.id===id)?.trackId,requested?'v0':'v9');
+  assert.equal(next.clips.find(c=>c.id===id)?.start,requested?300:60);
   assert.deepEqual(next.clips.filter(c=>c.id!==id),full.clips);
  }
  const audioOnly:Project={...full,clips:[],tracks:tracks.map(t=>({...t,kind:'audio'}))};
@@ -50,6 +54,18 @@ test('GIPHY insertion finds lower-lane gaps without allocating a thirteenth trac
  const empty:Project={...project,clips:[]};
  const added=addGiphyClip(empty,asset,0,'overlay','v').project;
  assert.equal(added.tracks.length,1);assert.equal(added.clips[0].trackId,'v');
+});
+test('two distinct GIFs share the requested lane and retain independent media and timing',()=>{
+ const empty:Project={...project,clips:[]};
+ const first=addGiphyClip(empty,asset,60,'overlay','v');
+ const other={...asset,id:'other-gif',name:'Different GIF',giphy:{...source,id:'other'}};
+ const second=addGiphyClip(first.project,other,75,'overlay','v');
+ assert.equal(second.project.tracks.length,1);
+ assert.deepEqual(second.project.clips[0],first.project.clips[0]);
+ assert.equal(second.project.clips[1].assetId,'other-gif');
+ assert.equal(second.project.clips[1].trackId,'v');assert.equal(second.project.clips[1].start,90);
+ const touching=addGiphyClip(first.project,other,90,'overlay','v');
+ assert.equal(touching.project.clips[1].start,90);
 });
 test('GIPHY metadata and renditions preserve source attribution and reject unsafe URLs',()=>{
  assert.deepEqual(giphySourceSchema.parse(source),source);assert.equal(giphyHttps('https://media0.giphy.com/media/id/giphy.gif?cid=keep&rid=keep',true),true);
@@ -78,6 +94,13 @@ test('GIPHY local import works without an approval flag and uses revision-safe i
   const imported=await post(`/api/projects/${id}/giphy/import-path`,{filePath:file,source}),result=await imported.json();assert.equal(imported.status,200,JSON.stringify(result));assert.equal(result.asset.giphy.creator,'Example');
   const body={expectedRevision:0,assetId:result.asset.id,start:15},added=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(added.status,200);assert.equal((await store.read(id)).project.clips[0].start,15);assert.ok((await store.read(id)).project.clips[0].overlay);
   const stale=await post(`/api/projects/${id}/giphy/add`,body);assert.equal(stale.status,409);assert.equal((await store.read(id)).project.clips.length,1);
+  const secondFile=path.join(dir,'different.mp4');await media.run(['-y','-f','lavfi','-i','color=c=blue:s=64x64:r=30:d=0.2','-an','-pix_fmt','yuv420p',secondFile]);
+  const importedSecond=await post(`/api/projects/${id}/giphy/import-path`,{filePath:secondFile,source:{...source,id:'different',title:'Different GIF'}}),secondAsset=(await importedSecond.json()).asset;
+  const first=(await store.read(id)).project.clips[0];
+  const second=await post(`/api/projects/${id}/giphy/add`,{expectedRevision:1,assetId:secondAsset.id,start:15,trackId:first.trackId});assert.equal(second.status,200);
+  const saved=await store.read(id);assert.equal(saved.project.clips.length,2);assert.equal(saved.project.clips[1].trackId,first.trackId);assert.equal(saved.project.clips[1].start,first.start+first.duration);assert.deepEqual(saved.project.clips[0],first);
+  assert.notEqual(saved.project.clips[0].assetId,saved.project.clips[1].assetId);
+  assert.equal(saved.assets.find(a=>a.id===first.assetId)?.giphy?.id,'example');assert.equal(saved.assets.find(a=>a.id===secondAsset.id)?.giphy?.id,'different');
   const status=await(await fetch(base+'/api/giphy/status')).json();assert.equal('apiKey' in status,false);assert.equal(status.localImportEnabled,true);assert.equal('projectMediaApproved' in status,false);
  }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await fs.rm(dir,{recursive:true,force:true});}
 });

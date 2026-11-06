@@ -24,9 +24,9 @@ export function addGiphyClip(project:Project,asset:Asset,start:number,placement:
  if(project.clips.length>=300)throw new Error('This project has reached its clip limit.');
  const requested=project.tracks.find(t=>t.id===requestedTrack&&t.kind==='video'),target=requested||project.tracks.find(t=>t.kind==='video');
  const clip:Clip={id:uid(),assetId:asset.id,name:asset.name,kind:'video',trackId:target?.id??'',start:Math.max(0,Math.round(start)),duration:asset.frames,sourceIn:0,rate:1,volume:1,muted:!asset.hasAudio,fadeIn:0,fadeOut:0,...(placement==='overlay'?{overlay:{x:50,y:50,width:fittedOverlayWidth(project,asset)}}:{})};
- // An explicit drop reuses its lane when the interval is free. Initialize the
+ // An explicit drop stays on its lane, snapping to a free interval. Initialize the
  // overlay before placement so makeOverlay does not allocate a second lane.
- let next=placeTimelineClip(project,clip,{forceNewTrack:placement==='overlay'&&!requested&&project.tracks.length<MAX_TRACKS});
+ let next=placeTimelineClip(project,clip,{keepTrack:!!requested,forceNewTrack:placement==='overlay'&&!requested&&project.tracks.length<MAX_TRACKS});
  if(placement==='overlay')next=makeOverlay(next,clip.id,{},asset);
  return {project:next,id:clip.id};
 }

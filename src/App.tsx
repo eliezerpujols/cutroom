@@ -49,7 +49,7 @@ import {makeVideoText,splitVideoText,visibleVideoText,textPresetStyle,type Video
 import {useCaptions} from './useCaptions';
 import {replaceCueText,type CaptionSelection,type CaptionStyle} from './captions';
 import {PlaybackControls,TimingControls} from './ClipAdjustments';
-import {arrangeTimelineTracks,changedTimelineClipIds} from './videoTracks';
+import {arrangeTimelineTracks,changedTimelineClipIds,placeTimelineClip} from './videoTracks';
 import {timelineItems,type TimelineItem} from './timelineSelection';
 import {copyEditorSelection,removeEditorSelection,pasteEditorClipboard,type ObjectSelection,type EditorClipboard} from './editorClipboard';
 import {api,useEditor} from './useEditor';
@@ -157,7 +157,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   };
   const changeCaptionPosition=(id:string,position:{x?:number;y?:number},record=true)=>edit(p=>patchSelectionStyles(p,[id],position),record);
   const changeVideoText=(id:string,patch:Partial<VideoText>,record=true)=>edit(p=>({...p,texts:p.texts?.map(text=>text.id===id?mergeShadow(text,patch):text)}),record);
-  const insertStudio=(template:string,at=player.current?.getCurrentFrame()??frame,trackId?:string)=>{player.current?.pause();const id=uid();try{let next=addStudioElement(current.current,template,at,id,trackId);if(coverEditing){const t=studioTemplates.find(t=>t.id===template);next={...next,clips:next.clips.map(c=>c.id===id?{...c,duration:1,sourceIn:(t?.duration??30)-1}:c)};}edit(next);selectClips([id]);setInspectorOpen(true);seek(at);}catch(error){toast((error as Error).message);}};
+  const insertStudio=(template:string,at=player.current?.getCurrentFrame()??frame,trackId?:string)=>{player.current?.pause();const id=uid();try{let next=addStudioElement(current.current,template,at,id,trackId);if(coverEditing){const t=studioTemplates.find(t=>t.id===template);next={...next,clips:next.clips.map(c=>c.id===id?{...c,duration:1,sourceIn:(t?.duration??30)-1}:c)};}edit(next);selectClips([id]);setInspectorOpen(true);seek(next.clips.find(c=>c.id===id)?.start??at);}catch(error){toast((error as Error).message);}};
   const addVideoText=(preset:TextPreset='heading')=>{if((current.current.texts?.length||0)>=100){toast('Remove an unused text clip before adding another.');return;}const at=clamp(player.current?.getCurrentFrame()??frame,0,108000),item={...makeVideoText(uid(),at,preset),...(coverEditing?{duration:1}:{})};edit(p=>({...p,texts:[item,...(p.texts||[])]}));selectText(item.id);seek(at);};
   const changeCover=useCallback((patch:Partial<Cover>,record=true)=>edit(p=>({...p,cover:{...defaultCover,...p.cover,...patch}}),record),[edit]);
   const chooseCoverFrame=useCallback((next:number,record=true)=>{const value=clamp(Math.round(next),0,endFrame(current.current)-1);editProject(p=>moveCoverFrame(p,value),record);seek(value);},[editProject,current,seek]);
@@ -272,7 +272,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       const next=addGiphyClip(target,asset,targetFrame,'overlay',trackId);
       if(coverScope)next.project={...next.project,clips:next.project.clips.map(c=>c.id===next.id?{...c,duration:1}:c)};
       editInScope(next.project,coverScope);
-      if(coverModeRef.current===coverScope){setSelected(next.id);setInspectorOpen(true);seek(targetFrame);}
+      if(coverModeRef.current===coverScope){setSelected(next.id);setInspectorOpen(true);seek(next.project.clips.find(c=>c.id===next.id)?.start??targetFrame);}
     }finally{giphyImporting.current=false;setGiphyBusy(false);}
   }
   async function addLibrarySound(soundId:string,at=player.current?.getCurrentFrame()??frame,requestedTrack?:string){
@@ -284,7 +284,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
       let track=p.tracks.find(track=>track.id===requestedTrack&&track.kind==='audio')||p.tracks.find(track=>track.kind==='audio');const tracks=[...p.tracks];
       if(!track){track={id:uid(),kind:'audio',name:'Audio',muted:false};tracks.push(track);}
       const clip:Clip={id:uid(),assetId:asset.id,name:asset.name,kind:'audio',trackId:track.id,start:clamp(Math.round(at),0,108000),duration:asset.frames,sourceIn:0,rate:1,volume:1,muted:false,fadeIn:0,fadeOut:0};
-      const next=arrangeTimelineTracks({...p,tracks,clips:[...p.clips,clip]},[clip.id]);
+      const next=placeTimelineClip({...p,tracks},clip,{keepTrack:track.id===requestedTrack});
       setAssets(previous=>previous.some(item=>item.id===asset.id)?previous:[...previous,asset]);edit(next);setSelected(clip.id);setMobilePanel('preview');
     }finally{importingSound.current=false;}
   }
@@ -294,7 +294,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     const p=current.current,kind=a.kind==='audio'?'audio':'video';let track=p.tracks.find(t=>t.id===requestedTrack&&t.kind===kind)||p.tracks.find(t=>t.kind===kind);
     const tracks=[...p.tracks];if(!track){track={id:uid(),kind,name:kind==='audio'?'Audio':'Video',muted:false};tracks.push(track);}
     const c:Clip={id:uid(),assetId:a.id,name:a.name,kind,trackId:track.id,start:Math.max(0,at),duration:coverEditing?1:a.frames,sourceIn:0,rate:1,volume:1,muted:false,fadeIn:0,fadeOut:0};
-    let next=arrangeTimelineTracks({...p,tracks,clips:[...p.clips,c]},[c.id]);if(coverEditing&&kind==='video')next=makeOverlay(next,c.id,{},a);edit(next);setSelected(c.id);setMobilePanel('preview');
+    let next=placeTimelineClip({...p,tracks},c,{keepTrack:track.id===requestedTrack});if(coverEditing&&kind==='video')next=makeOverlay(next,c.id,{},a);edit(next);setSelected(c.id);setMobilePanel('preview');
   },[assets,current,edit,coverEditing,setSelected]);
   async function relink(assetId:string,file:File){const form=new FormData();form.append('file',file);try{const result=await api<Workspace>(`/api/projects/${initial.projectId}/relink/${assetId}`,{method:'POST',body:form});setAssets(result.assets);toast('Media located. Your edits are still in place.');}catch(e){toast((e as Error).message);}}
   async function extract(detach=false){if(!clip||!asset)return;setExtracting(true);

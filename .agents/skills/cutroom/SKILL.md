@@ -169,8 +169,9 @@ video track appears above lower ones in both preview and export. Overlapping
 audio clips mix from separate visible tracks; new tracks inherit the occupied
 track's mute state when separating an overlap.
 At the 12-track limit, placement also checks compatible lower lanes for a free
-interval. Explicit library drops, including GIPHY overlays, reuse the requested
-lane when the interval is free. Pointer drags report placement failures only on
+interval. Explicit library drops, including GIPHY overlays, keep the requested
+lane and snap to its nearest free interval if needed, preferring the later one
+on ties. Existing clips stay in place. Pointer drags report placement failures only on
 the final drop, not while passing over blocked positions.
 
 If a revision conflict occurs, read the latest project and reconcile the requested
