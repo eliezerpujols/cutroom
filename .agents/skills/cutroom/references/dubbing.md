@@ -4,7 +4,60 @@ Use this workflow when the user supplies a video and target language, for exampl
 “$cutroom Traduce este video al inglés, conserva la voz, haz lip sync y ábrelo.”
 Ask for the output language only when it is missing. Omit `source_language` for
 auto-detection. Preserve the full video unless the user explicitly requests a
-sample, and default to lip sync and watermark-free output.
+sample, and default to a watermark-free result. For an editable language version,
+plan lip sync on RAW speaker footage after the voice-performance review below.
+
+## Choose the source before spending
+
+- A request for an English or other language version of an existing edit means
+  rebuild that edit in the target language. Inspect its source assets, speech
+  clips, overlays, captions, cover and sound tracks before choosing provider input.
+  Duplicate the editable project and preserve the original version.
+- Use the original RAW footage of the real speaker for dubbing and lip sync.
+  Keep titles, captions, generated people, reaction faces, paper cutouts, collage
+  scenes, Studio elements and sound effects outside the provider input. A final
+  exported montage is not RAW: lip sync may animate any visible face, including
+  the illustrations, and its burned-in Spanish text cannot be edited afterward.
+- Map RAW source windows to the edited timeline so the approved translated voice
+  and synchronized real-speaker shots can be reinserted correctly. Keep the full
+  requested edit; a quality preview is not a substitute for the full deliverable.
+  Translate editable on-screen text, captions and cover text, preserve intentional
+  typography/depth, and rebuild the animation and sound mix locally. Keep one
+  reading system where the edit uses titles instead of simultaneous subtitles.
+- Do not export the full edited timeline as the default dubbing input. An already
+  finished export is an exception only when the user explicitly chooses that
+  source after understanding its baked-in text and the effect on other faces.
+  If RAW or the editable source is missing, identify the missing material before
+  a paid submission; do not silently substitute the montage.
+
+## Voice-performance review before lip sync
+
+- Match the source performance: emotion, conversational energy, emphasis, pauses,
+  pace and humor, as well as the speaker's voice. Natural idiomatic English and
+  correct meaning are necessary, but a correct transcript alone does not prove
+  that the dub sounds convincing. Do not treat flat automatic delivery as final.
+- State the actual provider, model and translation mode. Automatic ElevenLabs
+  Dubbing v2 preserves voice identity but this workflow exposes no acting,
+  emotion or CEFR/B2 control. Do not claim those controls were applied. Verify
+  available controls before proposing a more expressive voice-generation route;
+  do not invent a setting or assume adapted translation controls delivery.
+- Prepare the translation and a representative audio preview with enough context
+  to assess the original tone. Listen to the actual audio against the RAW source
+  when supported and let the user hear and approve it before full-video lip sync.
+  Provider completion, subtitles, waveform or duration checks are not that review.
+  Reuse an already approved exact preview/performance without asking again.
+- Any billable preview or regeneration must fit the authorized scope and combined
+  budget. Explain its cost before requesting additional approval. A rejected
+  voice or incorrect source does not authorize a new paid job; preserve existing
+  audio/provider IDs and establish what can be reused before spending again.
+- **Current tool limitation:** `start_dubbing` with `lip_sync=true` automatically
+  proceeds from ElevenLabs to paid Sync, without a voice-review pause. Do not use
+  that combined chain for an unapproved voice. `lip_sync=false` avoids Sync, but
+  current MCP tools do not expose upgrading that job or supplying an approved
+  external dub to Sync. Use a supported staged/reuse path when available; if none
+  is available, explain the limitation before starting. Do not create a second
+  charged ElevenLabs project merely to add lip sync, edit saved job state to
+  bypass a review, or promise an unsupported staged workflow.
 
 ## Tools and sequence
 
@@ -14,13 +67,15 @@ sample, and default to lip sync and watermark-free output.
    `source_project_id` + `source_asset_id`, and the required `target_language`
    (BCP-47, such as `en-US`). It reads live account limits and quotes Sync before
    submitting anything paid. A blocked preparation has no paid generation.
-   If the user wants the current edited timeline dubbed, first export that edit
-   as MP4 with `export_project` and use the completed local export as `video_path`;
-   a source asset by itself does not include timeline trims or audio edits.
-3. When the user requested processing and the quote fits the authorized limits,
+   Supply the verified RAW speaker source chosen above, not a rendered montage.
+   A source asset does not include timeline trims: preserve the source-window map
+   and reconstruct those edits in the separate language-version project.
+3. When source selection and the applicable voice-performance review are satisfied,
+   the user requested processing, and the quote fits the authorized limits,
    call `start_dubbing` with the returned `project_id` and `job_id`. Do not ask
    for a redundant approval within an already authorized budget. This call
-   authorizes the complete ElevenLabs dub and optional Sync lip sync.
+   authorizes the complete ElevenLabs dub and optional Sync lip sync. Budget
+   approval alone does not validate the source or approve an unheard performance.
 4. Poll `get_dubbing_job` while `running=true`, with about 10 seconds between
    polls. A background worker downloads and assembles the output. `completed`
    returns the local video and a separate-instance editor URL. Open that URL in
@@ -85,7 +140,10 @@ The workflow creates a separate result project under `~/Documents/Cut Room`
 `media/`, keeps resumable state, provider IDs, translations, audio and subtitles
 under `dubbing/<job_id>/`, and saves the final MP4 in `exports/`. The timeline
 contains muted embedded video audio plus an independently editable dubbed audio
-clip, so sound is not doubled. The source edit is preserved. A timeline revision
+clip, so sound is not doubled. This provider-result project is a source for the
+rebuilt edit, not the completed translated montage: restore the approved overlays,
+translated text/captions/cover and separate sound effects in the language-version
+project. Preserve the source edit. A timeline revision
 conflict on the output project keeps the generated media without replacing edits.
 
 The MCP launcher and server load the checkout's ignored `.env` (mode 0600 locally):

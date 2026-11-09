@@ -7,6 +7,13 @@ description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use 
 
 Use the `cutroom` MCP to prepare the video and open its project in the local editor.
 For translation, dubbing or lip sync, read [the dubbing workflow](references/dubbing.md).
+For a language version of an editable video, dub and lip-sync the original RAW
+speaker footage, then rebuild the edit with translated text and captions. Never
+send the finished montage, collage faces or burned-in text to lip sync by default.
+Review the actual voice performance against the source and obtain approval of a
+representative audio preview before paid full-video lip sync; automatic dubbing
+completion is not evidence of natural delivery or preserved emotion. The dubbing
+workflow explains source checks, preview costs and staged-tool limitations.
 For the reusable sound library and audio placement, read [sound effects](references/sounds.md).
 For GIPHY GIFs, Clips, Stickers and local animation import/export, read [the GIPHY workflow](references/giphy.md).
 For authored titles and text during a video, read [manual video text](references/text.md).
