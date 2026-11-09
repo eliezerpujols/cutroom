@@ -71,7 +71,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const saving=useProjectSave(initial,savedProject);
   const coverExport=useCoverExport(initial.projectId,initial.editorInstanceId,savedProject);
   useEffect(()=>{document.title=project.name+' · Cutroom';},[project.name]);
-  useEffect(()=>controls.registerSave(saving.flush),[controls.registerSave,saving.flush]);
+  useEffect(()=>controls.registerSave(saving.flush,saving.getRevision),[controls.registerSave,saving.flush,saving.getRevision]);
   const [textSelected,setTextSelected]=useState<string|null>(()=>initialProject.texts?.find(text=>text.id===new URLSearchParams(location.search).get('text'))?.id||null),[transcriptOpen,setTranscriptOpen]=useState(()=>!initialProject.captions?.length);
   const [captionSelection,setCaptionSelection]=useState<CaptionSelection>(null),[captionStyleOpen,setCaptionStyleOpen]=useState(false);
   const [cropClipId,setCropClipId]=useState<string|null>(null);

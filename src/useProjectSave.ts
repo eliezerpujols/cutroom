@@ -38,5 +38,6 @@ export function useProjectSave(w:Workspace,project:Project){
   useEffect(()=>{if(JSON.stringify(project)===saved.current)return;backup();setState(blocked.current?'conflict':'saving');const timer=setTimeout(()=>void flush().catch(()=>{}),600);return()=>clearTimeout(timer);},[project,backup,flush]);
   useEffect(()=>{if(state!=='retrying')return;const timer=setTimeout(()=>void flush().catch(()=>{}),3000);return()=>clearTimeout(timer);},[state,error,retryVersion,flush]);
   useEffect(()=>{const retry=()=>{if(!blocked.current)void flush().catch(()=>{});};const unload=(e:BeforeUnloadEvent)=>{if(JSON.stringify(latest.current)!==saved.current){backup();e.preventDefault();}};window.addEventListener('online',retry);window.addEventListener('focus',retry);window.addEventListener('beforeunload',unload);return()=>{window.removeEventListener('online',retry);window.removeEventListener('focus',retry);window.removeEventListener('beforeunload',unload);};},[backup,flush]);
-  return {state,error,flush};
+  const getRevision=useCallback(()=>revision.current,[]);
+  return {state,error,flush,getRevision};
 }

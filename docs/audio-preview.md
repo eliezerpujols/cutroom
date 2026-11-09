@@ -16,10 +16,22 @@ Trim offsets, speed with preserved pitch, track and clip muting, volume, and fad
 are passed through. Server rendering retains `Html5Audio`; this change does not
 alter the export mixer or saved project data.
 
+## Native video compatibility (2026-11-09)
+
+Video preview uses `Html5Video` with buffering and Web Audio enabled, while export
+continues to use `OffthreadVideo`. This avoids the failing WebCodecs decoder path
+observed on the English RAW MP4. Remotion's latency-aware seek tolerance is kept;
+the old explicit 1/30-second tolerance could repeatedly seek native fallback
+audio on Safari. Scheduled sound effects retain their existing preview path,
+avoiding the shared native-audio-tag limit during premounting.
+
+Hidden editors also release event streams, as described in
+[editor instances](editor-instances.md), to leave connections available for media.
+
 References: [Remotion Audio](https://www.remotion.dev/docs/media/audio),
 [Player buffering](https://www.remotion.dev/docs/player/buffer-state).
 
-Validation: TypeScript and the production build only. Live playback and exports
-have not been exercised, following the user's instruction to leave their active
-editing session untouched. The reported overlap scenario still needs the user's
-playback check.
+Validation: TypeScript, production build, 114 automated tests and a complete
+34-second playback of the English project in Codex. See the
+[dated verification](qa/preview-playback-2026-11-09/verification.md). The saved
+montage and export mixer were not changed by this preview repair.

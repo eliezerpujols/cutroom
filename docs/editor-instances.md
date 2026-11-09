@@ -29,6 +29,18 @@ on reload. A new MCP instance cannot adopt another tab's legacy draft. Same-file
 instances keep revision conflict checks; this is view isolation, not an automatic
 project fork. Save a copy creates an independently saved version.
 
-Scope excludes changing user project data, creating a sample instance, exercising
-browser controls, exports or paid jobs. TypeScript/build checks are permitted;
-multi-tab behavior is not runtime-tested under the user's no-testing instruction.
+## Background connections (2026-11-09)
+
+Only visible editors hold an SSE connection. Background instances release theirs
+so they cannot exhaust HTTP/1's shared origin connection pool and stall media,
+font loads or a newly opened editor. Returning to a tab reconnects and checks the
+saved workspace for missed revisions. The check uses the editor's latest saved
+revision so its own autosaves do not create a false external-update notice.
+Drafts remain untouched; a missed external change still produces the existing
+notice rather than reloading the editor.
+
+The 2026-11-09 repair preserves user project data and recovery drafts. Visibility
+subscription tests cover disconnect, reconnect and stale events; the current
+English project was played through in Codex without editing its montage or
+calling a paid provider. See the
+[dated verification](qa/preview-playback-2026-11-09/verification.md).
