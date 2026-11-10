@@ -6,13 +6,15 @@ import {withStudioAssets} from '../studio/registry';
 import {TransitionMedia} from './TransitionMedia';
 import {LayeredComposition} from './LayeredComposition';
 import '../fonts.css';
-import {AbsoluteFill,Sequence} from 'remotion';
+import {AbsoluteFill,Sequence,useCurrentFrame} from 'remotion';
+import {activePreviewClip} from '../nativeVideoBuffer';
 import {FPS,clipsInRenderOrder,type Asset,type Project} from '../model';
 import {CaptionOverlay} from './Captions';
 import {VideoTextOverlay} from './VideoText';
 import {CoverOverlay,VisualLayer} from './Visuals';
 export type EditorProps={project:Project;assets:Asset[];fontProjectId?:string;coverMode?:boolean;hiddenTextIds?:string[];hiddenCaptionCueIds?:string[];cropClipId?:string};
 function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hiddenCaptionCueIds=[],cropClipId}:EditorProps){
+  const frame=useCurrentFrame();
   if(coverMode)project=coverSceneProject(project);
   if(cropClipId)project={...project,clips:project.clips.map(c=>c.id===cropClipId?{...c,transform:{...c.transform,crop:undefined,faceTrack:undefined}}:c)};
   assets=withStudioAssets(assets);
@@ -25,7 +27,7 @@ function CompositionContent({project,assets,coverMode=false,hiddenTextIds=[],hid
     // and stopping the video for every new audio clip. Pointer events pass through
     // audio wrappers; Sequence premounting requires an absolute-fill layout.
     return <Sequence key={clip.id} from={clip.start} durationInFrames={clip.duration} layout="absolute-fill" style={clip.kind==='audio'?{pointerEvents:'none'}:undefined} premountFor={clip.kind==='audio'?FPS*2:FPS}>
-      <TransitionMedia project={project} assets={assets} clip={clip} asset={asset} muted={coverMode||!!project.tracks.find(t=>t.id===clip.trackId)?.muted}/>
+      <TransitionMedia project={project} assets={assets} clip={clip} asset={asset} muted={coverMode||!!project.tracks.find(t=>t.id===clip.trackId)?.muted} previewActive={activePreviewClip(frame,clip.start,clip.duration,coverMode)}/>
     </Sequence>;
   })}</VisualLayer>{!!project.captions?.length&&(!coverMode||project.cover?.showCaptions)&&<CaptionOverlay layers={project.captions} hiddenCueIds={hiddenCaptionCueIds}/>}<VideoTextOverlay project={visibleProject}/>{coverMode&&visibleCover&&<CoverOverlay cover={visibleCover}/>}</AbsoluteFill>;
 }
