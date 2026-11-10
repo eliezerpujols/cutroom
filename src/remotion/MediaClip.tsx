@@ -2,15 +2,14 @@ import {cropGeometry,cropStyle,mediaTransformStyle,trackedPosition,noCrop,faceCa
 import React from 'react';
 import {StudioElement} from '../studio/StudioElement';
 import {Audio as PreviewAudio} from '@remotion/media';
-import {AbsoluteFill,Html5Audio,OffthreadVideo,Img,getRemotionEnvironment,useCurrentFrame,useVideoConfig} from 'remotion';
+import {AbsoluteFill,Html5Audio,Html5Video,OffthreadVideo,Img,getRemotionEnvironment,useCurrentFrame,useVideoConfig} from 'remotion';
 import {gainAt,type Asset,type Clip} from '../model';
 import {overlayHeight} from '../overlays';
 import {EffectLayer} from './Effects';
 import {VisualLayer} from './Visuals';
 import {SequenceFrames} from './SequenceFrames';
-import {PreviewVideo} from './PreviewVideo';
 
-export function MediaClip({clip,asset,muted,previewActive=false}:{clip:Clip;asset:Asset;muted:boolean;previewActive?:boolean}){
+export function MediaClip({clip,asset,muted}:{clip:Clip;asset:Asset;muted:boolean}){
   const frame=useCurrentFrame(),{width,height}=useVideoConfig();
   if(clip.studio&&clip.hidden)return null;
   const volume=muted?0:gainAt(clip,frame);
@@ -27,7 +26,7 @@ export function MediaClip({clip,asset,muted,previewActive=false}:{clip:Clip;asse
   // Local MP4s can fail WebCodecs even when the browser can play them natively.
   // Use native video in preview with Remotion's latency-aware sync tolerance;
   // a one-frame tolerance repeatedly seeks amplified audio on Safari.
-  const video=getRemotionEnvironment().isRendering?<OffthreadVideo {...props} style={mediaStyle}/>:<PreviewVideo {...props} active={previewActive} style={mediaStyle}/>;
+  const video=getRemotionEnvironment().isRendering?<OffthreadVideo {...props} style={mediaStyle}/>:<Html5Video {...props} style={mediaStyle}/>;
   const visual=asset.sequence?<SequenceFrames url={asset.url} count={asset.sequence.count} sourceFrame={clip.sourceIn+frame*clip.rate} rate={clip.rate} style={mediaStyle}/>:clip.studio?<StudioElement instance={clip.studio} frame={clip.sourceIn+frame*clip.rate}/>:asset.kind==='image'?<Img src={asset.url} style={mediaStyle}/>:video;
   const pixels=clip.transform?.faceTrack?.length?<div style={{position:'absolute',inset:0,overflow:'hidden'}}><div style={{...faceCameraStyle({width:asset.width*cw,height:asset.height*ch},view,{x:(track.x-crop.left)/cw,y:(track.y-crop.top)/ch}),overflow:'hidden'}}><div style={cropStyle(crop)}>{visual}</div></div></div>:<div style={geometry.viewport}><div style={geometry.source}>{visual}</div></div>;
   const content=<EffectLayer effects={clip.effects} frame={frame} duration={clip.duration} maskBounds={view} fill><VisualLayer adjustments={clip.adjustments}><div style={{position:'absolute',inset:0,...mediaTransformStyle(clip.transform)}}>{pixels}</div></VisualLayer></EffectLayer>;

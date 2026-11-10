@@ -60,3 +60,49 @@ it is not a claim that the user's exact sequence was visually reproduced.
 Sources: [Remotion buffer cleanup requirements](https://www.remotion.dev/docs/use-buffer-state),
 [native video buffering](https://www.remotion.dev/docs/html5-video), and the
 installed version's `buffer-until-first-frame.ts` / `use-media-buffering.ts` code.
+
+## Superseded after user-reported regression
+
+The user then reported that overlays advanced while the native video and audio
+were absent. The 122 controller/model tests above did not verify the integrated
+Remotion media pipeline, and the previous completion statement was too strong.
+The custom buffer replacement from 03a1226 is withdrawn in full. Its new
+PreviewVideo/nativeVideoBuffer modules and tests are removed; Composition,
+LayeredComposition, MediaClip and TransitionMedia return exactly to their
+862c649 versions. Remotion again owns native video buffering, frame presentation,
+Web Audio gain and scheduled sound effects. Historical evidence above is retained,
+but is not proof that the user's reproduction was fixed.
+
+### Replacement correction
+
+Source inspection found both custom playback controls discarded their interaction
+events: the button called toggle() without its click and the global Space handler
+called toggle() without its key event. Remotion's documented Safari path expects
+that event, and its implementation uses it to prime shared audio tags. The button
+now invokes the transport in onClickCapture and passes the original event; Space
+forwards the actual key event synchronously, with repeat presses ignored.
+
+The existing deferred seek also could run after a subsequent Play. A small
+previewTransport controller retains scrubbing coalescing, but flushes the latest
+seek synchronously before toggle within the same interaction. It cancels stale
+animation-frame callbacks on Play and unmount. It never replaces the Player,
+decoder or audio context, and never starts playback from a timer.
+
+### Replacement validation
+
+- `npm test`: 121 passed, zero failures: 116 existing tests plus five transport
+  cases covering original event identity/synchronous dispatch, seek-then-immediate
+  Play ordering, stale cancelled callbacks, ordinary coalesced scrubbing, native
+  keyboard gestures and cleanup.
+- `npm run build`: passed TypeScript and Vite; existing large-chunk warning only.
+- Local HTTP serves `index-BigfKiDO.js`, containing the restored native pipeline
+  and revised gesture/seek transport. No server restart or cloud deployment.
+- No playback, project edit, seek, refresh or screenshot was performed in the
+  user's browser; they explicitly retained visual verification. Therefore an
+  integrated Safari playback result is still unverified.
+- The task did not mutate the saved montage or any media files. Unrelated Studio
+  work remains outside the commit. Existing non-deploying codex topic branch,
+  no delivery workflows or active Git push hooks.
+
+References: [Player best practices — pass interaction events](https://www.remotion.dev/docs/player/best-practices),
+[Safari autoplay — prefer click capture](https://www.remotion.dev/docs/player/autoplay).

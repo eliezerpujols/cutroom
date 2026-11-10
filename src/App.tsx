@@ -17,6 +17,7 @@ import {itemVisible,selectionVisibility,selectionVisibilityTargets,setItemVisibi
 import {InspectorItemHeader,InspectorActions} from './InspectorItemHeader';
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Player,type PlayerRef} from '@remotion/player';
+import {createPreviewTransport} from './previewTransport';
 import {Play,Pause,SkipBack,SkipForward,Undo2,Redo2,Plus,ChevronLeft,Film,AudioLines,ArrowUpRight,ArrowDownToLine,Copy,ChevronDown,ChevronRight,Check,LoaderCircle,Sun,Moon,Monitor,PanelLeftOpen,PanelRightOpen,SlidersHorizontal,FolderOpen,X,Download,Music2,Type,Sparkles,Box,ClosedCaption,Sticker} from 'lucide-react';
 import {Button,IconButton,TooltipProvider,Input,Dialog,DialogContent,DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from './ui/primitives';
 import {EditComposition} from './remotion/Composition';
@@ -113,7 +114,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   const [exportLoading,setExportLoading]=useState(false),[previousExport,setPreviousExport]=useState(false),[revealBusy,setRevealBusy]=useState(false),[exportError,setExportError]=useState('');
   const exportLookup=useRef(0);
   const [coverExportOpen,setCoverExportOpen]=useState(false);
-  const player=useRef<PlayerRef>(null),fileInput=useRef<HTMLInputElement>(null),noticeTimer=useRef<ReturnType<typeof setTimeout>|null>(null),seekRequest=useRef<number|undefined>(undefined);
+  const player=useRef<PlayerRef>(null),fileInput=useRef<HTMLInputElement>(null),noticeTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const transport=useMemo(()=>createPreviewTransport(()=>player.current,{request:callback=>requestAnimationFrame(callback),cancel:id=>cancelAnimationFrame(id)},setFrame),[]);
   const clip=project.clips.find(c=>c.id===selected),asset=assets.find(a=>a.id===clip?.assetId),duration=endFrame(project);
   const videoText=multiple?undefined:project.texts?.find(text=>text.id===textSelected);
   const captionLayer=multiple?undefined:project.captions?.find(layer=>layer.id===captionSelection?.layerId),captionCue=captionLayer?.cues.find(cue=>cue.id===captionSelection?.cueId);
@@ -146,8 +148,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     const play=()=>setPlaying(true),pause=()=>setPlaying(false);p.addEventListener('frameupdate',update);p.addEventListener('play',play);p.addEventListener('pause',pause);p.addEventListener('ended',pause);
     return()=>{p.removeEventListener('frameupdate',update);p.removeEventListener('play',play);p.removeEventListener('pause',pause);p.removeEventListener('ended',pause);};},[]);
   useEffect(()=>{if(frame>=duration){player.current?.seekTo(Math.max(0,duration-1));setFrame(Math.max(0,duration-1));}},[duration,frame]);
-  const seek=useCallback((f:number)=>{player.current?.pause();if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);seekRequest.current=requestAnimationFrame(()=>{player.current?.seekTo(f);setFrame(f);seekRequest.current=undefined;});},[]);
-  useEffect(()=>()=>{if(seekRequest.current!==undefined)cancelAnimationFrame(seekRequest.current);if(noticeTimer.current)clearTimeout(noticeTimer.current);},[]);
+  const seek=transport.seek;
+  useEffect(()=>()=>{transport.dispose();if(noticeTimer.current)clearTimeout(noticeTimer.current);},[transport]);
   useEffect(()=>{const id=new URLSearchParams(location.search).get('text'),item=initialProject.texts?.find(text=>text.id===id);if(item)seek(item.start);},[initialProject,seek]);
   const selectText=useCallback((id:string|null)=>{player.current?.pause();setTextSelected(id);setSelection(id?[id]:[]);setCaptionSelection(null);setCaptionStyleOpen(false);setCoverTextId(null);if(!coverEditing)setLibraryTab(tab=>tab==='effects'?tab:'text');setMediaOpen(true);setTool('select');const item=current.current.texts?.find(text=>text.id===id),at=player.current?.getCurrentFrame()??0;if(item&&(at<item.start||at>=item.start+item.duration))seek(item.start);},[current,seek,coverEditing]);
   const commitCaptionText=(id:string,text:string)=>{
@@ -248,12 +250,12 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();if(!e.repeat)split();return;}
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'&&target.closest('.timeline')){e.preventDefault();selectClips(timelineItems(current.current).map(item=>item.id));setTool('select');return;}
     if(e.metaKey||e.ctrlKey||e.altKey)return;
-    if(e.code==='Space'&&!target.closest('button')){e.preventDefault();player.current?.toggle();}
+    if(e.code==='Space'&&!target.closest('button')){e.preventDefault();if(!e.repeat)transport.toggle(e);}
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();seek(clamp(frame+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?30:1),0,duration-1));}
     if(e.key==='Home'){e.preventDefault();seek(0);}if(e.key==='End'){e.preventDefault();seek(duration-1);}
     if(e.key.toLowerCase()==='v')changeTool('select');if(e.key.toLowerCase()==='s'){e.preventDefault();if(!e.repeat)split();}if(e.key.toLowerCase()==='y'&&!e.repeat)changeTool('slip');
     if(e.key==='Escape'){setSelected(null);setTool('select');}
-  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[coverEditing,changeTool,current,duration,exportOpen,frame,helpOpen,redo,seek,selectClips,setSelected,split,undo]);
+  };window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[coverEditing,changeTool,current,duration,exportOpen,frame,helpOpen,redo,seek,selectClips,setSelected,split,transport,undo]);
   const localVision=useLocalVision({projectId:initial.projectId,current,edit,addAsset:asset=>setAssets(p=>p.some(a=>a.id===asset.id)?p:[...p,asset]),select:id=>setSelected(id),report:toast});
   const [giphyBusy,setGiphyBusy]=useState(false),giphyImporting=useRef(false);
   async function insertGiphy(selection:GiphySelection,at=player.current?.getCurrentFrame()??frame,trackId?:string){
@@ -353,7 +355,7 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
           {coverEditing&&<CoverGuideOverlay state={coverGuides.state} width={project.width} height={project.height}/>}
           {coverEditing&&<CoverDragOverlay project={project} selected={coverTextId} select={id=>{setCoverTextId(id);setSelection([]);setTextSelected(null);setCaptionSelection(null);}} change={changeCoverText} checkpoint={checkpoint} editingChanged={setInlineTextId} reportError={toast}/>}
         </div>{project.clips.length===0&&<div className="preview-empty"><Film size={30}/><h3>A fresh start</h3><p>Add a video from your media to begin.</p></div>}</div>
-        <div className="transport"><div className="transport-time"><strong>{time(frame,true)}</strong><span>/ {time(duration,true)}</span></div><div className="transport-buttons" style={coverEditing?{visibility:'hidden'}:undefined}><IconButton label="Jump to start" onClick={()=>seek(0)}><SkipBack size={17}/></IconButton><IconButton label={playing?'Pause':'Play'} className="play-button" onClick={()=>player.current?.toggle()}>{playing?<Pause size={19} fill="currentColor"/>:<Play size={19} fill="currentColor"/>}</IconButton><IconButton label="Jump to end" onClick={()=>seek(duration-1)}><SkipForward size={17}/></IconButton></div><div className="preview-meta">{project.height}p <span>·</span> 30 fps</div></div>
+        <div className="transport"><div className="transport-time"><strong>{time(frame,true)}</strong><span>/ {time(duration,true)}</span></div><div className="transport-buttons" style={coverEditing?{visibility:'hidden'}:undefined}><IconButton label="Jump to start" onClick={()=>seek(0)}><SkipBack size={17}/></IconButton><IconButton label={playing?'Pause':'Play'} className="play-button" onClickCapture={event=>transport.toggle(event)}>{playing?<Pause size={19} fill="currentColor"/>:<Play size={19} fill="currentColor"/>}</IconButton><IconButton label="Jump to end" onClick={()=>seek(duration-1)}><SkipForward size={17}/></IconButton></div><div className="preview-meta">{project.height}p <span>·</span> 30 fps</div></div>
       </section>
       <aside id="clip-properties" className="inspector" aria-label="Clip properties"><div className="panel-heading"><h2>{coverEditing?'Cover · ':''}{coverEditing&&coverText?'Text':videoText?'Text settings':captionLayer?'Caption settings':multiple?'Selection':clip?.studio?'Studio element':clip?'Clip settings':coverEditing?'Settings':'Make it yours'}</h2><IconButton label="Hide properties panel" onClick={()=>{setInspectorOpen(false);setMobilePanel('preview');requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.inspector-reopen')?.focus({preventScroll:true}));}}><X size={15}/></IconButton></div>
         {coverEditing&&coverText?<CoverInspector text={coverText} change={(patch,record)=>{if(coverTextId)changeCoverText(coverTextId,patch,record);}} remove={remove} duplicate={duplicate} checkpoint={checkpoint}/>:videoText?<VideoTextInspector text={videoText} timelineEnd={duration} change={(patch,record)=>changeVideoText(videoText.id,patch,record)} checkpoint={checkpoint} remove={remove} duplicate={duplicate}/>:captionLayer?<CaptionInspector key={captionCue?.id||captionLayer.id} layer={captionLayer} cue={captionCue} timelineEnd={duration} edit={edit} checkpoint={checkpoint} remove={remove} duplicate={duplicate} openStyle={openCaptionStyle}/>:multiple?<SelectionInspector vision={localVision} report={toast} assets={assets} duplicate={duplicate} openCaptionStyle={openCaptionStyle} project={project} ids={selectedIds} edit={edit} checkpoint={checkpoint} items={selectedItems} remove={remove}/>:clip&&asset?<><InspectorItemHeader icon={clip.kind==='video'?<Film size={19}/>:<AudioLines size={20}/>} kind={clip.kind} title={clip.name} detail={<>{clip.studio?'Studio element':asset.kind==='image'?'Image clip':clip.kind==='video'?'Video clip':'Audio clip'} · {time(clip.duration,true)}</>} actions={<InspectorActions label={asset.kind} audio={clip.kind==='audio'} visible={itemVisible(project,{kind:'clip',id:clip.id})} toggle={()=>edit(p=>setItemVisibility(p,[{kind:'clip',id:clip.id}],!itemVisible(p,{kind:'clip',id:clip.id})))} duplicate={duplicate} remove={remove}/>}/>
