@@ -25,8 +25,11 @@ the old explicit 1/30-second tolerance could repeatedly seek native fallback
 audio on Safari. Scheduled sound effects retain their existing preview path,
 avoiding the shared native-audio-tag limit during premounting.
 
-Hidden editors also release event streams, as described in
-[editor instances](editor-instances.md), to leave connections available for media.
+Project update checks now use finite revision requests, including compatibility
+responses for cached SSE clients, as described in
+[editor instances](editor-instances.md). This leaves the browser's shared HTTP/1
+connections available for media even when an embedded browser reports several
+editor views as visible. The native video and scheduled-audio paths stay intact.
 
 References: [Remotion Audio](https://www.remotion.dev/docs/media/audio),
 [Player buffering](https://www.remotion.dev/docs/player/buffer-state).

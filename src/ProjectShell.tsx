@@ -4,7 +4,7 @@ import {Button,Dialog,DialogContent,Input,TooltipProvider,DropdownMenu,DropdownM
 import {api} from './useEditor';
 import {time} from './model';
 import type {Workspace} from './useProjectSave';
-import {subscribeVisibleEvents} from './visibleEvents';
+import {subscribeProjectUpdates} from './projectUpdates';
 
 type Summary={id:string;name:string;folder:string;updatedAt:string;available:boolean;missingCount:number;previewUrl?:string|null;durationFrames?:number};
 type Panel='browse'|'new'|'copy';
@@ -49,12 +49,9 @@ export function ProjectShell({children}:{children:(workspace:Workspace,controls:
 
   useEffect(()=>{
     if(!workspace)return;
-    const query=new URLSearchParams({clientId:crypto.randomUUID(),projectId:workspace.projectId,instanceId});
     let active=true;
     const receive=(event:{type:string;projectId:string;revision:number;originInstanceId?:string})=>{const current=visibleProject.current;if(!active||event.type!=='project-changed'||!current||event.projectId!==current.projectId||event.originInstanceId===instanceId||!Number.isInteger(event.revision)||event.revision<=(savedRevision.current?.()??current.revision))return;const url=new URL(location.href);url.searchParams.set('project',event.projectId);url.searchParams.set('instance',crypto.randomUUID());setUpdate({projectId:event.projectId,revision:event.revision,url:url.toString()});};
-    const disconnect=subscribeVisibleEvents('/api/events?'+query,data=>{try{receive(JSON.parse(data));}catch{}},()=>{
-      void api<Workspace>('/api/workspace?projectId='+encodeURIComponent(workspace.projectId)).then(latest=>receive({type:'project-changed',projectId:latest.projectId,revision:latest.revision})).catch(()=>{});
-    });
+    const disconnect=subscribeProjectUpdates(workspace.projectId,receive);
     return()=>{active=false;disconnect();};
   },[instanceId,workspace?.projectId]);
 

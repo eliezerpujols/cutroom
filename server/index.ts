@@ -1,3 +1,4 @@
+import {registerProjectUpdateRoutes} from './projectUpdates';
 import {registerCoverElementRoutes} from './coverElements';
 import {coverSceneProject} from '../src/coverScene';
 import {registerGiphyRoutes} from './giphy';
@@ -54,19 +55,7 @@ registerGiphyRoutes(app,store,media,data,(id,revision)=>{publish({projectId:id,r
 app.get('/api/health',(_req,res)=>res.json({app:'cutroom',version:2,localVisionBusy:localVision.isBusy(),capabilities:['dubbing','native-project-picker','multi-selection','captions','editor-instances','covers','visual-adjustments','images','export-cover-companion','timed-text','sound-library','overlays','layer-order','giphy','animated-gifs'],url:`http://127.0.0.1:${port}`}));
 const projectId=(req:express.Request)=>String(req.query.projectId||req.body?.projectId||store.legacyId());
 
-type EditorClient={response:express.Response;projectId?:string;instanceId?:string};
-const clients=new Map<string,EditorClient>();
-function publish(event:Record<string,unknown>){
-  if(typeof event.projectId!=='string')return false;
-  let delivered=false;
-  for(const [clientId,client] of clients){
-    if(client.projectId!==event.projectId||event.originInstanceId&&client.instanceId===event.originInstanceId)continue;
-    if(client.response.destroyed||client.response.writableEnded){clients.delete(clientId);continue;}
-    // External updates are notices, never navigation commands, even for legacy callers.
-    try{client.response.write(`data: ${JSON.stringify({...event,type:'project-changed'})}\n\n`);delivered=true;}catch{clients.delete(clientId);}
-  }
-  return delivered;
-}
+const publish=registerProjectUpdateRoutes(app,async id=>(await store.read(id)).revision);
 const dubbing=dubbingEngine(store,media,async(projectId,revision)=>{publish({projectId,revision});return false;});
 registerStudioRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});const d=editorDestination(id);return {...d,editor_url:d.editor_url+'&view=studio'};});
 registerCoverElementRoutes(app,store,(id,revision)=>{publish({projectId:id,revision});return editorDestination(id,'cover');});
@@ -115,7 +104,6 @@ app.post('/api/dubbing/prepare',async(req,res)=>{const result=await dubbing.prep
 app.get('/api/dubbing/jobs',async(req,res)=>res.json(await dubbing.list(req.query.projectId?z.string().uuid().parse(req.query.projectId):undefined)));
 app.get('/api/projects/:id/dubbing/:jobId',async(req,res)=>res.json(await dubbing.get(String(req.params.id),String(req.params.jobId))));
 app.post('/api/projects/:id/dubbing/:jobId/start',async(req,res)=>res.status(202).json(await dubbing.start(String(req.params.id),String(req.params.jobId),req.body)));
-app.get('/api/events',(req,res)=>{const id=z.string().uuid().parse(req.query.clientId||randomUUID()),projectId=z.string().uuid().optional().parse(req.query.projectId),instanceId=z.string().uuid().optional().parse(req.query.instanceId);res.setHeader('Content-Type','text/event-stream');res.setHeader('Cache-Control','no-cache');res.setHeader('Connection','keep-alive');res.flushHeaders();const client={response:res,projectId,instanceId};clients.set(id,client);res.write(': connected\n\n');const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),20000);req.on('close',()=>{clearInterval(heartbeat);if(clients.get(id)===client)clients.delete(id);});});
 // Older tabs can still report focus, but focus no longer selects an MCP destination.
 app.post('/api/focus',(_req,res)=>res.json({ok:true}));
 app.get('/api/projects',async(_req,res)=>res.json({projects:await store.list(),activeProjectId:store.activeId(),projectsRoot:store.managedRoot}));

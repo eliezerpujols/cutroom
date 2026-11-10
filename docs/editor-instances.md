@@ -12,11 +12,12 @@ the HTTP server does not control Codex's browser. Existing cached MCP clients
 still receive the destination metadata from the server. Their old `broadcast`
 flag is accepted for compatibility but cannot trigger navigation.
 
-SSE clients register their project and instance. External updates are delivered
-only to matching project IDs as `project-changed` notices. There is no focused
-client fallback. Autosave identifies its originating instance so it does not
-notify itself. Old unscoped tabs receive no navigation events. Dubbing completion
-returns a separate output-instance URL instead of navigating a connected tab.
+Editors check a small project-scoped revision snapshot every two seconds while
+visible. External updates become `project-changed` notices; there is no focused
+client fallback. The snapshot retains the originating instance for the current
+revision, so an autosave whose response is still in flight cannot notify itself.
+Old unscoped tabs receive no navigation events. Dubbing completion returns a
+separate output-instance URL instead of navigating a connected tab.
 
 The shell defensively ignores navigation events and mismatched project IDs. A
 notice offers the saved update in another tab, without saving, replacing or
@@ -29,18 +30,26 @@ on reload. A new MCP instance cannot adopt another tab's legacy draft. Same-file
 instances keep revision conflict checks; this is view isolation, not an automatic
 project fork. Save a copy creates an independently saved version.
 
-## Background connections (2026-11-09)
+## Bounded update connections (2026-11-10)
 
-Only visible editors hold an SSE connection. Background instances release theirs
-so they cannot exhaust HTTP/1's shared origin connection pool and stall media,
-font loads or a newly opened editor. Returning to a tab reconnects and checks the
-saved workspace for missed revisions. The check uses the editor's latest saved
-revision so its own autosaves do not create a false external-update notice.
-Drafts remain untouched; a missed external change still produces the existing
-notice rather than reloading the editor.
+The visibility-only SSE repair did not cover embedded browsers that report
+several open editor views as visible. Persistent streams could still occupy the
+HTTP/1 connection pool shared with video, sound effects and newly opened editors.
 
-The 2026-11-09 repair preserves user project data and recovery drafts. Visibility
-subscription tests cover disconnect, reconnect and stale events; the current
-English project was played through in Codex without editing its montage or
-calling a paid provider. See the
-[dated verification](qa/preview-playback-2026-11-09/verification.md).
+`subscribeProjectUpdates` now uses finite, uncached revision requests. Each editor
+has at most one request in flight, aborts after five seconds, and waits two
+seconds before checking again. Hidden views cancel their request and timer;
+returning checks immediately. Old responses after hiding or disposal are ignored.
+Unchanged revisions do not repeat a dismissed notice.
+
+`GET /api/projects/:id/revision` returns only the current revision and its known
+origin, without media metadata or filesystem checks for every asset. Cached older
+clients retain `/api/events` compatibility: it returns one SSE-formatted snapshot
+and ends, with a five-second reconnect interval. No update request reserves a
+persistent connection. Out-of-process file changes do not inherit stale origin
+information from an earlier save.
+
+Revision conflict checks, recovery drafts and the existing update notice remain
+unchanged. Checks never reload or overwrite the current edit. See the
+[dated verification](qa/preview-playback-2026-11-10/verification.md) and the
+[previous native-audio repair](qa/preview-playback-2026-11-09/verification.md).
