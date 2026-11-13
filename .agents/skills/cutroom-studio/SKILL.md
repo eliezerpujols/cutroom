@@ -121,3 +121,14 @@ math; reject invalid template IDs, unknown props and invalid field values.
 Show the working example and identify its editable properties. Save a screenshot
 of the UI. Report export failure or a concrete limitation rather than describing
 unverified behavior as completed. Preserve the user's original edit.
+
+## Paper conversations
+
+`paper-conversation` renders an anonymous chat with editable message copy and a
+blurred contact name. `paper-message` crops the first outgoing bubble. Both use
+`scenario` (`waiting`, `manual`, or `followup`), `contact`, `message1`–`message3`,
+`documentName`, and the local-frame cues `sendSecondAt`, `sendThirdAt`, `receiveAt`.
+Manual mode shows the seller attaching and sending a document; followup mode
+shows the buyer composing repeated requests before the PDF arrives. Splits must
+retain sourceIn to preserve the writing and delivery phase. These are reconstructed
+interfaces; their copy and illustrative timestamps are not imported private chats.

@@ -1,3 +1,4 @@
+import {PaperConversation} from './PaperConversation';
 import {ProductFlowDemo} from './ProductFlowDemo';
 import {CommunicationBeat} from './CommunicationBeat';
 import {CommunitySelection} from './CommunitySelection';
@@ -11,6 +12,7 @@ import {SpokenQuestion} from './SpokenQuestion';
 import {orbitPose,studioDefaults,type StudioInstance} from './registry';
 export function StudioElement({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
   if(instance.template==='product-flow-demo-es')return <ProductFlowDemo instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
+  if(instance.template==='paper-conversation'||instance.template==='paper-message')return <PaperConversation instance={instance} frame={frame}/>;
   if(instance.template==='communication-beat')return <CommunicationBeat instance={instance} frame={frame}/>;
   if(instance.template==='community-selection')return <CommunitySelection instance={instance} frame={frame}/>;
   if(instance.template==='creator-program-screen')return <CreatorProgramScreen instance={instance} frame={frame} libraryPreview={libraryPreview}/>;

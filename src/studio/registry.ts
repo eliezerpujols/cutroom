@@ -1,3 +1,4 @@
+import {conversationTemplates,conversationArtwork} from './conversationRegistry';
 import {cardArtUrl,creatorCardArt} from './creatorCards';
 import type {Asset,Clip,Project} from '../model';
 import {placeTimelineClip} from '../videoTracks';
@@ -74,12 +75,12 @@ export const studioTemplates=[{id:'orbit-card',name:'Orbit card',width:800,heigh
   {key:'accent',label:'Trazo',type:'color',default:'#BBFFFF'},
   {key:'ink',label:'Fondo de figura',type:'color',default:'#102A43'},
  ] satisfies StudioField[]
-},...creatorTemplates];
+},...creatorTemplates,...conversationTemplates];
 export function studioDefaults(id:string){const template=studioTemplates.find(t=>t.id===id);if(!template)throw new Error('Unknown Studio element.');return Object.fromEntries(template.fields.map(f=>[f.key,f.default]));}
 const thumbnail='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="800" height="480" rx="64" fill="#203e35"/><circle cx="670" cy="100" r="40" fill="#d3e8b5"/><text x="65" y="285" font-family="sans-serif" font-size="70" fill="#f4f5ec">Orbit card</text><path d="M65 340h300" stroke="#d3e8b5" stroke-width="12"/></svg>');
 const questionThumbnail='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480"><text x="30" y="100" fill="#fff1d4" font-family="serif" font-style="italic" font-size="76">¿Quién iría a</text><text x="25" y="295" font-family="sans-serif" font-weight="900" font-size="204" fill="#ffdf83">PAGAR</text><path d="M35 320 Q330 298 760 310" fill="none" stroke="#ffdf83" stroke-width="6"/><text x="755" y="395" text-anchor="end" font-style="italic" font-size="68" fill="#fff1d4">por esto?</text></svg>');
 const tileThumbnail='/studio/product-tile.svg';
-export const studioAssets:Asset[]=studioTemplates.map(t=>{const preview=t.id==='product-flow-demo-es'?'/studio/product-flow-es/screens/home.png':t.id==='communication-beat'?'/studio/communication-beat.svg':t.id==='community-selection'?'/studio/community-selection.svg':t.id==='creator-program-screen'?'/studio/creator-program/inicio-es.jpg':t.id==='heart-pop'?'/studio/heart-pop.png':creatorCardArt[t.id]?cardArtUrl(t.id):t.id==='product-tile'?tileThumbnail:t.id==='spoken-question'?questionThumbnail:thumbnail;return {id:`studio-${t.id}`,name:t.name,kind:'image',duration:3600,frames:108000,width:t.width,height:t.height,hasAudio:false,url:preview,thumbnails:[preview],peaks:[]};});
+export const studioAssets:Asset[]=studioTemplates.map(t=>{const preview=conversationArtwork[t.id]??(t.id==='product-flow-demo-es'?'/studio/product-flow-es/screens/home.png':t.id==='communication-beat'?'/studio/communication-beat.svg':t.id==='community-selection'?'/studio/community-selection.svg':t.id==='creator-program-screen'?'/studio/creator-program/inicio-es.jpg':t.id==='heart-pop'?'/studio/heart-pop.png':creatorCardArt[t.id]?cardArtUrl(t.id):t.id==='product-tile'?tileThumbnail:t.id==='spoken-question'?questionThumbnail:thumbnail);return {id:`studio-${t.id}`,name:t.name,kind:'image',duration:3600,frames:108000,width:t.width,height:t.height,hasAudio:false,url:preview,thumbnails:[preview],peaks:[]};});
 export const withStudioAssets=(assets:Asset[])=>[...assets.filter(a=>!studioAssets.some(s=>s.id===a.id)),...studioAssets];
 export function addStudioElement(project:Project,templateId:string,start:number,id:string,trackId?:string):Project{
   const t=studioTemplates.find(t=>t.id===templateId);if(!t)throw new Error('Unknown Studio element.');
