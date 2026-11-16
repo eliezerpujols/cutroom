@@ -34,3 +34,17 @@ Editable-source manifest, references, brief, registration and cover PNG remain i
 ## Cover punctuation revision 129
 
 Removed only the period after `A VOS` in a duplicated [Figma v03 frame 208:347](https://www.figma.com/design/nEw6oajcSUL2irEFU2Pm1Q/CP--Social?node-id=208-347), preserving brand yellow and all other artwork. Exported the actual 1080 x 1920 Figma PNG, registered Created version v03 (`a7173024-1f1c-4068-a8f9-8e0806107376`), and updated the independent Cutroom cover image. Schema and saved readback pass; the entire timeline is unchanged. No visual testing. Source/export and prior versions remain in the brand output; local project evidence is in `production/cover-no-period-v20/`. Remote Actions workflows and hooks were empty before synchronization.
+
+## CP ES publication — 2026-11-16
+
+Rendered the latest user-saved revision **130** as a fresh full MP4 with its matching cover from the same snapshot (export `a993e5fe-fa2c-4c14-8c5f-001044ea4885`). Revision 130 includes the user's opening-message spacing correction. The video is H.264 / AAC, 1080 x 1920 at 30 fps, approximately 72.58 seconds and 94,219,874 bytes; the fresh cover is a 1080 x 1920 PNG. No visual testing was performed.
+
+Published once through Zernio to all three accounts in the Spanish profile: Instagram, Facebook and TikTok `creatorprogram.es`. Zernio post `6afb53f49f2eec6aa68164af` and all three platform entries report **published**, with these returned URLs:
+
+- [Instagram Reel](https://www.instagram.com/reel/Df0ES2WgA6l/)
+- [Facebook video](https://www.facebook.com/watch/?v=1809605556925719)
+- [TikTok video](https://www.tiktok.com/@creatorprogram.es/video/7708847763961761037)
+
+Instagram and Facebook use the approved full three-paragraph caption. TikTok uses exactly the first two paragraphs. Readback verifies the account IDs, caption override, video media type, comments enabled on TikTok, AI/promotion flags disabled, and the uploaded cover in the documented per-platform fields. TikTok's Business connection received the native cover URL. Facebook uses a full-length feed video because Zernio's Reel route documents a 60-second maximum; a subsequent thumbnail metadata update explicitly confirmed its custom cover. Instagram saved the custom Reel cover and share-to-feed setting.
+
+Export receipt with checksums, outgoing caption variants/request, publication response, settings verification and final published readback remain local in `production/publish-cp-es-v21/`. The signed upload URLs were not persisted. Existing timeline and unrelated application source changes are preserved. This source synchronization contains delivery evidence only and does not deploy runtime code.
