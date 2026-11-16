@@ -124,6 +124,15 @@ unverified behavior as completed. Preserve the user's original edit.
 
 ## Paper conversations
 
+`paper-chat-stack` is the loose paper-cut version: individual messages enter
+diagonally from their sender's lower corner in held stop-motion poses, settle
+with a small tilt and remain stacked. The uneven scissor-cut paper contour
+includes the bottom tail and mirrors for incoming messages. It shares the conversation copy and local-frame cues, plus
+`entranceFrames` (1–60). `reply` alternates buyer/seller/buyer without a PDF;
+`followup` retains requests and then receives the document. It has no phone,
+header, composer or background; place it over a composition background. Existing
+conversation templates keep their original appearance and motion.
+
 `paper-conversation` renders an anonymous chat with editable message copy and a
 blurred contact name. `paper-message` crops the first outgoing bubble. Both use
 `scenario` (`waiting`, `manual`, or `followup`), `contact`, `message1`–`message3`,

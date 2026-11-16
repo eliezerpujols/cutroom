@@ -14,7 +14,7 @@ function Bubble({text,time,incoming=false,children,progress=1}:{text?:string;tim
     <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:'.8cqw',fontSize:'2.65cqw',color:'#66756D',marginTop:'.6cqw'}}>{time}{!incoming&&<CheckCheck style={{...iconStyle,width:'3.5cqw',height:'3.5cqw',color:'#7E8A80'}}/>}</div>
   </div>;
 }
-function Document({name,download=1}:{name:string;download?:number}){
+export function Document({name,download=1}:{name:string;download?:number}){
   return <div style={{display:'flex',alignItems:'center',gap:'2.3cqw',padding:'2.6cqw',background:'#66756D0D',borderRadius:'1.4cqw',minWidth:'42cqw'}}>
     <FileText style={{...iconStyle,width:'7.3cqw',height:'7.3cqw',color:'#D35555'}}/>
     <div style={{flex:1}}><div style={{fontSize:'3.9cqw',fontWeight:550}}>{name}</div><div style={{fontSize:'2.65cqw',color:'#728077',marginTop:'.8cqw'}}>PDF · Documento</div></div>
