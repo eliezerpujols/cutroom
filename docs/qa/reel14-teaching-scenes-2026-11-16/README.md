@@ -1,6 +1,14 @@
 # Reel 14 revisions — 2026-11-16
 
-Final saved local project revision: **126**. The latest continuity fix removes the brief Lu shot before the corrections scene; revision 124 applied the typography and paper bubble feedback.
+Final saved local project revision: **127**. The latest feedback presents three passages in short word groups, using bold upright Epilogue. Prior revisions below retain their historical verification scope.
+
+Revision 127 changes:
+
+- Recording: Grabate (1501-1511), haciendo (1511-1519), los (1519-1525), ejercicios (1525-1553). The earlier heading ends before the next word begins. The exercise words use Epilogue 148 px, weight 800, blue, at the established main heading position.
+- Explanation: four caption cues show explica (1553-1568), por que (1568-1577), los estas (1577-1588), incluyendo (1588-1614). Spanish accents remain intact in the saved text. Cue-specific Epilogue 148 px / 800 styling preserves the layer default and every original absolute word timestamp.
+- CTA: Creas el (1983-2002) switches from italic Cormorant to upright Epilogue 148 px / 800 at the existing emphasis position; enlace begins at 2002 and retains its 2024 endpoint and existing font. The saved Spanish accent remains intact. The phrases appear consecutively.
+
+Revision 127 verification: schema, saved readback and frame-by-frame grouping checks pass. All media/audio, tracks, cover and unrelated text/captions are unchanged. No visual testing, renders or browser inspection were performed, as requested. Snapshots, candidate, change plan and verification are in the local project's production/word-groups-v18/ folder.
 
 - Opening (frames 287–329): “Primero” → “tuvo” → “que” → “esperar” appears one word at a time, using the existing “esperar” style: Epilogue 148 px, weight 800, white, same position. Word boundaries follow the saved transcription and each word holds until the next starts.
 - “haciendo los ejercicios” and “añadí esas” now use upright Epilogue 68 px, weight 600, in their existing blue and positions.
