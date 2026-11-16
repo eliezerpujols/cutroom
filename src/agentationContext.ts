@@ -26,6 +26,11 @@ function stamp(target:EventTarget|null,frame:number){
     element.setAttribute('data-cutroom-time',seconds(frame));
     if(element===root)break;
   }
+  // Outer items (such as the preview) keep an earlier frame from a previous hover; refresh them too.
+  for(let element=root.parentElement;element;element=element.parentElement)if(element.hasAttribute('data-cutroom-frame')){
+    element.setAttribute('data-cutroom-frame',String(frame));
+    element.setAttribute('data-cutroom-time',seconds(frame));
+  }
 }
 
 export function useAgentationFrame(frame:number){
