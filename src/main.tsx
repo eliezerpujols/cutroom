@@ -7,7 +7,11 @@ import './styles.css';
 import './visuals.css';
 import './select.css';
 import './inspector.css';
+import {Agentation} from 'agentation';
 import App from './App';
 const saved=localStorage.getItem('cutroom-theme')||'system';
 document.documentElement.dataset.theme=saved==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):saved;
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById('root')!).render(<>
+  <App/>
+  <Agentation endpoint="http://localhost:4747"/>
+</>);
