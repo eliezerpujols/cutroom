@@ -1,6 +1,6 @@
 # Reel 14 revisions — 2026-11-16
 
-Final saved local project revision: **128** (cover update below). Timeline revision: **127**. The latest feedback presents three passages in short word groups, using bold upright Epilogue. Prior revisions below retain their historical verification scope.
+Final saved local project revision: **129** (cover update below). Timeline revision: **127**. The latest feedback presents three passages in short word groups, using bold upright Epilogue. Prior revisions below retain their historical verification scope.
 
 Revision 127 changes:
 
@@ -30,3 +30,7 @@ Duplicated the existing editable Reel 14 Figma cover from frame `203:347` to [v0
 Exported the actual Figma frame as a 1080 x 1920 PNG and registered it in Created under the same work slug, version v02 (`e9a52d93-80de-472d-a0c6-5c44a7df1a80`). The Cutroom project's independent cover-scene image now uses that export. All other project state, including the full video timeline and audio, is unchanged from revision 127. Schema and exact saved readback pass. Figma returned two remaining editable Epilogue text layers and exact yellow RGB; the exported file header confirms PNG and dimensions. No visual testing or screenshots were performed, per the user's preference.
 
 Editable-source manifest, references, brief, registration and cover PNG remain in the brand output's `reel-14-te-compran-a-vos/v02/` directory. Cutroom snapshots and structural verification remain in `production/cover-yellow-v19/`. No app code or runtime deployment changed; remote Actions workflows and hooks were empty before synchronization.
+
+## Cover punctuation revision 129
+
+Removed only the period after `A VOS` in a duplicated [Figma v03 frame 208:347](https://www.figma.com/design/nEw6oajcSUL2irEFU2Pm1Q/CP--Social?node-id=208-347), preserving brand yellow and all other artwork. Exported the actual 1080 x 1920 Figma PNG, registered Created version v03 (`a7173024-1f1c-4068-a8f9-8e0806107376`), and updated the independent Cutroom cover image. Schema and saved readback pass; the entire timeline is unchanged. No visual testing. Source/export and prior versions remain in the brand output; local project evidence is in `production/cover-no-period-v20/`. Remote Actions workflows and hooks were empty before synchronization.
