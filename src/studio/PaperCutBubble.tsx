@@ -8,7 +8,7 @@ const fiber='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.
 
 export function PaperCutBubble({text,time,incoming=false,children}:{text?:string;time:string;incoming?:boolean;children?:React.ReactNode}){
   const paper:React.CSSProperties={position:'absolute',inset:0,clipPath:edge,transform:incoming?'scaleX(-1)':undefined};
-  return <div style={{position:'relative',alignSelf:incoming?'flex-start':'flex-end',maxWidth:'83%',minWidth:'23%',padding:'3.3cqw 3.6cqw 4cqw',filter:'drop-shadow(.35cqw .85cqw .55cqw #004F8C32)'}}>
+  return <div style={{position:'relative',alignSelf:incoming?'flex-start':'flex-end',maxWidth:'83%',minWidth:'23%',padding:'3.3cqw 3.6cqw 4cqw',filter:'drop-shadow(.35cqw .85cqw .55cqw #302B2429)'}}>
     <div aria-hidden style={{...paper,background:'#FFFDF7'}}/>
     <div aria-hidden style={{...paper,inset:'.45cqw .5cqw .5cqw',backgroundColor:incoming?'#F7F5EF':'#D9F4D0',backgroundImage:`url("${fiber}")`,backgroundSize:'12cqw 12cqw'}}/>
     <div style={{position:'relative'}}>
