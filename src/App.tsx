@@ -55,7 +55,7 @@ import {timelineItems,type TimelineItem} from './timelineSelection';
 import {copyEditorSelection,removeEditorSelection,pasteEditorClipboard,type ObjectSelection,type EditorClipboard} from './editorClipboard';
 import {api,useEditor} from './useEditor';
 import {FPS,uid,time,endFrame,clamp,splitClip,splitTarget,type Asset,type Clip,type Project,type Tool} from './model';
-import {cutroomTarget,useAgentationFrame} from './agentationContext';
+import {cutroomTarget,fromAgentation,keyTarget,useAgentationFrame} from './agentationContext';
 
 import {ProjectShell,type ProjectControls} from './ProjectShell';
 import {restoredProject,useProjectSave,type Workspace} from './useProjectSave';
@@ -234,7 +234,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   useEffect(()=>{
     const onObjectKey=(event:KeyboardEvent)=>{
       if(event.isComposing||event.defaultPrevented||exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
-      const target=event.target;if(!(target instanceof HTMLElement)||target.closest('input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="menu"],[role^="menuitem"]'))return;
+      if(fromAgentation(event))return;
+      const target=keyTarget(event);if(!(target instanceof HTMLElement)||target.closest('input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="menu"],[role^="menuitem"]'))return;
       if(target.closest('[role="slider"]')&&(!target.closest('.ruler')||coverEditing))return;
       const modified=event.metaKey||event.ctrlKey,key=event.key.toLowerCase();
       const command=!event.altKey&&!event.shiftKey&&modified?({d:'duplicate',x:'cut',c:'copy',v:'paste'} as const)[key as 'd'|'x'|'c'|'v']:!modified&&!event.altKey&&(key==='delete'||key==='backspace')?'delete':undefined;
@@ -246,7 +247,8 @@ function Editor({initial,controls}:{initial:Workspace;controls:ProjectControls})
   },[coverEditing,exportOpen,helpOpen,objectCommand]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{
     if(exportOpen||helpOpen||document.querySelector('[role="dialog"]'))return;
-    const target=e.target as HTMLElement;if(target.closest('input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="menu"],[role="menuitem"]'))return;
+    if(fromAgentation(e))return;
+    const target=keyTarget(e) as HTMLElement;if(!(target instanceof HTMLElement)||target.closest('input,textarea,select,summary,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="menu"],[role="menuitem"]'))return;
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
     if(coverEditing)return;
     if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();if(!e.repeat)split();return;}

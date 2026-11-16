@@ -42,3 +42,8 @@ export function useAgentationFrame(frame:number){
     return()=>{for(const type of ['pointerover','pointermove','pointerdown','click'])window.removeEventListener(type,update,options);};
   },[]);
 }
+
+// Agentation renders in a shadow root, so event.target is retargeted to its host element.
+// Use the real element and leave keys typed into Agentation to Agentation.
+export const keyTarget=(event:Event)=>event.composedPath()[0]??event.target;
+export const fromAgentation=(event:Event)=>event.composedPath().some(node=>node instanceof Element&&(node.localName==='agentation-toolbar'||node.hasAttribute('data-agentation-portal')));
