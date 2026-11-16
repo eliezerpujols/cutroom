@@ -47,3 +47,13 @@ test('renders loose messages and delivery with no phone chrome or wallpaper',()=
   assert.doesNotMatch(html,/wallpaper|contacto|Enviar documento|Hoy/);
   assert.match(html,/rotate\(/);
 });
+test('document label can be translated without changing saved Spanish instances',()=>{
+  const render=(props:Record<string,string|number>)=>renderToStaticMarkup(createElement(PaperChatStack,{instance:{template:'paper-chat-stack',props},frame:110}));
+  assert.match(render({}),/PDF · Documento/);
+  const english=render({documentName:'Workout.pdf',documentLabel:'Document'});
+  assert.match(english,/Workout\.pdf/);
+  assert.match(english,/PDF · Document</);
+  assert.doesNotMatch(english,/Documento/);
+  assert.equal(studioSchema.safeParse({template:'paper-chat-stack',props:{documentLabel:'Document'}}).success,true);
+  assert.equal(studioDefaults('paper-chat-stack').documentLabel,'Documento');
+});

@@ -32,7 +32,7 @@ export function PaperChatStack({instance,frame}:{instance:StudioInstance;frame:n
   return <div style={{position:'absolute',inset:0,containerType:'inline-size',fontFamily:'Arial,Helvetica,sans-serif',fontWeight:400,fontStyle:'normal',color:'#17231F'}}>
     <div style={{position:'absolute',inset:'7% 6%',display:'flex',flexDirection:'column',gap:'5cqw'}}>
       {s.messages.map((message,i)=>stage(message.at,message.incoming,i,<PaperCutBubble {...message}/>))}
-      {s.document&&stage(s.receive,true,3,<PaperCutBubble time="12:42" incoming><Document name={String(p.documentName)} download={s.download}/></PaperCutBubble>)}
+      {s.document&&stage(s.receive,true,3,<PaperCutBubble time="12:42" incoming><Document name={String(p.documentName)} download={s.download} label={String(p.documentLabel??'Documento')}/></PaperCutBubble>)}
     </div>
   </div>;
 }

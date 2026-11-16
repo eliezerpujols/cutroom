@@ -36,7 +36,7 @@ const bubbleFields: StudioField[] = [
 export const conversationTemplates = [
   {id:'paper-conversation',name:'Chat · escribir y entregar',width:720,height:1020,duration:114,fields},
   {id:'paper-message',name:'Chat · mensaje recortado',width:720,height:240,duration:96,fields},
-  {id:'paper-chat-stack',name:'Chat · papel en movimiento',width:900,height:1000,duration:123,fields:[...fields,{key:'entranceFrames',label:'Entrada desde esquina',type:'number',default:12,min:1,max:60,step:1,unit:'fr'}] satisfies StudioField[]},
+  {id:'paper-chat-stack',name:'Chat · papel en movimiento',width:900,height:1000,duration:123,fields:[...fields,{key:'documentLabel',label:'Tipo de documento',type:'text',default:'Documento'},{key:'entranceFrames',label:'Entrada desde esquina',type:'number',default:12,min:1,max:60,step:1,unit:'fr'}] satisfies StudioField[]},
   // Figma iPhone chat kit at 393 points wide, rendered at 2×; the chat area is shortened to 700 points.
   {id:'phone-chat',name:'Chat · iPhone',width:786,height:1400,duration:114,fields},
   {id:'chat-bubbles',name:'Chat · burbujas sueltas',width:786,height:460,duration:60,fields:bubbleFields},
