@@ -72,3 +72,15 @@ test('comment card renders its initials, blurred name and message from props',as
   assert.match(html,/AB/);assert.match(html,/blur\(/);assert.match(html,/Hola/);
   assert.ok(studioTemplates.find(t=>t.id==='comment-card'));
 });
+
+test('phone chat always shows the buyer point of view, even for manual delivery',async()=>{
+  const {createElement}=await import('react');
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {PhoneChat}=await import('../src/studio/PhoneChat');
+  const props={scenario:'manual',message1:'Hola, ya pagué',receiveAt:100};
+  const sending=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:80,libraryPreview:true}));
+  assert.doesNotMatch(sending,/Enviar documento/);
+  assert.match(sending,/#D9FDD3/);
+  const received=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:104,libraryPreview:true}));
+  assert.match(received,/Rutina\.pdf/);assert.match(received,/conic-gradient/);
+});

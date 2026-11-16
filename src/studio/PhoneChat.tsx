@@ -47,7 +47,9 @@ function Wallpaper({libraryPreview}:{libraryPreview:boolean}){
 
 /** iPhone messaging screen. Shares the paper conversation's scenario timing. */
 export function PhoneChat({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
-  const p={...conversationDefaults,...instance.props},s=conversationState(frame,p);
+  const p={...conversationDefaults,...instance.props},shared=conversationState(frame,p);
+  // Always the buyer's phone: their messages are sent and the PDF arrives, whoever sends it manually.
+  const s={...shared,messages:shared.messages.map(message=>({...message,incoming:false})),attached:false,documentIncoming:true};
   const bar:React.CSSProperties={position:'absolute',left:0,right:0,background:'#F5F2EBEB',backdropFilter:'blur(12px)'};
   const sendPress=s.attached&&frame>=s.receive-4;
   return <div style={{position:'absolute',inset:0,containerType:'inline-size',fontFamily:font,color:ink,fontStyle:'normal',fontWeight:400}}>
