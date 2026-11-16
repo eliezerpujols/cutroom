@@ -63,3 +63,12 @@ test('phone chat renders the Figma screen with the shared scenario timing',async
   assert.match(late,/Sigo esperando/);
   assert.match(late,/Rutina\.pdf/);
 });
+
+test('comment card renders its initials, blurred name and message from props',async()=>{
+  const {createElement}=await import('react');
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {CommentCard}=await import('../src/studio/CommentCard');
+  const html=renderToStaticMarkup(createElement(CommentCard,{instance:{template:'comment-card',props:{initials:'AB',message:'Hola'}}}));
+  assert.match(html,/AB/);assert.match(html,/blur\(/);assert.match(html,/Hola/);
+  assert.ok(studioTemplates.find(t=>t.id==='comment-card'));
+});
