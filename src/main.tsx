@@ -8,10 +8,11 @@ import './visuals.css';
 import './select.css';
 import './inspector.css';
 import {Agentation} from 'agentation';
+import {AGENTATION_ATTRIBUTES} from './agentationContext';
 import App from './App';
 const saved=localStorage.getItem('cutroom-theme')||'system';
 document.documentElement.dataset.theme=saved==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):saved;
 createRoot(document.getElementById('root')!).render(<>
   <App/>
-  <Agentation endpoint="http://localhost:4747"/>
+  <Agentation endpoint="http://localhost:4747" appName="Cutroom" identifyingAttributes={AGENTATION_ATTRIBUTES}/>
 </>);

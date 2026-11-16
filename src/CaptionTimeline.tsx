@@ -1,6 +1,7 @@
 import React,{useEffect,useRef} from 'react';
 import {ClosedCaption,Eye,EyeOff} from 'lucide-react';
 import {IconButton} from './ui/primitives';
+import {cutroomTarget} from './agentationContext';
 import type {LayerRowAttributes} from './useLayerReorder';
 import {FPS,clamp,type Project} from './model';
 import {cueText,resizeCaptionCue,type CaptionCue,type CaptionLayer,type CaptionSelection} from './captions';
@@ -33,7 +34,7 @@ export const CaptionTimeline=React.memo(function CaptionTimeline({dragHandle,row
   }
   return <>{layers.map(layer=><div {...rowAttributes} className="track-row caption-track-row" key={layer.id} role="group" aria-label={`${layer.name} track`}>
     <div className="track-label">{dragHandle}<button className="caption-track-name" onClick={()=>select({layerId:layer.id})}><ClosedCaption size={16}/><span>{layer.name}</span></button><IconButton label={`${layer.muted?'Show':'Hide'} ${layer.name}`} aria-pressed={!layer.muted} onClick={()=>edit(p=>({...p,captions:p.captions?.map(item=>item.id===layer.id?{...item,muted:!item.muted}:item)}))}>{layer.muted?<EyeOff size={14}/>:<Eye size={14}/>}</IconButton></div>
-    <div className="track-lane" style={{width}}>{layer.cues.map(cue=><div key={cue.id} data-caption-id={cue.id} data-timeline-id={cue.id} role="button" tabIndex={0} className={`timeline-clip caption-clip ${selectedIds.includes(cue.id)?'selected':''} ${layer.muted||cue.hidden?'caption-hidden':''}`} aria-label={`Caption: ${cueText(cue)}`} aria-pressed={selectedIds.includes(cue.id)} style={{left:cue.start*ppf,width:Math.max(6,cue.duration*ppf)}} onPointerDown={event=>start(event,layer,cue)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.stopPropagation();event.preventDefault();toggle(cue.id,event.shiftKey||event.metaKey||event.ctrlKey);}if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.stopPropagation();event.preventDefault();nudge(cue.id,(event.key==='ArrowRight'?1:-1)*(event.shiftKey?FPS:1));}}}>
+    <div className="track-lane" style={{width}}>{layer.cues.map(cue=><div key={cue.id} {...cutroomTarget('caption-cue',cue.id,cue,{name:cueText(cue),track:layer.id})} data-caption-id={cue.id} data-timeline-id={cue.id} role="button" tabIndex={0} className={`timeline-clip caption-clip ${selectedIds.includes(cue.id)?'selected':''} ${layer.muted||cue.hidden?'caption-hidden':''}`} aria-label={`Caption: ${cueText(cue)}`} aria-pressed={selectedIds.includes(cue.id)} style={{left:cue.start*ppf,width:Math.max(6,cue.duration*ppf)}} onPointerDown={event=>start(event,layer,cue)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.stopPropagation();event.preventDefault();toggle(cue.id,event.shiftKey||event.metaKey||event.ctrlKey);}if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.stopPropagation();event.preventDefault();nudge(cue.id,(event.key==='ArrowRight'?1:-1)*(event.shiftKey?FPS:1));}}}>
       <div className="caption-clip-text">{cueText(cue)||'Empty caption'}</div><div className="clip-edge left" role="separator" aria-label="Resize caption start" onPointerDown={event=>start(event,layer,cue,'left')}/><div className="clip-edge right" role="separator" aria-label="Resize caption end" onPointerDown={event=>start(event,layer,cue,'right')}/>
     </div>)}</div>
   </div>)}</>;

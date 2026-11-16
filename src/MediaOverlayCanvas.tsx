@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {clamp,clipsInRenderOrder,type Asset,type Clip,type Project} from './model';
 import {overlayHeight,type ClipOverlay} from './overlays';
 import {snapCanvasPosition} from './canvasSnapping';
+import {cutroomTarget} from './agentationContext';
 import './canvasGuides.css';
 
 type Corner='nw'|'ne'|'sw'|'se';
@@ -43,7 +44,7 @@ export function MediaOverlayCanvas({project,assets,frame,selected,select,change,
   }
   return <div ref={root} className="media-overlay-canvas">{clipsInRenderOrder(project).filter(clip=>!clip.hidden&&clip.overlay&&clip.start<=frame&&frame<clip.start+clip.duration).map(clip=>{
     const asset=assets.find(asset=>asset.id===clip.assetId);if(!asset||asset.missing)return null;const value=clip.overlay!,active=selected===clip.id;
-    return <div key={clip.id} className={`media-overlay-box ${active?'selected':''}`} style={{left:`${value.x}%`,top:`${value.y}%`,width:`${value.width}%`,height:`${overlayHeight(project,asset,value.width)}%`,transform:`translate(-50%,-50%) rotate(${clip.transform?.rotation??0}deg)`}} role="button" tabIndex={0} aria-label={`Move overlay ${clip.name}`} aria-pressed={active} onPointerDown={event=>start(event,clip,asset)} onClick={event=>event.stopPropagation()} onKeyDown={event=>{
+    return <div key={clip.id} {...cutroomTarget(clip.studio?'studio-overlay':'media-overlay',clip.id,clip,{name:clip.name,track:clip.trackId})} className={`media-overlay-box ${active?'selected':''}`} style={{left:`${value.x}%`,top:`${value.y}%`,width:`${value.width}%`,height:`${overlayHeight(project,asset,value.width)}%`,transform:`translate(-50%,-50%) rotate(${clip.transform?.rotation??0}deg)`}} role="button" tabIndex={0} aria-label={`Move overlay ${clip.name}`} aria-pressed={active} onPointerDown={event=>start(event,clip,asset)} onClick={event=>event.stopPropagation()} onKeyDown={event=>{
       if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();select(clip.id);}
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(direction&&!event.metaKey&&!event.ctrlKey&&!event.altKey){event.preventDefault();event.stopPropagation();select(clip.id);const step=event.shiftKey?5:.5;change(clip.id,{x:clamp(value.x+direction[0]*step,0,100),y:clamp(value.y+direction[1]*step,0,100)});}
