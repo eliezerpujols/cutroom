@@ -31,7 +31,7 @@ test('waiting does not accidentally receive; reversed timing preserves action or
   assert.equal(state.receive,24);
 });
 test('both registered crops resolve synthetic assets and independent defaults',()=>{
-  for(const id of ['paper-conversation','paper-message']){
+  for(const id of ['paper-conversation','paper-message','phone-chat']){
     assert.ok(studioTemplates.find(t=>t.id===id));
     assert.ok(studioAssets.find(a=>a.id===`studio-${id}`));
     assert.equal(studioDefaults(id).message2,'¿Alguna novedad con la rutina?');
@@ -49,4 +49,17 @@ test('conversation cues survive split/save and reject unknown or out-of-range pr
   assert.equal(studioSchema.safeParse({template:'paper-conversation',props:{receiveAt:-1}}).success,false);
   assert.equal(studioSchema.safeParse({template:'paper-conversation',props:{unknown:'x'}}).success,false);
   assert.equal(studioSchema.safeParse({template:'paper-message',props:{message1:'x'.repeat(161)}}).success,false);
+});
+
+test('phone chat renders the Figma screen with the shared scenario timing',async()=>{
+  const {createElement}=await import('react');
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {PhoneChat}=await import('../src/studio/PhoneChat');
+  const props={scenario:'followup',contact:'Entrenador',message1:'Hola',message2:'¿Novedad?',message3:'Sigo esperando',documentName:'Rutina.pdf',sendSecondAt:28,sendThirdAt:60,receiveAt:84};
+  const early=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:10,libraryPreview:true}));
+  const late=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:110,libraryPreview:true}));
+  assert.match(early,/\/studio\/phone-chat\/wallpaper\.png/);
+  assert.doesNotMatch(early,/Rutina\.pdf/);
+  assert.match(late,/Sigo esperando/);
+  assert.match(late,/Rutina\.pdf/);
 });

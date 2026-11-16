@@ -16,8 +16,11 @@ const fields: StudioField[] = [
 export const conversationTemplates = [
   {id:'paper-conversation',name:'Chat · escribir y entregar',width:720,height:1020,duration:114,fields},
   {id:'paper-message',name:'Chat · mensaje recortado',width:720,height:240,duration:96,fields},
+  // Figma iPhone chat kit: 393 × 852 points, rendered at 2×.
+  {id:'phone-chat',name:'Chat · iPhone',width:786,height:1704,duration:114,fields},
 ];
 export const conversationArtwork: Record<string,string> = {
   'paper-conversation':'/studio/paper-conversation.svg',
   'paper-message':'/studio/paper-conversation.svg',
+  'phone-chat':'/studio/phone-chat.svg',
 };
