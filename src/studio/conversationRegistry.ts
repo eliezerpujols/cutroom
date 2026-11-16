@@ -4,7 +4,7 @@ import {commentCardDefaults as card} from './CommentCard';
 import {chatBubblesDefaults as bubbles} from './ChatBubbles';
 
 const fields: StudioField[] = [
-  {key:'scenario',label:'Acción (waiting / manual / followup)',type:'text',default:conversationDefaults.scenario},
+  {key:'scenario',label:'Acción (waiting / manual / followup / reply)',type:'text',default:conversationDefaults.scenario},
   {key:'contact',label:'Nombre oculto',type:'text',default:conversationDefaults.contact},
   {key:'message1',label:'Primer mensaje',type:'text',default:conversationDefaults.message1},
   {key:'message2',label:'Segundo mensaje',type:'text',default:conversationDefaults.message2},

@@ -95,3 +95,15 @@ test('chat bubbles cut in at their local frames without entrance motion',async()
   assert.match(early,/Uno/);assert.doesNotMatch(early,/Dos/);assert.match(late,/Tres/);
   assert.match(late,/opacity:1/);
 });
+
+test('phone chat reply scenario: seller answers, buyer replies, nothing is delivered',async()=>{
+  const {createElement}=await import('react');
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {PhoneChat}=await import('../src/studio/PhoneChat');
+  const props={scenario:'reply',message1:'Hola',message2:'Hey, te la envío en un momento',message3:'Está bien :)',sendSecondAt:30,sendThirdAt:90,receiveAt:100};
+  const typingSeller=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:20,libraryPreview:true}));
+  assert.doesNotMatch(typingSeller,/Hey, te la/);
+  const end=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:120,libraryPreview:true}));
+  assert.match(end,/Hey, te la envío en un momento/);assert.match(end,/Está bien :\)/);assert.doesNotMatch(end,/Rutina\.pdf/);
+  assert.match(end,/background:#FFFFFF/);
+});

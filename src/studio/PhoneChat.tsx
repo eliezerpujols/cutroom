@@ -47,9 +47,13 @@ function Wallpaper({libraryPreview}:{libraryPreview:boolean}){
 
 /** iPhone messaging screen. Shares the paper conversation's scenario timing. */
 export function PhoneChat({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
-  const p={...conversationDefaults,...instance.props},shared=conversationState(frame,p);
+  const p={...conversationDefaults,...instance.props},reply=p.scenario==='reply';
   // Always the buyer's phone: their messages are sent and the PDF arrives, whoever sends it manually.
-  const s={...shared,messages:shared.messages.map(message=>({...message,incoming:false})),attached:false,documentIncoming:true};
+  // "reply": the seller answers message 2 (incoming), the buyer types message 3, and nothing is delivered yet.
+  const shared=conversationState(frame,reply?{...p,scenario:'followup'}:p),second=Math.max(8,Number(p.sendSecondAt));
+  const s={...shared,attached:false,documentIncoming:true,document:reply?false:shared.document,
+    draft:reply&&frame<second?'':shared.draft,
+    messages:shared.messages.map((message,i)=>reply?{...message,incoming:i===1,time:['09:41','09:43','09:43'][i]}:{...message,incoming:false})};
   const bar:React.CSSProperties={position:'absolute',left:0,right:0,background:'#F5F2EBEB',backdropFilter:'blur(12px)'};
   const sendPress=s.attached&&frame>=s.receive-4;
   return <div style={{position:'absolute',inset:0,containerType:'inline-size',fontFamily:font,color:ink,fontStyle:'normal',fontWeight:400}}>
