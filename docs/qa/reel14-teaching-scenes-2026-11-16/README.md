@@ -1,6 +1,6 @@
 # Reel 14 revisions — 2026-11-16
 
-Final saved local project revision: **127**. The latest feedback presents three passages in short word groups, using bold upright Epilogue. Prior revisions below retain their historical verification scope.
+Final saved local project revision: **128** (cover update below). Timeline revision: **127**. The latest feedback presents three passages in short word groups, using bold upright Epilogue. Prior revisions below retain their historical verification scope.
 
 Revision 127 changes:
 
@@ -22,3 +22,11 @@ Revision 126 validation: schema and saved readback pass; every frame from 1495 t
 Revision 124 snapshots, change plan, validation results and renders remain in the local project's `production/type-chat-v16/` folder. Earlier revision 123 evidence remains in `production/corrections-v15/`. Its pointer research inspected [anyway.julia, editing carousel, slide 4](https://www.instagram.com/p/DeHoreyANxc/); those pointers are superseded by the user's latest bubble request. No archived reference footage was imported. Private project media remain local, and Reel 7 is unchanged.
 
 Evidence is synchronized on the existing `reel-14-paper-chat-bubbles` topic branch. Remote Actions workflows and hooks were checked before publishing (both empty). Pre-existing source edits in ChatBubbles, PhoneChat and their test remain outside this task.
+
+## Cover revision 128
+
+Duplicated the existing editable Reel 14 Figma cover from frame `203:347` to [v02, frame 207:347](https://www.figma.com/design/nEw6oajcSUL2irEFU2Pm1Q/CP--Social?node-id=207-347). Removed the entire lower tagline group and changed only the `A VOS.` text fill to the canonical brand yellow, `#FFE501`. The photo, aligned foreground, exact remaining copy, typography, size and placement are preserved; the original Figma version remains intact.
+
+Exported the actual Figma frame as a 1080 x 1920 PNG and registered it in Created under the same work slug, version v02 (`e9a52d93-80de-472d-a0c6-5c44a7df1a80`). The Cutroom project's independent cover-scene image now uses that export. All other project state, including the full video timeline and audio, is unchanged from revision 127. Schema and exact saved readback pass. Figma returned two remaining editable Epilogue text layers and exact yellow RGB; the exported file header confirms PNG and dimensions. No visual testing or screenshots were performed, per the user's preference.
+
+Editable-source manifest, references, brief, registration and cover PNG remain in the brand output's `reel-14-te-compran-a-vos/v02/` directory. Cutroom snapshots and structural verification remain in `production/cover-yellow-v19/`. No app code or runtime deployment changed; remote Actions workflows and hooks were empty before synchronization.
