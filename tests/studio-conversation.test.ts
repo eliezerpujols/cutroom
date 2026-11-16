@@ -84,3 +84,14 @@ test('phone chat always shows the buyer point of view, even for manual delivery'
   const received=renderToStaticMarkup(createElement(PhoneChat,{instance:{template:'phone-chat',props},frame:104,libraryPreview:true}));
   assert.match(received,/Rutina\.pdf/);assert.match(received,/conic-gradient/);
 });
+
+test('chat bubbles cut in at their local frames without entrance motion',async()=>{
+  const {createElement}=await import('react');
+  const {renderToStaticMarkup}=await import('react-dom/server');
+  const {ChatBubbles}=await import('../src/studio/ChatBubbles');
+  const props={message1:'Uno',message2:'Dos',message3:'Tres',secondAt:10,thirdAt:20};
+  const early=renderToStaticMarkup(createElement(ChatBubbles,{instance:{template:'chat-bubbles',props},frame:5}));
+  const late=renderToStaticMarkup(createElement(ChatBubbles,{instance:{template:'chat-bubbles',props},frame:20}));
+  assert.match(early,/Uno/);assert.doesNotMatch(early,/Dos/);assert.match(late,/Tres/);
+  assert.match(late,/opacity:1/);
+});

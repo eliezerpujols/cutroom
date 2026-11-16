@@ -1,6 +1,7 @@
 import {PaperConversation} from './PaperConversation';
 import {PhoneChat} from './PhoneChat';
 import {CommentCard} from './CommentCard';
+import {ChatBubbles} from './ChatBubbles';
 import {ProductFlowDemo} from './ProductFlowDemo';
 import {CommunicationBeat} from './CommunicationBeat';
 import {CommunitySelection} from './CommunitySelection';
@@ -15,6 +16,7 @@ import {orbitPose,studioDefaults,type StudioInstance} from './registry';
 export function StudioElement({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
   if((instance.template==='product-flow-demo-es'||instance.template==='product-flow-demo-en'))return <ProductFlowDemo instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(instance.template==='paper-conversation'||instance.template==='paper-message')return <PaperConversation instance={instance} frame={frame}/>;
+  if(instance.template==='chat-bubbles')return <ChatBubbles instance={instance} frame={frame}/>;
   if(instance.template==='comment-card')return <CommentCard instance={instance}/>;
   if(instance.template==='phone-chat')return <PhoneChat instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(instance.template==='communication-beat')return <CommunicationBeat instance={instance} frame={frame}/>;

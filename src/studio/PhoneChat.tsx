@@ -26,7 +26,7 @@ const icons={
 function Battery(){return <svg viewBox="0 0 27.34 13.67" style={{width:u(27.3),height:u(13.7),display:'block'}}><rect x=".5" y=".5" width="24" height="12.67" rx="4" fill="none" stroke={ink} strokeOpacity=".4"/><rect x="2" y="2" width="21" height="9.67" rx="2.6" fill={ink}/><path d="M26 4.43C26.8 4.93 27.34 5.82 27.34 6.83C27.34 7.85 26.8 8.74 26 9.24Z" fill={ink} fillOpacity=".4"/></svg>;}
 function Ticks(){return <svg viewBox="0 0 16 11" style={{width:u(16),height:u(11),display:'block'}}><path d="M1 6l3 3.2L10.5 1.5M6.5 8.7l.6.5L14.5 1.5" fill="none" stroke={tick} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;}
 
-function Bubble({text,time,incoming=false,children,progress=1}:{text?:string;time:string;incoming?:boolean;children?:React.ReactNode;progress?:number}){
+export function Bubble({text,time,incoming=false,children,progress=1}:{text?:string;time:string;incoming?:boolean;children?:React.ReactNode;progress?:number}){
   return <div style={{position:'relative',alignSelf:incoming?'flex-start':'flex-end',maxWidth:u(300),padding:`${u(6)} ${u(10)} ${u(6)} ${u(11)}`,borderRadius:u(16),background:incoming?'#FFFFFF':outgoing,boxShadow:`0 ${u(1)} ${u(.5)} #0B141A1F`,opacity:progress,transform:`translateY(calc(${1-progress} * ${u(14)})) scale(${.94+.06*progress})`,transformOrigin:incoming?'left bottom':'right bottom'}}>
     {children}
     {text&&<span style={{fontSize:u(16),lineHeight:u(21),letterSpacing:'-.02em',whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{text}</span>}
