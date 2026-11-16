@@ -11,7 +11,7 @@ import {ProductTile} from './ProductTile';
 import {SpokenQuestion} from './SpokenQuestion';
 import {orbitPose,studioDefaults,type StudioInstance} from './registry';
 export function StudioElement({instance,frame,libraryPreview=false}:{instance:StudioInstance;frame:number;libraryPreview?:boolean}){
-  if(instance.template==='product-flow-demo-es')return <ProductFlowDemo instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
+  if((instance.template==='product-flow-demo-es'||instance.template==='product-flow-demo-en'))return <ProductFlowDemo instance={instance} frame={frame} libraryPreview={libraryPreview}/>;
   if(instance.template==='paper-conversation'||instance.template==='paper-message')return <PaperConversation instance={instance} frame={frame}/>;
   if(instance.template==='communication-beat')return <CommunicationBeat instance={instance} frame={frame}/>;
   if(instance.template==='community-selection')return <CommunitySelection instance={instance} frame={frame}/>;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ProductFlowDemo,productDemoFrame} from '../src/studio/ProductFlowDemo';
+import {ProductFlowDemo,productDemoFrame,uploadSparklePose} from '../src/studio/ProductFlowDemo';
 import {communicationPose} from '../src/studio/CommunicationBeat';
 import {studioSchema,validateProject} from '../server/schema';
 import {addStudioElement} from '../src/studio/registry';
@@ -21,4 +21,22 @@ test('native demo and visual resources validate and retain animation time after 
  assert.equal(studioSchema.safeParse({template:'product-flow-demo-es',props:{speed:3}}).success,false);
  assert.equal(studioSchema.safeParse({template:'communication-beat',props:{unknown:7}}).success,false);
  for(const frame of [0,1,10,45,83]){const v=communicationPose(frame);assert.ok(Object.values(v).every(Number.isFinite));assert.deepEqual(v,communicationPose(frame));}
+});
+test('upload restores both animated logo pieces, with the original staggered loop',()=>{
+ const html=renderToStaticMarkup(createElement(ProductFlowDemo,{instance:{template:'product-flow-demo-es',props:{speed:1}},frame:150,libraryPreview:true}));
+ for(const file of ['upload-crown.svg','upload-eye-left.svg','upload-eye-right.svg'])assert.ok(html.includes(file));
+ assert.notDeepEqual(uploadSparklePose(12),uploadSparklePose(0));
+ assert.deepEqual(uploadSparklePose(12,42),uploadSparklePose(0));
+ assert.deepEqual(uploadSparklePose(54,42),uploadSparklePose(12));
+ assert.deepEqual(uploadSparklePose(84),uploadSparklePose(0));
+ for(const f of [0,8,21,38,42,84,150])assert.ok(Object.values(uploadSparklePose(f)).every(Number.isFinite));
+});
+
+test('English variant reuses the flow with its original artwork and translated live scenes',()=>{
+ const instance={template:'product-flow-demo-en',props:{speed:1}};
+ const html=(frame:number)=>renderToStaticMarkup(createElement(ProductFlowDemo,{instance,frame,libraryPreview:true}));
+ assert.match(html(120),/>Cancel</);assert.match(html(120),/>Photos</);assert.match(html(120),/1 photo selected/);
+ assert.match(html(150),/Uploading your file/);assert.match(html(330),/product-flow-en\/screens\/description/);
+ for(const f of [0,90,120,150,240,330,390,420])assert.doesNotMatch(html(f),/product-flow-es|Cancelar|Subiendo|NaN|Infinity/);
+ assert.equal(studioSchema.safeParse(instance).success,true);
 });
