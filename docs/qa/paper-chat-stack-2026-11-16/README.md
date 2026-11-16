@@ -16,3 +16,9 @@ Local Reel 14 verification:
 Validation: `npm test` (138 tests), `npm run build`, `npm run check:global`, `npm run check:mcp`; fresh MCP discovery includes the new template. Build retains the existing large-chunk advisory.
 
 Source delivery uses the `reel-14-paper-chat-bubbles` topic branch. Remote Actions workflows and repository webhooks were both empty when checked. No runtime deployment was requested or performed. Pre-existing edits to ChatBubbles, PhoneChat and their conversation test remain outside this change.
+
+## Chat background trial
+
+Replaced only the two conversation background clips (frames 382–505 and 683–800) with the exported “Background chat” asset from the user-supplied [WhatsApp Figma kit, node 2008:8645](https://www.figma.com/design/Bu6dygVundIEk3jd6Hm9XN/?node-id=2008-8645). The 393 × 852 PNG includes the beige fill and faint doodle pattern; it is stored in the local project media library and fills the vertical composition proportionally. No temporary Figma URL is used at runtime.
+
+Saved revision 110 from the latest revision 109. Before/after verification found exactly those two background clips changed; all other clips, bubble props, timing, text, captions and cover stayed identical to revision 109. Inspected production-composition frames 490 and 795 for pattern geometry, bubble tail visibility and text contrast. Project assets and verification snapshots remain local. This is a media-only project edit; no application code or runtime release changed.
