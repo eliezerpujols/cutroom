@@ -42,9 +42,10 @@ plan lip sync on RAW speaker footage after the voice-performance review below.
   available controls before proposing a more expressive voice-generation route;
   do not invent a setting or assume adapted translation controls delivery.
 - Prepare the translation and a representative audio preview with enough context
-  to assess the original tone. Listen to the actual audio against the RAW source
-  when supported and let the user hear and approve it before full-video lip sync.
-  Provider completion, subtitles, waveform or duration checks are not that review.
+  to assess the original tone. Follow [Audio review in Codex](../SKILL.md#audio-review-in-codex)
+  and share the local preview so the user can compare it with the RAW source
+  and approve it before full-video lip sync. Report the technical checks you
+  actually performed and let the user's listening review establish the delivery.
   Reuse an already approved exact preview/performance without asking again.
 - Any billable preview or regeneration must fit the authorized scope and combined
   budget. Explain its cost before requesting additional approval. A rejected

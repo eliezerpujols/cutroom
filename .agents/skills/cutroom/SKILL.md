@@ -6,6 +6,7 @@ description: Translate and dub videos with ElevenLabs, apply Sync lip sync, use 
 # Cutroom
 
 Use the `cutroom` MCP to prepare the video and open its project in the local editor.
+For any audio work, follow [Audio review in Codex](#audio-review-in-codex).
 For translation, dubbing or lip sync, read [the dubbing workflow](references/dubbing.md).
 For a language version of an editable video, dub and lip-sync the original RAW
 speaker footage, then rebuild the edit with translated text and captions. Never
@@ -33,6 +34,27 @@ writing style. Automatic ElevenLabs dubbing cannot enforce a B2 script; explain
 that limitation without claiming exact control. Use adapted mode when explicit
 control of the translated text is requested; its Enterprise requirement is checked
 before any generation. Do not silently replace an explicitly required mode.
+
+## Audio review in Codex
+
+Keep audio as files in the project folder. Send file paths, timings, transcripts
+and measurement summaries through tools. Never print base64 or audio bytes in
+shell output or send audio to the model with `functions.exec`'s `audio()`,
+`input_audio` or an audio data URL. In Codex, that handoff can return
+`400 Audio input is not available` and stop the chat before the next edit.
+
+For dialogue timing, check saved word timestamps and use local waveform or
+silence measurements as needed. For a listening review, play the file in
+Cutroom or give the user a local preview link. To preview part of the edited
+mix, use `export_project` with a WAV or MP3 frame range, then check
+`export_status`. Verify timing, levels or playback separately from perceived
+delivery and sound quality. Keep working on edits that can be verified locally
+while any required listening approval is pending.
+
+If the 400 has already left a chat unable to continue, pick up in a fresh chat
+with the same project ID. Read the saved revision and existing jobs and outputs
+before continuing from the last saved edit. Reuse completed work and reconcile
+any submitted jobs before starting new provider work.
 
 ## Building Cutroom features
 
